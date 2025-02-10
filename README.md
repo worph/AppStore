@@ -1,29 +1,39 @@
-# CasaOS AppStore
+# Yundera CasaOS 3rd-Party AppStore
 
-[![GitHub issues by-label](https://img.shields.io/github/issues/IceWhaleTech/CasaOS-AppStore/help%20wanted?label=help%20wanted&style=for-the-badge)](https://github.com/IceWhaleTech/CasaOS-AppStore/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) [![GitHub contributors](https://img.shields.io/github/contributors/IceWhaleTech/CasaOS-AppStore?style=for-the-badge)](https://github.com/IceWhaleTech/CasaOS-AppStore/graphs/contributors)
+## About
+This AppStore provides a curated list of applications compatible with CasaOS running on Yundera servers. The apps are specifically configured to work with the nsl.sh mesh router service and are accessible over HTTPS by default.
 
-CasaOS AppStore needs your help to grow:
+### Key Differences from Official CasaOS AppStore
+Regular CasaOS app URL:
+```http://demo.casaos.io:5230/```
 
-- See [CONTRIBUTING.md](CONTRIBUTING.md) for how to contribute CasaOS Apps in Docker Compose format.
+Yundera app URL:
+```https://memo-demo.nsl.sh```
 
-  **IMPORTANT**: Your PR must be *well tested* on your own CasaOS first. This is the mandatory first step for your submission.
+All apps are designed to run on CasaIMG, a dockerized version of CasaOS.
+All apps are accessible over HTTPS by default.
+All apps are tested on Yundera servers using a nsl.sh routing domain.
 
-- Check `help wanted` for which issues you can help with.
+## Related Projects
+- [CasaIMG](https://github.com/worph/casa-img) - Docker-based CasaOS image manager with mesh router compatibility
+- [Mesh-Router](https://github.com/worph/mesh-router) - Domain management system for containerized applications, integrated with CasaIMG
 
-Thank you!
+## Sponsors
+* **Yundera** - [yundera.com](https://yundera.com)  
+  Easy to use cloud server for open source container applications
+* **NSL.SH** - [nsl.sh](https://nsl.sh)  
+  Free domain provider for open source projects
 
-## 3-Party AppStores
+## Contributing
+We welcome contributions to help grow this AppStore:
 
-CasaOS allows you to customize your device with a variety of third-party app stores. Below, you'll find a collection of third-party app store links that you can add to your CasaOS device to expand your app selection and enhance your user experience. 
-
-Simply copy the provided source link and add it to your CasaOS settings to access the corresponding app store.
-
-- [Awesome Store list](https://awesome.casaos.io/content/3rd-party-app-stores/list.html)
+1. Read our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on submitting apps in Docker Compose format
+2. **Important**: Test your submission thoroughly on a Yundera instance running CasaOS before creating a PR
+3. Check issues labeled `help wanted` for specific areas needing assistance
 
 ## Contributors
-
-<a href="https://github.com/IceWhaleTech/CasaOS-AppStore/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=IceWhaleTech/CasaOS-AppStore" />
+<a href="https://github.com/worph/Yundera-AppStore/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=worph/Yundera-AppStore" />
 </a>
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
@@ -32,5 +42,4 @@ Simply copy the provided source link and add it to your CasaOS settings to acces
 
 <!-- markdownlint-restore -->
 <!-- prettier-ignore-end -->
-
 <!-- ALL-CONTRIBUTORS-LIST:END -->
