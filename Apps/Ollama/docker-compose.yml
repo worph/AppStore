@@ -1,7 +1,6 @@
 name: ollama
 services:
-
-  main_app:
+  ollama:
     image: ghcr.io/ollama-webui/ollama-webui:git-f4000f4
     container_name: ollama
     restart: unless-stopped
