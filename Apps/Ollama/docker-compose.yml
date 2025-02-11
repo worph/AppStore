@@ -1,0 +1,62 @@
+name: ollama
+services:
+  ollama-api:
+    image: ollama/ollama:0.5.8
+    container_name: ollama-api
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/data
+        target: /root/.ollama
+    expose:
+      - 11434
+    networks:
+      pcs: null
+    deploy:
+      resources:
+        reservations:
+          memory: 512M
+  ollama:
+    image: ghcr.io/ollama-webui/ollama-webui:git-f4000f4
+    container_name: ollama
+    restart: unless-stopped
+    depends_on:
+      - ollama-api
+    expose:
+      - 8080
+    environment:
+      - OLLAMA_API_BASE_URL=http://ollama-api:11434/api
+    networks:
+      pcs: null
+    deploy:
+      resources:
+        reservations:
+          memory: 128M
+networks:
+  pcs:
+    name: pcs
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: ollama
+  author: Chris
+  category: AI
+  description:
+    en_us: Ollama WebUI - A web interface for Ollama, enabling easy management and interaction with AI models
+    zh_cn: Ollama WebUI - Ollama的Web界面，可轻松管理和与AI模型交互
+  developer: Ollama
+  icon: https://cdn.jsdelivr.net/gh/worph/AppStore@main/Apps/Ollama/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/worph/AppStore@main/Apps/Ollama/screenshot1.png
+    - https://cdn.jsdelivr.net/gh/worph/AppStore@main/Apps/Ollama/screenshot2.png
+    - https://cdn.jsdelivr.net/gh/worph/AppStore@main/Apps/Ollama/screenshot3.png
+  tagline:
+    en_us: Chat with AI models, manage your models, and customize your AI experience
+    zh_cn: 与AI模型聊天，管理您的模型，自定义您的AI体验
+  thumbnail: https://cdn.jsdelivr.net/gh/worph/AppStore@main/Apps/Ollama/thumbnail.png
+  title:
+    en_us: Ollama
+  index: /
+  port_map: "8080"
