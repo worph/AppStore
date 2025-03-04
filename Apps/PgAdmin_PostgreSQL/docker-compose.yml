@@ -10,7 +10,9 @@ services:
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: mydb
     volumes:
-      - /DATA/AppData/postgres/data:/var/lib/postgresql/data  # Stockage persistant sur le serveur
+      - /DATA/AppData/postgres/data:/var/lib/postgresql/data  
+    expose:
+      - 5432  
     networks:
       - pcs
 
@@ -22,7 +24,9 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
-      - "8000:80"
+      - target: 80  
+        published: "8000"  
+        protocol: tcp
     depends_on:
       - postgres
     networks:
@@ -36,7 +40,7 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  main: pgadmin
+  main: pgadmin 
   author: UgEff
   category: Database
   description:
