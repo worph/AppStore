@@ -1,0 +1,58 @@
+name: mongo-express
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin
+    volumes:
+      - type: bind
+        source: /DATA/AppData/mongodb
+        target: /data/db
+    expose:
+      - 27017
+    networks:
+      pcs: null
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    restart: unless-stopped
+    environment:
+      - ME_CONFIG_MONGODB_URL=mongodb://admin:admin@mongodb:27017/
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=pass
+    ports:
+      - target: 8081
+        published: "8081"
+        protocol: tcp
+    depends_on:
+      - mongodb
+    networks:
+      pcs: null
+
+networks:
+  pcs:
+    name: pcs
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: mongo-express
+  author: Toi
+  category: Database
+  description:
+    en_us: Mongo-Express - A web-based interface to manage MongoDB easily.
+  developer: MongoDB
+  icon: 
+  screenshot_link:
+
+  tagline:
+    en_us: Manage your MongoDB databases easily via a web interface.
+  title:
+    en_us: Mongo Express
+  index: /
+  port_map: "8081"
