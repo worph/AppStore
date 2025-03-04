@@ -52,7 +52,7 @@ x-casaos:
   description:
     en_us: Rocket.Chat - A self-hosted chat platform for teams and communities.
   developer: Rocket.Chat
-  icon: AppStore\Apps\RocketChat_MangoDB\IconRocketChat.png
+  icon: https://github.com/UgEff/AppStore/blob/BiApp/Apps/RocketChat_MangoDB/IconRocketChat.png
   screenshot_link:
 
   tagline:
