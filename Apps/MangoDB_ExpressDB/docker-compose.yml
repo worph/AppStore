@@ -42,7 +42,7 @@ x-casaos:
     - amd64
     - arm64
   main: mongo-express
-  author: Toi
+  author: UgEff
   category: Database
   description:
     en_us: Mongo-Express - A web-based interface to manage MongoDB easily.

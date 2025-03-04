@@ -1,0 +1,63 @@
+name: rocketchat
+services:
+  mongo_rocketchat:
+    image: mongo:latest
+    container_name: mongo_rocketchat
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin
+    volumes:
+      - type: bind
+        source: /DATA/AppData/mongo_rocketchat
+        target: /data/db
+    ports:
+      - target: 27017
+        published: "27018"  
+        protocol: tcp
+    networks:
+      pcs: null
+
+  rocketchat:
+    image: rocketchat/rocket.chat:latest
+    container_name: rocketchat
+    restart: unless-stopped
+    environment:
+      - MONGO_URL=mongodb://admin:admin@mongo_rocketchat:27018/rocketchat?authSource=admin
+      - MONGO_OPLOG_URL=mongodb://admin:admin@mongo_rocketchat:27018/local?authSource=admin
+      - ROOT_URL=http://localhost:3100
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASS=admin123
+      - ADMIN_EMAIL=admin@example.com
+    ports:
+      - target: 3000
+        published: "3100"
+        protocol: tcp
+    depends_on:
+      - mongo_rocketchat
+    networks:
+      pcs: null
+
+networks:
+  pcs:
+    name: pcs
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: rocketchat
+  author: UgEff
+  category: Communication
+  description:
+    en_us: Rocket.Chat - A self-hosted chat platform for teams and communities.
+  developer: Rocket.Chat
+  icon:
+  screenshot_link:
+
+  tagline:
+    en_us: A powerful open-source chat solution for teams.
+  title:
+    en_us: Rocket.Chat
+  index: /
+  port_map: "3100"
