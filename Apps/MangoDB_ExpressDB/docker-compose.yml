@@ -47,7 +47,7 @@ x-casaos:
   description:
     en_us: Mongo-Express - A web-based interface to manage MongoDB easily.
   developer: MongoDB
-  icon: AppStore\Apps\MangoDB_ExpressDB\IconMangoDB.png
+  icon: https://github.com/UgEff/AppStore/blob/BiApp/Apps/MangoDB_ExpressDB/IconMangoDB.png
   screenshot_link:
 
   tagline:
