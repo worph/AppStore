@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: mydb
+    volumes:
+      - /DATA/AppData/postgres/data:/var/lib/postgresql/data  # Stockage persistant sur le serveur
+    networks:
+      - pcs
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8000:80"
+    depends_on:
+      - postgres
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: pcs
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: pgadmin
+  author: UgEff
+  category: Database
+  description:
+    en_us: pgAdmin - A web-based database management tool for PostgreSQL
+  developer: PostgreSQL
+  icon: https://raw.githubusercontent.com/postgres/pgadmin4/master/docs/en_US/_static/pgadmin_logo.png
+  screenshot_link:
+    - https://www.pgadmin.org/static/images/screenshots/pgadmin4-dashboard.png
+  tagline:
+    en_us: Manage PostgreSQL databases easily with pgAdmin
+  title:
+    en_us: pgAdmin
+  index: /
+  port_map: "8000"
