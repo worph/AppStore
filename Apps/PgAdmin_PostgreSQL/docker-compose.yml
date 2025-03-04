@@ -46,9 +46,9 @@ x-casaos:
   description:
     en_us: pgAdmin - A web-based database management tool for PostgreSQL
   developer: PostgreSQL
-  icon: https://raw.githubusercontent.com/postgres/pgadmin4/master/docs/en_US/_static/pgadmin_logo.png
+  icon: AppStore\Apps\PgAdmin_PostgreSQL\postgresql_icon.png
   screenshot_link:
-    - https://www.pgadmin.org/static/images/screenshots/pgadmin4-dashboard.png
+    
   tagline:
     en_us: Manage PostgreSQL databases easily with pgAdmin
   title:
