@@ -13,11 +13,10 @@ services:
         target: /data/db
     expose:
       - 27017
-    networks:
-      pcs: null
+
 
   mongo:
-    image: mongo:latest
+    image: mongo-express:latest
     container_name: mongo
     restart: unless-stopped
     environment:
@@ -30,12 +29,9 @@ services:
         protocol: tcp
     depends_on:
       - mongodb
-    networks:
-      pcs: null
 
-networks:
-  pcs:
-    name: pcs
+
+
 
 x-casaos:
   architectures:
@@ -45,7 +41,7 @@ x-casaos:
   author: UgEff
   category: Database
   description:
-    en_us: Mongo - A web-based interface to manage MongoDB easily.
+    en_us: Mongo-Express - A web-based interface to manage MongoDB easily.
   developer: MongoDB
   icon: https://github.com/UgEff/AppStore/blob/BiApp/Apps/MangoDB_ExpressDB/IconMangoDB.png
   screenshot_link:
