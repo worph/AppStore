@@ -13,8 +13,7 @@ services:
       - /DATA/AppData/postgres/data:/var/lib/postgresql/data  
     expose:
       - 5432  
-    networks:
-      - pcs
+
 
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -29,12 +28,8 @@ services:
         protocol: tcp
     depends_on:
       - postgres
-    networks:
-      - pcs
 
-networks:
-  pcs:
-    name: pcs
+
 
 x-casaos:
   architectures:
