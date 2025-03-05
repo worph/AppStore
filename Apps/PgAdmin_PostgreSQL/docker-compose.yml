@@ -1,0 +1,57 @@
+name: PgAdmin
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: mydb
+    volumes:
+      - /DATA/AppData/postgres/data:/var/lib/postgresql/data  
+    expose:
+      - 5432  
+    networks:
+      - pcs
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - target: 80  
+        published: "8000"  
+        protocol: tcp
+    depends_on:
+      - postgres
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: pcs
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: pgadmin 
+  author: UgEff
+  category: Database
+  description:
+    en_us: pgAdmin - A web-based database management tool for PostgreSQL
+  developer: PostgreSQL
+  icon: https://github.com/UgEff/AppStore/blob/BiApp/Apps/PgAdmin_PostgreSQL/postgresql_icon.png
+  screenshot_link:
+    
+  tagline:
+    en_us: Manage PostgreSQL databases easily with pgAdmin
+  title:
+    en_us: pgAdmin
+  index: /
+  port_map: "8000"
