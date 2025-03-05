@@ -1,4 +1,4 @@
-name: mongo-express
+name: mongo
 services:
   mongodb:
     image: mongo:latest
@@ -16,9 +16,9 @@ services:
     networks:
       pcs: null
 
-  mongo-express:
-    image: mongo-express:latest
-    container_name: mongo-express
+  mongo:
+    image: mongo:latest
+    container_name: mongo
     restart: unless-stopped
     environment:
       - ME_CONFIG_MONGODB_URL=mongodb://admin:admin@mongodb:27017/
@@ -41,11 +41,11 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  main: mongo-express
+  main: mongo
   author: UgEff
   category: Database
   description:
-    en_us: Mongo-Express - A web-based interface to manage MongoDB easily.
+    en_us: Mongo - A web-based interface to manage MongoDB easily.
   developer: MongoDB
   icon: https://github.com/UgEff/AppStore/blob/BiApp/Apps/MangoDB_ExpressDB/IconMangoDB.png
   screenshot_link:
