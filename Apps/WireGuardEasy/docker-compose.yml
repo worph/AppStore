@@ -22,12 +22,12 @@ services:
           description:
             en_us: WEB UI port
     ports:
-      - target: 51820
-        published: "51820"
-        protocol: udp
       - target: 51821
         published: "51821"
         protocol: tcp
+      - target: 51820
+        published: "51820"
+        protocol: udp
     volumes:
       - type: bind
         source: /DATA/AppData/$AppID/wireguard
