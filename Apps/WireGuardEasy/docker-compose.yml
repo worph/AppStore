@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     network_mode: bridge
     environment:
-      PASSWORD: 'casaos'
+      PASSWORD: '$default_pwd'
       WG_HOST: '$public_ip'
       WG_PORT: '51820'
       WG_DEFAULT_DNS: '127.0.0.11'
