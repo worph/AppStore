@@ -1,52 +1,51 @@
-name: PgAdmin
-
+name: pgadmin
 services:
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - target: 80
+        published: "8080"
+        protocol: tcp
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@example.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/pgadmin
+        target: /var/lib/pgadmin
+    networks:
+      pcs: null
+
   postgres:
     image: postgres:latest
     container_name: postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
-      POSTGRES_DB: mydb
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_DB=mydb
     volumes:
       - type: bind
-        source: /DATA/AppData/postgres/data
+        source: /DATA/AppData/$AppID/postgres
         target: /var/lib/postgresql/data
     expose:
-      - 5432  
-    networks:
-      - pgadmin_network
+      - 5432
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin"]
       interval: 10s
       timeout: 5s
       retries: 5
-
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: pgadmin
-    restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@example.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-    ports:
-      - target: 80  
-        published: "8000"  
-        protocol: tcp
-    depends_on:
-      - postgres:
-        condition: service_healthy
-    volumes:
-      - type: bind
-        source: /DATA/AppData/pgadmin
-        target: /var/lib/pgadmin
     networks:
-      - pgadmin_network
+      pcs: null
 
 networks:
-  pgadmin_network:
-    driver: bridge
+  pcs:
+    name: pcs
 
 x-casaos:
   architectures:
@@ -63,10 +62,4 @@ x-casaos:
   title:
     en_us: PgAdmin + PostgreSQL
   index: /
-  port_map: "8000"
-  store:
-    app_name: PgAdmin_PostgreSQL
-    database: postgres
-  volumes:
-    - /DATA/AppData/postgres/data
-    - /DATA/AppData/pgadmin
+  port_map: "8080"
