@@ -56,11 +56,17 @@ x-casaos:
   author: UgEff
   category: Database
   description:
-    en_us: pgAdmin - A web-based database management tool for PostgreSQL
+    en_us: pgAdmin - A web-based database management tool for PostgreSQL with integrated PostgreSQL server
   developer: PostgreSQL
   tagline:
     en_us: Manage PostgreSQL databases easily with pgAdmin
   title:
-    en_us: pgAdmin
+    en_us: PgAdmin + PostgreSQL
   index: /
   port_map: "8000"
+  store:
+    app_name: PgAdmin_PostgreSQL
+    database: postgres
+  volumes:
+    - /DATA/AppData/postgres/data
+    - /DATA/AppData/pgadmin
