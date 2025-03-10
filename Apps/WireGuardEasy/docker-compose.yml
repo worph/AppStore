@@ -1,4 +1,4 @@
-name: wg-easy
+name: wgeasy
 services:
   wgeasy:
     image: ghcr.io/wg-easy/wg-easy:13
