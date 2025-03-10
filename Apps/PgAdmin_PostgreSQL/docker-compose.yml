@@ -10,10 +10,18 @@ services:
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: mydb
     volumes:
-      - /DATA/AppData/postgres/data:/var/lib/postgresql/data  
+      - type: bind
+        source: /DATA/AppData/postgres/data
+        target: /var/lib/postgresql/data
     expose:
       - 5432  
-
+    networks:
+      - pgadmin_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -27,15 +35,24 @@ services:
         published: "8000"  
         protocol: tcp
     depends_on:
-      - postgres
+      - postgres:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: /DATA/AppData/pgadmin
+        target: /var/lib/pgadmin
+    networks:
+      - pgadmin_network
 
-
+networks:
+  pgadmin_network:
+    driver: bridge
 
 x-casaos:
   architectures:
     - amd64
     - arm64
-  main: pgadmin 
+  main: pgadmin
   author: UgEff
   category: Database
   description:
@@ -43,7 +60,7 @@ x-casaos:
   developer: PostgreSQL
   icon: https://github.com/UgEff/AppStore/blob/BiApp/Apps/PgAdmin_PostgreSQL/postgresql_icon.png
   screenshot_link:
-    
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/PgAdmin_PostgreSQL/screenshot-1.png
   tagline:
     en_us: Manage PostgreSQL databases easily with pgAdmin
   title:
