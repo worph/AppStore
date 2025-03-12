@@ -2,54 +2,53 @@
 name: rocketchat
 
 services:
-  # Service pour le serveur MongoDB dédié à RocketChat
-  mongo_rocketchat:
-    image: mongo:latest                            # Image officielle MongoDB
-    container_name: mongo_rocketchat               # Nom du conteneur
-    restart: unless-stopped                        # Redémarrage automatique
+  # Service principal RocketChat (interface utilisateur)
+  rocketchat:
+    image: rocketchat/rocket.chat:latest
+    container_name: rocketchat
+    restart: unless-stopped
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin          # Utilisateur root MongoDB
-      - MONGO_INITDB_ROOT_PASSWORD=admin          # Mot de passe root MongoDB
+      - MONGO_URL=mongodb://admin:admin@mongo_rocketchat:27017/rocketchat?authSource=admin
+      - MONGO_OPLOG_URL=mongodb://admin:admin@mongo_rocketchat:27017/local?authSource=admin
+      - ROOT_URL=http://localhost:3000
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASS=admin123
+      - ADMIN_EMAIL=admin@example.com
+    ports:
+      - target: 3000
+        published: "3000"
+        protocol: tcp
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/mongo_rocketchat/data
+        source: /DATA/AppData/$AppID/rocketchat
+        target: /app/uploads
+    depends_on:
+      mongo_rocketchat:
+        condition: service_healthy
+    networks:
+      pcs: null
+
+  # Service MongoDB en arrière-plan
+  mongo_rocketchat:
+    image: mongo:latest
+    container_name: mongo_rocketchat
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/mongodb
         target: /data/db
     expose:
-      - 27017                                     # Port MongoDB (interne uniquement)
-    # Vérification de la santé du service
+      - 27017
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      pcs: null                                   # Connexion au réseau partagé
-
-  # Service pour RocketChat
-  rocketchat:
-    image: rocketchat/rocket.chat:latest          # Image officielle RocketChat
-    container_name: rocketchat                    # Nom du conteneur
-    restart: unless-stopped
-    environment:
-      - MONGO_URL=mongodb://admin:admin@mongo_rocketchat:27017/rocketchat?authSource=admin
-      - MONGO_OPLOG_URL=mongodb://admin:admin@mongo_rocketchat:27017/local?authSource=admin
-      - ROOT_URL=http://localhost:3000            # URL de base
-      - ADMIN_USERNAME=admin                      # Utilisateur admin par défaut
-      - ADMIN_PASS=admin123                       # Mot de passe admin
-      - ADMIN_EMAIL=admin@example.com             # Email admin
-    ports:
-      - target: 3000                             # Port interne
-        published: "3000"                        # Port exposé sur l'hôte
-        protocol: tcp
-    depends_on:
-      mongo_rocketchat:
-        condition: service_healthy               # Attendre que MongoDB soit prêt
-    networks:
       pcs: null
-    volumes:
-      - type: bind
-        source: /DATA/AppData/$AppID/rocketchat/data
-        target: /app/uploads
 
 # Définition du réseau partagé
 networks:
@@ -61,7 +60,7 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  main: rocketchat                               # Service principal (interface utilisateur)
+  main: rocketchat
   author: UgEff
   category: Communication
   description:
@@ -73,6 +72,6 @@ x-casaos:
     en_us: Rocket.Chat
   index: /
   port_map: "3000"
-  volumes:                                       # Déclaration explicite des volumes
-    - /DATA/AppData/$AppID/mongo_rocketchat/data
-    - /DATA/AppData/$AppID/rocketchat/data
+  volumes:
+    - /DATA/AppData/$AppID/mongodb
+    - /DATA/AppData/$AppID/rocketchat
