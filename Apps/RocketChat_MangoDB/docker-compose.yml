@@ -12,8 +12,8 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=admin          # Mot de passe root MongoDB
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/mongodb       # Stockage persistant sur l'hôte
-        target: /data/db                          # Point de montage dans le conteneur
+        source: /DATA/AppData/$AppID/mongo_rocketchat/data
+        target: /data/db
     expose:
       - 27017                                     # Port MongoDB (interne uniquement)
     # Vérification de la santé du service
@@ -46,6 +46,10 @@ services:
         condition: service_healthy               # Attendre que MongoDB soit prêt
     networks:
       pcs: null
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/rocketchat/data
+        target: /app/uploads
 
 # Définition du réseau partagé
 networks:
@@ -70,4 +74,5 @@ x-casaos:
   index: /
   port_map: "3000"
   volumes:                                       # Déclaration explicite des volumes
-    - /DATA/AppData/$AppID/mongodb
+    - /DATA/AppData/$AppID/mongo_rocketchat/data
+    - /DATA/AppData/$AppID/rocketchat/data
