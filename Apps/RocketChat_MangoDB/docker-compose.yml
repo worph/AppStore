@@ -20,7 +20,7 @@ services:
         protocol: tcp
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/rocketchat/uploads
+        source: /DATA/AppData/$AppID/rocketchat
         target: /app/uploads
     depends_on:
       mongodb_rocketchat:
@@ -39,7 +39,7 @@ services:
       - MONGO_INITDB_DATABASE=rocketchat
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/mongodb/data
+        source: /DATA/AppData/$AppID/mongodb
         target: /data/db
     expose:
       - 27017
@@ -74,5 +74,5 @@ x-casaos:
   index: /
   port_map: "3000"
   volumes:
-    - /DATA/AppData/$AppID/mongodb/data
-    - /DATA/AppData/$AppID/rocketchat/uploads
+    - /DATA/AppData/$AppID/mongodb
+    - /DATA/AppData/$AppID/rocketchat
