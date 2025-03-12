@@ -1,7 +1,7 @@
 name: wgeasy
 services:
   wgeasy:
-    image: ghcr.io/wg-easy/wg-easy:13
+    image: ghcr.io/wg-easy/wg-easy:14
     restart: unless-stopped
     network_mode: bridge
     environment:
@@ -18,15 +18,11 @@ services:
         - container: '51820'
           description:
             en_us: Wireguard VPN port
-        - container: '51821'
-          description:
-            en_us: WEB UI port
+    expose:
+      - 51821
     ports:
-      - target: 51821
-        published: "51821"
-        protocol: tcp
       - target: 51820
-        published: "51820"
+        published: 51820
         protocol: udp
     volumes:
       - type: bind
@@ -106,4 +102,4 @@ x-casaos:
         同样，`WG_PORT` 参数也是如此。如果与默认的 51820 不同，请将其更改为局域网外可以访问的端口。
   title:
     en_us: WireGuard Easy
-  port_map: '51821'
+  webui_port: 51821

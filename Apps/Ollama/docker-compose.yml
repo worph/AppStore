@@ -6,10 +6,8 @@ services:
     restart: unless-stopped
     depends_on:
       - ollama-api
-    ports:
-      - target: 8080
-        published: "8080"
-        protocol: tcp
+    expose:
+      - 8080
     environment:
       - OLLAMA_API_BASE_URL=http://ollama-api:11434/api
     networks:
@@ -55,4 +53,4 @@ x-casaos:
   title:
     en_us: Ollama
   index: /
-  port_map: "8080"
+  webui_port: 8080
