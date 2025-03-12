@@ -8,8 +8,8 @@ services:
     container_name: rocketchat
     restart: unless-stopped
     environment:
-      - MONGO_URL=mongodb://admin:admin@mongo_rocketchat:27017/rocketchat?authSource=admin
-      - MONGO_OPLOG_URL=mongodb://admin:admin@mongo_rocketchat:27017/local?authSource=admin
+      - MONGO_URL=mongodb://admin:admin@mongodb:27017/rocketchat?authSource=admin
+      - MONGO_OPLOG_URL=mongodb://admin:admin@mongodb:27017/local?authSource=admin
       - ROOT_URL=http://localhost:3000
       - ADMIN_USERNAME=admin
       - ADMIN_PASS=admin123
@@ -20,25 +20,26 @@ services:
         protocol: tcp
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/rocketchat
+        source: /DATA/AppData/$AppID/rocketchat/uploads
         target: /app/uploads
     depends_on:
-      mongo_rocketchat:
+      mongodb_rocketchat:
         condition: service_healthy
     networks:
       pcs: null
 
-  # Service MongoDB en arrière-plan
-  mongo_rocketchat:
+  # Service MongoDB dédié à RocketChat
+  mongodb:
     image: mongo:latest
-    container_name: mongo_rocketchat
+    container_name: mongodb
     restart: unless-stopped
     environment:
       - MONGO_INITDB_ROOT_USERNAME=admin
       - MONGO_INITDB_ROOT_PASSWORD=admin
+      - MONGO_INITDB_DATABASE=rocketchat
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/mongodb
+        source: /DATA/AppData/$AppID/mongodb/data
         target: /data/db
     expose:
       - 27017
@@ -73,5 +74,5 @@ x-casaos:
   index: /
   port_map: "3000"
   volumes:
-    - /DATA/AppData/$AppID/mongodb
-    - /DATA/AppData/$AppID/rocketchat
+    - /DATA/AppData/$AppID/mongodb/data
+    - /DATA/AppData/$AppID/rocketchat/uploads
