@@ -65,5 +65,7 @@ x-casaos:
     en_us: PgAdmin + PostgreSQL
   port_map: "8080"
   volumes:
-    - /DATA/AppData/$AppID/pgadmin
-    - /DATA/AppData/$AppID/postgres
+    - container: /var/lib/pgadmin
+      description: PgAdmin Data
+    - container: /var/lib/postgresql/data
+      description: PostgreSQL Data
