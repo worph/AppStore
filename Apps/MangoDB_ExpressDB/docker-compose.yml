@@ -1,0 +1,74 @@
+# Nom du projet Docker Compose
+name: mongo
+
+services:
+  # Service pour le serveur MongoDB
+  mongodb:
+    image: mongo:latest                            # Image officielle MongoDB
+    container_name: mongodb                         # Nom du conteneur
+    restart: unless-stopped                         # Redémarrage automatique
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin           # Utilisateur root MongoDB
+      - MONGO_INITDB_ROOT_PASSWORD=admin           # Mot de passe root MongoDB
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/mongodb
+        target: /data/db
+    expose:
+      - 27017                                      # Port MongoDB (interne uniquement)
+    # Vérification de la santé du service
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      pcs: null                                    # Connexion au réseau partagé
+
+  # Service pour l'interface web Mongo-Express
+  mongo-express:                                   # Renommé pour plus de clarté
+    image: mongo-express:latest                    # Image officielle Mongo-Express
+    container_name: mongo-express                  # Nom du conteneur
+    restart: unless-stopped
+    environment:
+      - ME_CONFIG_MONGODB_URL=mongodb://admin:admin@mongodb:27017/
+      - ME_CONFIG_BASICAUTH_USERNAME=admin         # Utilisateur pour l'interface web
+      - ME_CONFIG_BASICAUTH_PASSWORD=pass          # Mot de passe pour l'interface web
+      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true        # Activation des fonctionnalités admin
+    ports:
+      - target: 8081                              # Port interne
+        published: "8081"                         # Port exposé sur l'hôte
+        protocol: tcp
+    depends_on:
+      mongodb:
+        condition: service_healthy                 # Attendre que MongoDB soit prêt
+    networks:
+      pcs: null
+
+# Définition du réseau partagé
+networks:
+  pcs:
+    name: pcs
+
+# Configuration spécifique à CasaOS
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: mongo-express                             # Service principal (interface utilisateur)
+  author: UgEff
+  category: Database
+  description:
+    en_us: Mongo-Express - A web-based interface to manage MongoDB easily.
+  developer: MongoDB
+  icon: https://github.com/UgEff/AppStore/blob/BiApp/Apps/MangoDB_ExpressDB/IconMangoDB.png
+  screenshot_link:
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/MangoDB_ExpressDB/screenshot-1.png
+  tagline:
+    en_us: Manage your MongoDB databases easily via a web interface.
+  title:
+    en_us: Mongo Express
+  index: /
+  port_map: "8081"
+  volumes:                                        # Déclaration explicite des volumes
+    - /DATA/AppData/$AppID/mongodb

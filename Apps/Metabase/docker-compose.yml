@@ -1,0 +1,43 @@
+# Nom du projet Docker Compose
+name: metabase
+
+services:
+  metabase:
+    image: metabase/metabase:latest
+    container_name: metabase
+    restart: unless-stopped
+    ports:
+      - target: 3000
+        published: "3000"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/metabase
+        target: /metabase-data
+    networks:
+      pcs: null
+
+# Définition du réseau partagé
+networks:
+  pcs:
+    name: pcs
+
+# Configuration spécifique à CasaOS
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: metabase
+  author: UgEff
+  category: Analytics
+  description:
+    en_us: Metabase - Business Intelligence and Analytics tool that lets you ask questions about your data
+  developer: Metabase
+  tagline:
+    en_us: Easy analytics and data visualization for your team
+  title:
+    en_us: Metabase
+  index: /
+  port_map: "3000"
+  volumes:
+    - /DATA/AppData/$AppID/metabase

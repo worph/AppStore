@@ -1,0 +1,78 @@
+# Nom du projet Docker Compose
+name: rocketchat
+
+services:
+  # Service principal RocketChat (interface utilisateur)
+  rocketchat:
+    image: rocketchat/rocket.chat:latest
+    container_name: rocketchat
+    restart: unless-stopped
+    environment:
+      - MONGO_URL=mongodb://admin:admin@mongodb_rocketchat:27017/rocketchat?authSource=admin
+      - MONGO_OPLOG_URL=mongodb://admin:admin@mongodb_rocketchat:27017/local?authSource=admin
+      - ROOT_URL=http://localhost:3000
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASS=admin123
+      - ADMIN_EMAIL=admin@example.com
+    ports:
+      - target: 3000
+        published: "3000"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/rocketchat
+        target: /app/uploads
+    depends_on:
+      mongodb_rocketchat:
+        condition: service_healthy
+    networks:
+      pcs: null
+
+  # Service MongoDB dédié à RocketChat
+  mongodb_rocketchat:
+    image: mongo:latest
+    container_name: mongodb_rocketchat
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin
+      - MONGO_INITDB_DATABASE=rocketchat
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/mongodb
+        target: /data/db
+    expose:
+      - 27017
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      pcs: null
+
+# Définition du réseau partagé
+networks:
+  pcs:
+    name: pcs
+
+# Configuration spécifique à CasaOS
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: rocketchat
+  author: UgEff
+  category: Communication
+  description:
+    en_us: Rocket.Chat - A self-hosted chat platform for teams and communities.
+  developer: Rocket.Chat
+  tagline:
+    en_us: A powerful open-source chat solution for teams.
+  title:
+    en_us: Rocket.Chat
+  index: /
+  port_map: "3000"
+  volumes:
+    - /DATA/AppData/$AppID/mongodb
+    - /DATA/AppData/$AppID/rocketchat
