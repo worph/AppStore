@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
     # Dépendance avec attente que PostgreSQL soit prêt
     depends_on:
-      postgres:
+      postgres_pgadmin:
         condition: service_healthy
     # Configuration du port
     ports:
@@ -26,26 +26,26 @@ services:
     # Configuration des volumes pour la persistance des données
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/pgadmin
+        source: /DATA/AppData/$AppID/data
         target: /var/lib/pgadmin
     # Configuration réseau
     networks:
       pcs: null            # Connexion au réseau 'pcs' partagé
 
   # Service pour le serveur PostgreSQL
-  postgres:
+  postgres_pgadmin:
     image: postgres:latest                          # Image Docker officielle PostgreSQL
-    container_name: postgres
+    container_name: postgres_pgadmin
     restart: unless-stopped
     # Variables d'environnement pour PostgreSQL
     environment:
       - POSTGRES_USER=admin                         # Utilisateur par défaut
       - POSTGRES_PASSWORD=admin                     # Mot de passe
-      - POSTGRES_DB=mydb                           # Base de données par défaut
+      - POSTGRES_DB=pgadmin                           # Base de données par défaut
     # Volume pour les données PostgreSQL
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/postgres
+        source: /DATA/AppData/$AppID/data
         target: /var/lib/postgresql/data
     # Port exposé uniquement aux autres services (non accessible depuis l'extérieur)
     expose:
@@ -82,5 +82,4 @@ x-casaos:
   index: /                                        # Page d'accueil de l'application
   port_map: "8080"                               # Port principal pour accéder à l'application
   volumes:
-    - /DATA/AppData/$AppID/pgadmin
-    - /DATA/AppData/$AppID/postgres
+    - /DATA/AppData/$AppID/data
