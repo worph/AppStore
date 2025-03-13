@@ -10,6 +10,7 @@ services:
     container_name: pgadmin
     # Redémarrage automatique sauf si arrêté manuellement
     restart: unless-stopped
+    user: "5050:5050"
     environment:
       - PGADMIN_DEFAULT_EMAIL=admin@example.com
       - PGADMIN_DEFAULT_PASSWORD=admin
