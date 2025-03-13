@@ -10,6 +10,7 @@ services:
     container_name: pgadmin
     # Redémarrage automatique sauf si arrêté manuellement
     restart: unless-stopped
+    user: "5050:5050"
     # Dépendance avec attente que PostgreSQL soit prêt
     depends_on:
       postgres_pgadmin:
@@ -28,6 +29,7 @@ services:
       - type: bind
         source: /DATA/AppData/$AppID/pgadmin
         target: /var/lib/pgadmin
+        chown: true
     # Configuration réseau
     networks:
       pcs: null            # Connexion au réseau 'pcs' partagé
@@ -47,6 +49,7 @@ services:
       - type: bind
         source: /DATA/AppData/$AppID/pgadmin
         target: /var/lib/postgresql/data
+        chown: true
     # Port exposé uniquement aux autres services (non accessible depuis l'extérieur)
     expose:
       - 5432
