@@ -25,9 +25,9 @@ services:
       - PGADMIN_DEFAULT_PASSWORD=admin              # Mot de passe de connexion
     # Configuration des volumes pour la persistance des données
     volumes:
-      - type: bind                                  # Type de montage (bind = lien direct)
-        source: /DATA/AppData/$AppID/pgadmin        # Dossier sur l'hôte ($AppID est remplacé par CasaOS)
-        target: /var/lib/pgadmin                    # Dossier dans le conteneur
+      - type: bind
+        source: /DATA/AppData/$AppID/pgadmin
+        target: /var/lib/pgadmin
     # Configuration réseau
     networks:
       pcs: null            # Connexion au réseau 'pcs' partagé
@@ -81,3 +81,6 @@ x-casaos:
     en_us: PgAdmin + PostgreSQL                   # Nom affiché dans CasaOS
   index: /                                        # Page d'accueil de l'application
   port_map: "8080"                               # Port principal pour accéder à l'application
+  volumes:
+    - /DATA/AppData/$AppID/pgadmin
+    - /DATA/AppData/$AppID/postgres

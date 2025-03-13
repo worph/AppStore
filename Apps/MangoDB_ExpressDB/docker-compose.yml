@@ -12,8 +12,8 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=admin           # Mot de passe root MongoDB
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/mongodb        # Stockage persistant sur l'hôte
-        target: /data/db                            # Point de montage dans le conteneur
+        source: /DATA/AppData/$AppID/mongodb
+        target: /data/db
     expose:
       - 27017                                      # Port MongoDB (interne uniquement)
     # Vérification de la santé du service
@@ -31,7 +31,7 @@ services:
     container_name: mongo-express                  # Nom du conteneur
     restart: unless-stopped
     environment:
-      - ME_CONFIG_MONGODB_URL=mongodb://admin:admin@mongodb:27017/  # URL de connexion à MongoDB
+      - ME_CONFIG_MONGODB_URL=mongodb://admin:admin@mongodb:27017/
       - ME_CONFIG_BASICAUTH_USERNAME=admin         # Utilisateur pour l'interface web
       - ME_CONFIG_BASICAUTH_PASSWORD=pass          # Mot de passe pour l'interface web
       - ME_CONFIG_MONGODB_ENABLE_ADMIN=true        # Activation des fonctionnalités admin
