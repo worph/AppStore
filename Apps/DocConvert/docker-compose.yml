@@ -10,8 +10,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - /DATA/AppData/$AppID/storage:/storage
-      - /DATA/AppData/$AppID/output:/output
+      - /DATA/AppData/$AppID/pdf-tools:/var/lib/gotenberg
     networks:
       pcs: null
 
@@ -22,8 +21,7 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - /DATA/AppData/$AppID/storage:/storage
-      - /DATA/AppData/$AppID/output:/output
+      - /DATA/AppData/$AppID/pdf-interface:/app/data
     depends_on:
       - pdf-tools
     networks:
@@ -46,5 +44,5 @@ x-casaos:
     en_us: PDF Tools
   port_map: "8080"
   volumes:
-    - /DATA/AppData/$AppID/storage
-    - /DATA/AppData/$AppID/output
+    - /DATA/AppData/$AppID/pdf-tools
+    - /DATA/AppData/$AppID/pdf-interface
