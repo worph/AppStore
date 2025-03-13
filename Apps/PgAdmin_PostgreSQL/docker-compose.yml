@@ -17,6 +17,8 @@ services:
       - PGADMIN_DEFAULT_PASSWORD=admin              # Mot de passe de connexion
       - PGADMIN_LISTEN_PORT=80
       - PGADMIN_SERVER_JSON_FILE=/var/lib/pgadmin/servers.json
+      - PGADMIN_SESSION_DIR=/var/lib/pgadmin/sessions
+      - PGADMIN_DATA_DIR=/var/lib/pgadmin
     # Configuration du port
     ports:
       - target: 80
@@ -45,6 +47,7 @@ services:
       - POSTGRES_USER=admin                        
       - POSTGRES_PASSWORD=admin                     
       - POSTGRES_DB=postgres
+      - POSTGRES_INITDB_ARGS="--auth-host=scram-sha-256"
     # Volume pour les données PostgreSQL
     volumes:
       - type: bind
@@ -61,6 +64,10 @@ services:
       retries: 5
     networks:
       pcs: null
+    command: 
+      - "postgres"
+      - "-c"
+      - "listen_addresses=*"
 
 # Définition du réseau partagé
 networks:
