@@ -57,12 +57,8 @@ x-casaos:
   category: Database
   description:
     en_us: Mongo-Express - A web-based interface to manage MongoDB easily.
-  developer: MongoDB
-  tagline:
-    en_us: Manage your MongoDB databases easily via a web interface.
   title:
     en_us: MongoDB + Mongo Express
-  index: /
   port_map: "8081"
   volumes:
     - container: /data
