@@ -19,22 +19,26 @@ services:
       - PGADMIN_SERVER_JSON_FILE=/var/lib/pgadmin/servers.json
     # Configuration du port
     ports:
-      - "8080:80"   # Format simplifié pour le mappage de port
+      - target: 80
+        published: "8080"
+        protocol: tcp
     # Configuration des volumes pour la persistance des données
     volumes:
-      - /DATA/AppData/$AppID/pgadmin:/var/lib/pgadmin
+      - type: bind
+        source: /DATA/AppData/$AppID/pgadmin
+        target: /var/lib/pgadmin
     # Dépendance avec attente que PostgreSQL soit prêt
     depends_on:
-      postgres:
+      postgres_pgadmin:        # Changé pour correspondre au nom du conteneur
         condition: service_healthy
     # Configuration réseau
     networks:
-      - pcs
+      pcs: null               # Format correct pour le réseau
 
   # Service pour le serveur PostgreSQL
-  postgres:
-    image: postgres:latest                         
-    container_name: postgres
+  postgres_pgadmin:           # Renommé pour éviter les conflits
+    image: postgres:latest
+    container_name: postgres_pgadmin
     restart: unless-stopped
     # Variables d'environnement pour PostgreSQL
     environment:
@@ -43,10 +47,12 @@ services:
       - POSTGRES_DB=postgres
     # Volume pour les données PostgreSQL
     volumes:
-      - /DATA/AppData/$AppID/postgres:/var/lib/postgresql/data
+      - type: bind
+        source: /DATA/AppData/$AppID/postgres
+        target: /var/lib/postgresql/data
     # Port exposé pour accès externe si nécessaire
-    ports:
-      - "5432:5432"  # Accessible depuis l'extérieur
+    expose:                   # Changé ports en expose comme dans RocketChat
+      - 5432
     # Vérification de la santé du service
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin"]
@@ -54,13 +60,12 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - pcs
+      pcs: null
 
 # Définition du réseau partagé
 networks:
   pcs:
-    external: true  # Utilise un réseau existant au lieu d'en créer un nouveau
-    name: pcs
+    name: pcs                 # Simplifié comme dans RocketChat
 
 # Configuration spécifique à CasaOS
 x-casaos:
