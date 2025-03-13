@@ -8,17 +8,23 @@ services:
     environment:
       - JWT_ENABLED=false
       - GENERATE_DEFAULT_FONTS=true
-      - DB_HOST=localhost
-      - DB_PORT=5432
-      - DB_NAME=onlyoffice
-      - DB_USER=onlyoffice
-      - AMQP_HOST=localhost
-      - AMQP_PORT=5672
+      # Configuration des services internes
+      - DOCSERVICE_INTERNAL_PORT=8000
+      - CONVERTER_INTERNAL_PORT=8001
+      # Configuration des ressources
+      - NODE_MAX_MEMORY=4096
+      - NGINX_MAX_WORKER_CONNECTIONS=4096
     ports:
       - "8080:80"
     volumes:
       - /DATA/AppData/$AppID/data:/var/www/onlyoffice/Data
       - /DATA/AppData/$AppID/logs:/var/log/onlyoffice
+      - /DATA/AppData/$AppID/fonts:/usr/share/fonts/truetype/custom  # Pour les polices personnalisées
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       pcs: null
 
@@ -34,10 +40,11 @@ x-casaos:
   author: UgEff
   category: Office
   description:
-    en_us: OnlyOffice Document Server - Professional online editor for PDF and Office documents
+    en_us: OnlyOffice Document Server - Professional document editor and converter
   title:
     en_us: Document Converter & Editor
   port_map: "8080"
   volumes:
     - /DATA/AppData/$AppID/data
     - /DATA/AppData/$AppID/logs
+    - /DATA/AppData/$AppID/fonts
