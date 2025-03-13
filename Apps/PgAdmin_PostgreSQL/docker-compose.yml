@@ -29,7 +29,6 @@ services:
       - type: bind
         source: /DATA/AppData/$AppID/pgadmin
         target: /var/lib/pgadmin
-        chown: true
     # Configuration réseau
     networks:
       pcs: null            # Connexion au réseau 'pcs' partagé
@@ -47,9 +46,8 @@ services:
     # Volume pour les données PostgreSQL
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/pgadmin
+        source: /DATA/AppData/$AppID/postgres
         target: /var/lib/postgresql/data
-        chown: true
     # Port exposé uniquement aux autres services (non accessible depuis l'extérieur)
     expose:
       - 5432
@@ -86,3 +84,4 @@ x-casaos:
   port_map: "8080"                               # Port principal pour accéder à l'application
   volumes:
     - /DATA/AppData/$AppID/pgadmin
+    - /DATA/AppData/$AppID/postgres
