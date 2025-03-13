@@ -1,22 +1,31 @@
-name: handbrake
+name: pdftools
 
 services:
-  handbrake:
-    image: jlesage/handbrake:latest
-    container_name: handbrake
+  pdf-tools:
+    image: gotenberg/gotenberg:8
+    container_name: pdf-tools
     restart: unless-stopped
     environment:
-      - TZ=Europe/Paris
-      - PUID=1000
-      - PGID=1000
-      - KEEP_APP_RUNNING=1
+      - DISABLE_GOOGLE_CHROME=0
     ports:
-      - "5800:5800"  # Interface Web
+      - "3000:3000"
     volumes:
-      - /DATA/AppData/$AppID/config:/config
-      - /DATA/AppData/$AppID/watch:/watch  # Dossier de surveillance pour conversion automatique
-      - /DATA/AppData/$AppID/output:/output  # Dossier de sortie
-      - /DATA/AppData/$AppID/storage:/storage  # Stockage temporaire
+      - /DATA/AppData/$AppID/storage:/storage
+      - /DATA/AppData/$AppID/output:/output
+    networks:
+      pcs: null
+
+  pdf-interface:
+    image: pdfmix/pdfmix:latest
+    container_name: pdf-interface
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - /DATA/AppData/$AppID/storage:/storage
+      - /DATA/AppData/$AppID/output:/output
+    depends_on:
+      - pdf-tools
     networks:
       pcs: null
 
@@ -28,16 +37,14 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  main: handbrake
+  main: pdf-interface
   author: UgEff
-  category: Multimedia
+  category: Office
   description:
-    en_us: HandBrake - The open source video transcoder
+    en_us: PDF Tools - Powerful PDF manipulation suite
   title:
-    en_us: HandBrake
-  port_map: "5800"
+    en_us: PDF Tools
+  port_map: "8080"
   volumes:
-    - /DATA/AppData/$AppID/config
-    - /DATA/AppData/$AppID/watch
-    - /DATA/AppData/$AppID/output
     - /DATA/AppData/$AppID/storage
+    - /DATA/AppData/$AppID/output
