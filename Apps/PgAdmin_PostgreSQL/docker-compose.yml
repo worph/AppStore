@@ -10,51 +10,32 @@ services:
     container_name: pgadmin
     # Redémarrage automatique sauf si arrêté manuellement
     restart: unless-stopped
-    # Configuration correcte de l'utilisateur (user ID:group ID)
-    user: "5050:5050"
     environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@example.com     # Email de connexion
-      - PGADMIN_DEFAULT_PASSWORD=admin              # Mot de passe de connexion
-      - PGADMIN_LISTEN_PORT=80
-      - PGADMIN_SERVER_JSON_FILE=/var/lib/pgadmin/servers.json
-      - PGADMIN_SESSION_DIR=/var/lib/pgadmin/sessions
-      - PGADMIN_DATA_DIR=/var/lib/pgadmin
-    # Configuration du port
+      - PGADMIN_DEFAULT_EMAIL=admin@example.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
     ports:
-      - target: 80
-        published: "8080"
-        protocol: tcp
-    # Configuration des volumes pour la persistance des données
+      - "8080:80"
     volumes:
-      - type: bind
-        source: /DATA/AppData/$AppID/pgadmin
-        target: /var/lib/pgadmin
-    # Dépendance avec attente que PostgreSQL soit prêt
+      - /DATA/AppData/$AppID/pgadmin:/var/lib/pgadmin
     depends_on:
-      postgres_pgadmin:        # Changé pour correspondre au nom du conteneur
+      postgres:
         condition: service_healthy
-    # Configuration réseau
     networks:
-      pcs: null               # Format correct pour le réseau
+      pcs: null
 
   # Service pour le serveur PostgreSQL
-  postgres_pgadmin:           # Renommé pour éviter les conflits
+  postgres:
     image: postgres:latest
-    container_name: postgres_pgadmin
+    container_name: postgres
     restart: unless-stopped
     # Variables d'environnement pour PostgreSQL
     environment:
-      - POSTGRES_USER=admin                        
-      - POSTGRES_PASSWORD=admin                     
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
       - POSTGRES_DB=postgres
-      - POSTGRES_INITDB_ARGS="--auth-host=scram-sha-256"
-    # Volume pour les données PostgreSQL
     volumes:
-      - type: bind
-        source: /DATA/AppData/$AppID/postgres
-        target: /var/lib/postgresql/data
-    # Port exposé pour accès externe si nécessaire
-    expose:                   # Changé ports en expose comme dans RocketChat
+      - /DATA/AppData/$AppID/postgres:/var/lib/postgresql/data
+    expose:
       - 5432
     # Vérification de la santé du service
     healthcheck:
@@ -64,15 +45,11 @@ services:
       retries: 5
     networks:
       pcs: null
-    command: 
-      - "postgres"
-      - "-c"
-      - "listen_addresses=*"
 
 # Définition du réseau partagé
 networks:
   pcs:
-    name: pcs                 # Simplifié comme dans RocketChat
+    name: pcs
 
 # Configuration spécifique à CasaOS
 x-casaos:
@@ -83,13 +60,9 @@ x-casaos:
   author: UgEff
   category: Database
   description:
-    en_us: pgAdmin - A web-based database management tool for PostgreSQL with integrated PostgreSQL server
-  developer: PostgreSQL
-  tagline:
-    en_us: Manage PostgreSQL databases easily with pgAdmin
+    en_us: pgAdmin - A web-based database management tool for PostgreSQL
   title:
     en_us: PgAdmin + PostgreSQL
-  index: /
   port_map: "8080"
   volumes:
     - /DATA/AppData/$AppID/pgadmin
