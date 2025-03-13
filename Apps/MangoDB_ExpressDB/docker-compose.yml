@@ -1,5 +1,5 @@
 # Nom du projet Docker Compose
-name: mongo
+name: mongodb
 
 services:
   # Service pour le serveur MongoDB
@@ -11,9 +11,7 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=admin           # Utilisateur root MongoDB
       - MONGO_INITDB_ROOT_PASSWORD=admin           # Mot de passe root MongoDB
     volumes:
-      - type: bind
-        source: /DATA/AppData/$AppID/mongodb
-        target: /data/db
+      - /DATA/AppData/$AppID/mongodb:/data/db
     expose:
       - 27017                                      # Port MongoDB (interne uniquement)
     # Vérification de la santé du service
@@ -26,22 +24,21 @@ services:
       pcs: null                                    # Connexion au réseau partagé
 
   # Service pour l'interface web Mongo-Express
-  mongo-express:                                   # Renommé pour plus de clarté
-    image: mongo-express:latest                    # Image officielle Mongo-Express
-    container_name: mongo-express                  # Nom du conteneur
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
     restart: unless-stopped
     environment:
       - ME_CONFIG_MONGODB_URL=mongodb://admin:admin@mongodb:27017/
-      - ME_CONFIG_BASICAUTH_USERNAME=admin         # Utilisateur pour l'interface web
-      - ME_CONFIG_BASICAUTH_PASSWORD=pass          # Mot de passe pour l'interface web
-      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true        # Activation des fonctionnalités admin
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin
     ports:
-      - target: 8081                              # Port interne
-        published: "8081"                         # Port exposé sur l'hôte
-        protocol: tcp
+      - "8081:8081"
+    volumes:
+      - /DATA/AppData/$AppID/mongo-express:/data
     depends_on:
       mongodb:
-        condition: service_healthy                 # Attendre que MongoDB soit prêt
+        condition: service_healthy
     networks:
       pcs: null
 
@@ -55,7 +52,7 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  main: mongo-express                             # Service principal (interface utilisateur)
+  main: mongo-express
   author: UgEff
   category: Database
   description:
@@ -67,8 +64,11 @@ x-casaos:
   tagline:
     en_us: Manage your MongoDB databases easily via a web interface.
   title:
-    en_us: Mongo Express
+    en_us: MongoDB + Mongo Express
   index: /
   port_map: "8081"
-  volumes:                                        # Déclaration explicite des volumes
-    - /DATA/AppData/$AppID/mongodb
+  volumes:
+    - container: /data
+      description: Mongo Express Data
+    - container: /data/db
+      description: MongoDB Data
