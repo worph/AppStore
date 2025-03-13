@@ -11,9 +11,13 @@ services:
     # Redémarrage automatique sauf si arrêté manuellement
     restart: unless-stopped
     # Variables d'environnement pour la configuration de pgAdmin
+    user: "5050:5050"
     environment:
       - PGADMIN_DEFAULT_EMAIL=admin@example.com     # Email de connexion
       - PGADMIN_DEFAULT_PASSWORD=admin              # Mot de passe de connexion
+      # Ajout des permissions pour le dossier sessions
+      - PGADMIN_LISTEN_PORT=80
+      - PGADMIN_SERVER_JSON_FILE=/var/lib/pgadmin/servers.json
     # Configuration du port
     ports:
       - target: 80          # Port interne du conteneur
@@ -41,7 +45,7 @@ services:
     environment:
       - POSTGRES_USER=admin                         # Utilisateur par défaut
       - POSTGRES_PASSWORD=admin                     # Mot de passe
-      - POSTGRES_DB=pgadmin                           # Base de données par défaut
+      - POSTGRES_DB=postgres      # Changé de pgadmin à postgres
     # Volume pour les données PostgreSQL
     volumes:
       - type: bind
