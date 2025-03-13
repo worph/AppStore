@@ -61,7 +61,5 @@ x-casaos:
     en_us: MongoDB + Mongo Express
   port_map: "8081"
   volumes:
-    - container: /data
-      description: Mongo Express Data
-    - container: /data/db
-      description: MongoDB Data
+    - /DATA/AppData/$AppID/mongo-express
+    - /DATA/AppData/$AppID/mongodb
