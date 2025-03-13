@@ -1,0 +1,46 @@
+#This compose file adds draw.io to your stack
+name: drawio
+
+services:
+  drawio:
+    image: jgraph/drawio
+    container_name: drawio
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - /DATA/AppData/$AppID/drawio:/data
+    environment:
+      PUBLIC_DNS: localhost
+      ORGANISATION_UNIT: unit
+      ORGANISATION: org
+      CITY: city
+      STATE: state
+      COUNTRY_CODE: country
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    networks:
+      pcs: null
+
+networks:
+  pcs:
+    name: pcs
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: drawio
+  author: UgEff
+  category: Development
+  description:
+    en_us: Draw.io - Diagram creation and sharing tool
+  title:
+    en_us: Draw.io
+  port_map: "8080"
+  volumes:
+    - /DATA/AppData/$AppID/drawio
