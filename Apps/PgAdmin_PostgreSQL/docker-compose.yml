@@ -26,7 +26,7 @@ services:
     # Configuration des volumes pour la persistance des données
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/data
+        source: /DATA/AppData/$AppID/pgadmin
         target: /var/lib/pgadmin
     # Configuration réseau
     networks:
@@ -45,7 +45,7 @@ services:
     # Volume pour les données PostgreSQL
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/data
+        source: /DATA/AppData/$AppID/pgadmin
         target: /var/lib/postgresql/data
     # Port exposé uniquement aux autres services (non accessible depuis l'extérieur)
     expose:
@@ -82,4 +82,4 @@ x-casaos:
   index: /                                        # Page d'accueil de l'application
   port_map: "8080"                               # Port principal pour accéder à l'application
   volumes:
-    - /DATA/AppData/$AppID/data
+    - /DATA/AppData/$AppID/pgadmin
