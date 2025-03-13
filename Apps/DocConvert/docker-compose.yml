@@ -7,14 +7,18 @@ services:
     restart: unless-stopped
     environment:
       - JWT_ENABLED=false
+      - GENERATE_DEFAULT_FONTS=true
+      - DB_HOST=localhost
+      - DB_PORT=5432
+      - DB_NAME=onlyoffice
+      - DB_USER=onlyoffice
+      - AMQP_HOST=localhost
+      - AMQP_PORT=5672
     ports:
       - "8080:80"
     volumes:
-      - /DATA/AppData/$AppID/logs:/var/log/onlyoffice
       - /DATA/AppData/$AppID/data:/var/www/onlyoffice/Data
-      - /DATA/AppData/$AppID/lib:/var/lib/onlyoffice
-      - /DATA/AppData/$AppID/db:/var/lib/postgresql
-      - /DATA/AppData/$AppID/cache:/var/lib/onlyoffice/documentserver/App_Data/cache/files
+      - /DATA/AppData/$AppID/logs:/var/log/onlyoffice
     networks:
       pcs: null
 
@@ -32,11 +36,8 @@ x-casaos:
   description:
     en_us: OnlyOffice Document Server - Professional online editor for PDF and Office documents
   title:
-    en_us: PDF Editor
+    en_us: Document Converter & Editor
   port_map: "8080"
   volumes:
-    - /DATA/AppData/$AppID/logs
     - /DATA/AppData/$AppID/data
-    - /DATA/AppData/$AppID/lib
-    - /DATA/AppData/$AppID/db
-    - /DATA/AppData/$AppID/cache
+    - /DATA/AppData/$AppID/logs
