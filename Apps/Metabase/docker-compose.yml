@@ -2,49 +2,18 @@
 name: metabase
 
 services:
-  # Service pour la base de données PostgreSQL de Metabase
-  postgres_metabase:
-    image: postgres:latest                         # Image officielle PostgreSQL
-    container_name: postgres_metabase              # Nom du conteneur
-    restart: unless-stopped                        # Redémarrage automatique
-    environment:
-      - POSTGRES_USER=admin                        # Utilisateur PostgreSQL
-      - POSTGRES_PASSWORD=admin                    # Mot de passe PostgreSQL
-      - POSTGRES_DB=metabase                       # Base de données pour Metabase
+  metabase:
+    image: metabase/metabase:latest
+    container_name: metabase
+    restart: unless-stopped
+    ports:
+      - target: 3000
+        published: "3000"
+        protocol: tcp
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/postgres      # Stockage persistant sur l'hôte
-        target: /var/lib/postgresql/data           # Point de montage dans le conteneur
-    expose:
-      - 5432                                       # Port PostgreSQL (interne uniquement)
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin"]  # Vérification de la santé
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      pcs: null                                    # Connexion au réseau partagé
-
-  # Service pour Metabase
-  metabase:
-    image: metabase/metabase:latest               # Image officielle Metabase
-    container_name: metabase                       # Nom du conteneur
-    restart: unless-stopped
-    environment:
-      - MB_DB_TYPE=postgres                       # Type de base de données
-      - MB_DB_DBNAME=metabase                     # Nom de la base de données
-      - MB_DB_PORT=5432                           # Port de la base de données
-      - MB_DB_USER=admin                          # Utilisateur de la base de données
-      - MB_DB_PASS=admin                          # Mot de passe de la base de données
-      - MB_DB_HOST=postgres_metabase              # Nom d'hôte de la base de données
-      - JAVA_TIMEZONE=Europe/Paris                # Fuseau horaire
-    ports:
-      - target: 3000                              # Port interne
-        published: "3000"                         # Port exposé sur l'hôte
-        protocol: tcp
-    depends_on:
-      postgres_metabase:
-        condition: service_healthy                # Attendre que PostgreSQL soit prêt
+        source: /DATA/AppData/$AppID/metabase
+        target: /metabase-data
     networks:
       pcs: null
 
@@ -58,17 +27,17 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  main: metabase                                  # Service principal (interface utilisateur)
+  main: metabase
   author: UgEff
   category: Analytics
   description:
-    en_us: Metabase - The easy, open-source way for everyone to ask questions and learn from data.
+    en_us: Metabase - Business Intelligence and Analytics tool that lets you ask questions about your data
   developer: Metabase
   tagline:
-    en_us: Business Intelligence and Analytics made simple
+    en_us: Easy analytics and data visualization for your team
   title:
     en_us: Metabase
   index: /
   port_map: "3000"
-  volumes:                                        # Déclaration explicite des volumes
-    - /DATA/AppData/$AppID/postgres
+  volumes:
+    - /DATA/AppData/$AppID/metabase
