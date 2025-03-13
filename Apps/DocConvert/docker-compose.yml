@@ -1,29 +1,20 @@
-name: pdftools
+name: pdfeditor
 
 services:
-  pdf-tools:
-    image: gotenberg/gotenberg:8
-    container_name: pdf-tools
+  onlyoffice:
+    image: onlyoffice/documentserver:latest
+    container_name: onlyoffice
     restart: unless-stopped
     environment:
-      - DISABLE_GOOGLE_CHROME=0
-    ports:
-      - "3000:3000"
-    volumes:
-      - /DATA/AppData/$AppID/pdf-tools:/var/lib/gotenberg
-    networks:
-      pcs: null
-
-  pdf-interface:
-    image: pdfmix/pdfmix:latest
-    container_name: pdf-interface
-    restart: unless-stopped
+      - JWT_ENABLED=false
     ports:
       - "8080:80"
     volumes:
-      - /DATA/AppData/$AppID/pdf-interface:/app/data
-    depends_on:
-      - pdf-tools
+      - /DATA/AppData/$AppID/logs:/var/log/onlyoffice
+      - /DATA/AppData/$AppID/data:/var/www/onlyoffice/Data
+      - /DATA/AppData/$AppID/lib:/var/lib/onlyoffice
+      - /DATA/AppData/$AppID/db:/var/lib/postgresql
+      - /DATA/AppData/$AppID/cache:/var/lib/onlyoffice/documentserver/App_Data/cache/files
     networks:
       pcs: null
 
@@ -35,14 +26,17 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  main: pdf-interface
+  main: onlyoffice
   author: UgEff
   category: Office
   description:
-    en_us: PDF Tools - Powerful PDF manipulation suite
+    en_us: OnlyOffice Document Server - Professional online editor for PDF and Office documents
   title:
-    en_us: PDF Tools
+    en_us: PDF Editor
   port_map: "8080"
   volumes:
-    - /DATA/AppData/$AppID/pdf-tools
-    - /DATA/AppData/$AppID/pdf-interface
+    - /DATA/AppData/$AppID/logs
+    - /DATA/AppData/$AppID/data
+    - /DATA/AppData/$AppID/lib
+    - /DATA/AppData/$AppID/db
+    - /DATA/AppData/$AppID/cache
