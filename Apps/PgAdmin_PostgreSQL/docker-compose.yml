@@ -10,25 +10,24 @@ services:
     container_name: pgadmin
     # Redémarrage automatique sauf si arrêté manuellement
     restart: unless-stopped
-    user: "5050:5050"
-    # Dépendance avec attente que PostgreSQL soit prêt
-    depends_on:
-      postgres_pgadmin:
-        condition: service_healthy
+    # Variables d'environnement pour la configuration de pgAdmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@example.com     # Email de connexion
+      - PGADMIN_DEFAULT_PASSWORD=admin              # Mot de passe de connexion
     # Configuration du port
     ports:
       - target: 80          # Port interne du conteneur
         published: "8080"   # Port exposé sur l'hôte
         protocol: tcp       # Protocole utilisé
-    # Variables d'environnement pour la configuration de pgAdmin
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@example.com     # Email de connexion
-      - PGADMIN_DEFAULT_PASSWORD=admin              # Mot de passe de connexion
     # Configuration des volumes pour la persistance des données
     volumes:
       - type: bind
         source: /DATA/AppData/$AppID/pgadmin
         target: /var/lib/pgadmin
+    # Dépendance avec attente que PostgreSQL soit prêt
+    depends_on:
+      postgres_pgadmin:
+        condition: service_healthy
     # Configuration réseau
     networks:
       pcs: null            # Connexion au réseau 'pcs' partagé
@@ -85,3 +84,5 @@ x-casaos:
   volumes:
     - /DATA/AppData/$AppID/pgadmin
     - /DATA/AppData/$AppID/postgres
+
+    # a voir pour les volumes
