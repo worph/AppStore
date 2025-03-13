@@ -1,0 +1,43 @@
+name: handbrake
+
+services:
+  handbrake:
+    image: jlesage/handbrake:latest
+    container_name: handbrake
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Paris
+      - PUID=1000
+      - PGID=1000
+      - KEEP_APP_RUNNING=1
+    ports:
+      - "5800:5800"  # Interface Web
+    volumes:
+      - /DATA/AppData/$AppID/config:/config
+      - /DATA/AppData/$AppID/watch:/watch  # Dossier de surveillance pour conversion automatique
+      - /DATA/AppData/$AppID/output:/output  # Dossier de sortie
+      - /DATA/AppData/$AppID/storage:/storage  # Stockage temporaire
+    networks:
+      pcs: null
+
+networks:
+  pcs:
+    name: pcs
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: handbrake
+  author: UgEff
+  category: Multimedia
+  description:
+    en_us: HandBrake - The open source video transcoder
+  title:
+    en_us: HandBrake
+  port_map: "5800"
+  volumes:
+    - /DATA/AppData/$AppID/config
+    - /DATA/AppData/$AppID/watch
+    - /DATA/AppData/$AppID/output
+    - /DATA/AppData/$AppID/storage
