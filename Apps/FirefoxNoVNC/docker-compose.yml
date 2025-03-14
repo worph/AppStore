@@ -1,0 +1,54 @@
+name: firefox
+services:
+  firefox:
+    image: jlesage/firefox:latest
+    restart: unless-stopped
+    network_mode: bridge
+    environment:
+      VNC_PASSWORD: '$default_pwd'
+    expose:
+      - 5800
+    container_name: firefox
+
+x-casaos:
+  main: firefox
+  webui_port: 5800
+  architectures:
+    - amd64
+  tagline:
+    en_us: WEB UI to access Firefox via NoVNC.
+    zh_cn: 通过 NoVNC 访问 Firefox 的 WEB UI。
+    de_de: WEB UI zum Zugriff auf Firefox über NoVNC.
+    es_es: Interfaz WEB para acceder a Firefox a través de NoVNC.
+    fr_fr: Interface WEB pour accéder à Firefox via NoVNC.
+    hu_hu: WEB felhasználói felület a Firefox eléréséhez NoVNC-n keresztül.
+    it_it: Interfaccia WEB per accedere a Firefox tramite NoVNC.
+    ru_ru: Веб-интерфейс для доступа к Firefox через NoVNC.
+    pl_pl: WEB UI do uzyskiwania dostępu do Firefox za pomocą NoVNC.
+    pt_br: WEB UI para acessar o Firefox via NoVNC.
+    sv_se: WEB UI för att komma åt Firefox via NoVNC.
+    uk_ua: Веб-інтерфейс для доступу до Firefox через NoVNC.
+  description:
+    en_us: A simple way to run and access Firefox remotely using NoVNC.
+    zh_cn: 通过 NoVNC 远程运行和访问 Firefox 的简单方式。
+    de_de: Eine einfache Möglichkeit, Firefox remote mit NoVNC auszuführen und darauf zuzugreifen.
+    es_es: Una forma sencilla de ejecutar y acceder de forma remota a Firefox usando NoVNC.
+    fr_fr: Un moyen simple d'exécuter et d'accéder à Firefox à distance via NoVNC.
+    hu_hu: Egyszerű módja annak, hogy távolról futtasson és elérjen egy Firefox környezetet NoVNC segítségével.
+    it_it: Un modo semplice per eseguire e accedere a Firefox da remoto con NoVNC.
+    ru_ru: Простой способ удаленно запускать и получать доступ к Firefox через NoVNC.
+    pl_pl: Prosty sposób na zdalne uruchamianie i dostęp do Firefox za pomocą NoVNC.
+    pt_br: Uma maneira simples de executar e acessar o Firefox remotamente via NoVNC.
+    sv_se: Ett enkelt sätt att köra och komma åt Firefox på distans med NoVNC.
+    uk_ua: Простий спосіб запуску та доступу до Firefox віддалено через NoVNC.
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/FirefoxNoVNC/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/FirefoxNoVNC/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/FirefoxNoVNC/screenshot-3.png
+  developer: jlesage
+  author: jlesage
+  icon: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/FirefoxNoVNC/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/FirefoxNoVNC/icon.png
+  category: Web Browser
+  title:
+    en_us: Firefox NoVNC

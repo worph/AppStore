@@ -1,7 +1,7 @@
 name: ubuntu
 services:
   ubuntu:
-    image: dorowu/ubuntu-desktop-lxde-vnc
+    image: dorowu/ubuntu-desktop-lxde-vnc:latest
     restart: unless-stopped
     network_mode: bridge
     environment:
