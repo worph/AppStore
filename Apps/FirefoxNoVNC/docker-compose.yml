@@ -42,13 +42,13 @@ x-casaos:
     sv_se: Ett enkelt sätt att köra och komma åt Firefox på distans med NoVNC.
     uk_ua: Простий спосіб запуску та доступу до Firefox віддалено через NoVNC.
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/FirefoxNoVNC/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/FirefoxNoVNC/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/FirefoxNoVNC/screenshot-3.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/FirefoxNoVNC/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/FirefoxNoVNC/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/FirefoxNoVNC/screenshot-3.png
   developer: jlesage
   author: jlesage
-  icon: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/FirefoxNoVNC/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/FirefoxNoVNC/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/FirefoxNoVNC/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/FirefoxNoVNC/icon.png
   category: Web Browser
   title:
     en_us: Firefox NoVNC

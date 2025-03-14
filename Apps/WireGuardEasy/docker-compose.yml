@@ -68,38 +68,14 @@ x-casaos:
     sv_se: Du har hittat det enklaste sättet att installera och hantera WireGuard på en Linux-värd!
     uk_ua: Ви знайшли найпростіший спосіб встановити WireGuard та керувати ним на будь-якому комп'ютері з Linux!
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/WireGuardEasy/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/WireGuardEasy/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/WireGuardEasy/screenshot-3.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasy/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasy/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasy/screenshot-3.png
   developer: WeejeWel
   author: Sawy
-  icon: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/WireGuardEasy/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/WireGuardEasy/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasy/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasy/icon.png
   category: Network
-  tips:
-    before_install:
-      en_us: |
-        🔧 Settings
-
-        Default password: `casaos`
-
-        ⚠️ Warning!
-
-        You need to change at least change the mandatory parameter `WG_HOST` for this app to work properly.
-        It's value has to be a domain (or an IP address) that points to this server (accesible from WAN).
-
-        Same applies to the `WG_PORT` parameter. Change it to the port accessible from outside your LAN if it differs from the default 51820.
-      zh_cn: |
-        🔧 设置
-
-        默认密码： `casaos`
-
-        ⚠️ 警告！
-
-        您至少需要更改强制参数 `WG_HOST` 才能使本应用程序正常工作。
-        其值必须是指向本服务器的域（或 IP 地址）（可从广域网访问）。
-
-        同样，`WG_PORT` 参数也是如此。如果与默认的 51820 不同，请将其更改为局域网外可以访问的端口。
   title:
     en_us: WireGuard Easy
   webui_port: 51821

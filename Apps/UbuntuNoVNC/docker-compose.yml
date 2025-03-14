@@ -50,13 +50,13 @@ x-casaos:
     sv_se: Ett enkelt sätt att köra och komma åt en Ubuntu-skrivbordsmiljö på distans med NoVNC.
     uk_ua: Простий спосіб запуску та доступу до середовища робочого столу Ubuntu віддалено через NoVNC.
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/UbuntuNoVNC/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/UbuntuNoVNC/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/UbuntuNoVNC/screenshot-3.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/UbuntuNoVNC/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/UbuntuNoVNC/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/UbuntuNoVNC/screenshot-3.png
   developer: dorowu
   author: dorowu
-  icon: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/UbuntuNoVNC/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/UbuntuNoVNC/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/UbuntuNoVNC/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/UbuntuNoVNC/icon.png
   category: Remote Desktop
   title:
     en_us: Ubuntu NoVNC
