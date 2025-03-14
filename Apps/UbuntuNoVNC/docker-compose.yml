@@ -1,0 +1,62 @@
+name: ubuntu
+services:
+  ubuntu:
+    image: dorowu/ubuntu-desktop-lxde-vnc
+    restart: unless-stopped
+    network_mode: bridge
+    environment:
+      VNC_PASSWORD: '$default_pwd'
+    expose:
+      - 80
+    ports:
+      - target: 5900
+        published: 5900
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: /dev/shm
+        target: /dev/shm
+    container_name: ubuntu
+
+x-casaos:
+  main: ubuntu
+  webui_port: 80
+  architectures:
+    - amd64
+  tagline:
+    en_us: WEB UI to access an Ubuntu desktop via NoVNC.
+    zh_cn: 通过 NoVNC 访问 Ubuntu 桌面的 WEB UI。
+    de_de: WEB UI zum Zugriff auf einen Ubuntu-Desktop über NoVNC.
+    es_es: Interfaz WEB para acceder a un escritorio Ubuntu a través de NoVNC.
+    fr_fr: Interface WEB pour accéder à un bureau Ubuntu via NoVNC.
+    hu_hu: WEB felhasználói felület Ubuntu asztal eléréséhez NoVNC-n keresztül.
+    it_it: Interfaccia WEB per accedere a un desktop Ubuntu tramite NoVNC.
+    ru_ru: Веб-интерфейс для доступа к рабочему столу Ubuntu через NoVNC.
+    pl_pl: WEB UI do uzyskiwania dostępu do pulpitu Ubuntu za pomocą NoVNC.
+    pt_br: WEB UI para acessar um desktop Ubuntu via NoVNC.
+    sv_se: WEB UI för att komma åt en Ubuntu-skrivbordsmiljö via NoVNC.
+    uk_ua: Веб-інтерфейс для доступу до робочого столу Ubuntu через NoVNC.
+  description:
+    en_us: A simple way to run and access an Ubuntu desktop environment remotely using NoVNC.
+    zh_cn: 通过 NoVNC 远程运行和访问 Ubuntu 桌面环境的简单方式。
+    de_de: Eine einfache Möglichkeit, eine Ubuntu-Desktopumgebung remote mit NoVNC auszuführen und darauf zuzugreifen.
+    es_es: Una forma sencilla de ejecutar y acceder de forma remota a un entorno de escritorio Ubuntu usando NoVNC.
+    fr_fr: Un moyen simple d'exécuter et d'accéder à un environnement de bureau Ubuntu à distance via NoVNC.
+    hu_hu: Egyszerű módja annak, hogy távolról futtasson és elérjen egy Ubuntu asztali környezetet NoVNC segítségével.
+    it_it: Un modo semplice per eseguire e accedere a un ambiente desktop Ubuntu da remoto con NoVNC.
+    ru_ru: Простой способ удаленно запускать и получать доступ к среде рабочего стола Ubuntu через NoVNC.
+    pl_pl: Prosty sposób na zdalne uruchamianie i dostęp do środowiska pulpitu Ubuntu za pomocą NoVNC.
+    pt_br: Uma maneira simples de executar e acessar um ambiente de desktop Ubuntu remotamente via NoVNC.
+    sv_se: Ett enkelt sätt att köra och komma åt en Ubuntu-skrivbordsmiljö på distans med NoVNC.
+    uk_ua: Простий спосіб запуску та доступу до середовища робочого столу Ubuntu віддалено через NoVNC.
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/UbuntuNoVNC/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/UbuntuNoVNC/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/UbuntuNoVNC/screenshot-3.png
+  developer: dorowu
+  author: dorowu
+  icon: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/UbuntuNoVNC/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/UbuntuNoVNC/icon.png
+  category: Remote Desktop
+  title:
+    en_us: Ubuntu NoVNC
