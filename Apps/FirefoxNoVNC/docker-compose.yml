@@ -8,6 +8,10 @@ services:
       VNC_PASSWORD: '$default_pwd'
     expose:
       - 5800
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/firefox
+        target: /config
     container_name: firefox
 
 x-casaos:
