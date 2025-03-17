@@ -41,6 +41,11 @@ x-casaos:
     en_us: Draw.io - Diagram creation and sharing tool
   title:
     en_us: Draw.io
+  icon: https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/DrawIO/DrawIO.png
+  screenshot_link:
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/DrawIO/screen1.png
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/DrawIO/screen2.png
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/DrawIO/screen3.png
   port_map: "8080"
   volumes:
     - /DATA/AppData/$AppID/drawio
