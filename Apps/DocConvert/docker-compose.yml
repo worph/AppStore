@@ -8,6 +8,11 @@ services:
     environment:
       - JWT_ENABLED=false
       - GENERATE_DEFAULT_FONTS=true
+      # Configuration de l'URL racine
+      - ROOT_URL=http://localhost:8080
+      - APP_PROTOCOL=http
+      - APP_HOST=localhost
+      - APP_PORT=8080
       # Configuration des services internes
       - DOCSERVICE_INTERNAL_PORT=8000
       - CONVERTER_INTERNAL_PORT=8001
@@ -21,7 +26,7 @@ services:
       - /DATA/AppData/$AppID/logs:/var/log/onlyoffice
       - /DATA/AppData/$AppID/fonts:/usr/share/fonts/truetype/custom  # Pour les polices personnalisées
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/healthcheck"]
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
       interval: 30s
       timeout: 10s
       retries: 3
