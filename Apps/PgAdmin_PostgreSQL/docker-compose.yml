@@ -61,9 +61,16 @@ x-casaos:
   author: UgEff
   category: Database
   description:
-    en_us: pgAdmin - A web-based database management tool for PostgreSQL
+    en_us: A pre-configured package combining PostgreSQL database server and pgAdmin web interface. PostgreSQL is a powerful, open-source relational database, and pgAdmin is its official management tool. This package includes both services configured to work together out of the box.
+  tagline:
+    en_us: Ready-to-use PostgreSQL database with pgAdmin management interface
   title:
     en_us: PgAdmin + PostgreSQL
+  icon: https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/PgAdmin_PostgreSQL/postgresql_icon.png
+  screenshot_link:
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/PgAdmin_PostgreSQL/screen1.png
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/PgAdmin_PostgreSQL/screen2.png
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/PgAdmin_PostgreSQL/screen3.png
   port_map: "8080"
   volumes:
     - container: /var/lib/pgadmin
