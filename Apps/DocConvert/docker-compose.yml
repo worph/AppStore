@@ -1,41 +1,22 @@
-name: pdfeditor
+name: libreoffice
 
 services:
-  onlyoffice:
-    image: onlyoffice/documentserver:latest
-    container_name: onlyoffice
+  collabora:
+    image: collabora/code:latest
+    container_name: collabora
     restart: unless-stopped
     environment:
-      # Configuration de base
-      - JWT_ENABLED=true
-      - JWT_SECRET=your-secret-key
-      - JWT_HEADER=Authorization
-      - JWT_IN_BODY=true
-      # Configuration des services
-      - DOCSERVICE_PORT_OFFSET=0
-      - DOCSERVICE_PORT=8000
-      - CONVERTER_PORT=8001
-      # Configuration des logs
-      - LOG_LEVEL=DEBUG
-      # Configuration système
-      - ONLYOFFICE_CORE_MACHINEKEY=your-core-key
+      - username=admin
+      - password=admin
+      - extra_params=--o:ssl.enable=false
+      - aliasgroup1=http://localhost:9980
+    cap_add:
+      - MKNOD
     ports:
-      - "8080:80"
-      - "8000:8000"
-      - "8001:8001"
+      - "9980:9980"
     volumes:
-      - /DATA/AppData/$AppID/data:/var/www/onlyoffice/Data
-      - /DATA/AppData/$AppID/logs:/var/log/onlyoffice
-      - /DATA/AppData/$AppID/db:/var/lib/postgresql
-      - /DATA/AppData/$AppID/rabbitmq:/var/lib/rabbitmq
-      - /DATA/AppData/$AppID/redis:/var/lib/redis
-      - /DATA/AppData/$AppID/fonts:/usr/share/fonts/truetype/custom
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/healthcheck"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
+      - /DATA/AppData/$AppID/config:/etc/loolwsd
+      - /DATA/AppData/$AppID/data:/var/lib/lool
     networks:
       pcs: null
 
@@ -47,18 +28,14 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  main: onlyoffice
+  main: collabora
   author: UgEff
   category: Office
   description:
-    en_us: OnlyOffice Document Server - Professional document editor and converter
+    en_us: LibreOffice Online - Edit documents, spreadsheets and presentations in your browser
   title:
-    en_us: Document Converter & Editor
-  port_map: "8080"
+    en_us: LibreOffice Online
+  port_map: "9980"
   volumes:
+    - /DATA/AppData/$AppID/config
     - /DATA/AppData/$AppID/data
-    - /DATA/AppData/$AppID/logs
-    - /DATA/AppData/$AppID/db
-    - /DATA/AppData/$AppID/rabbitmq
-    - /DATA/AppData/$AppID/redis
-    - /DATA/AppData/$AppID/fonts
