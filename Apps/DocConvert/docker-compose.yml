@@ -6,30 +6,36 @@ services:
     container_name: onlyoffice
     restart: unless-stopped
     environment:
-      - JWT_ENABLED=false
-      - GENERATE_DEFAULT_FONTS=true
-      # Configuration de l'URL racine
-      - ROOT_URL=http://localhost:8080
-      - APP_PROTOCOL=http
-      - APP_HOST=localhost
-      - APP_PORT=8080
-      # Configuration des services internes
-      - DOCSERVICE_INTERNAL_PORT=8000
-      - CONVERTER_INTERNAL_PORT=8001
-      # Configuration des ressources
-      - NODE_MAX_MEMORY=4096
-      - NGINX_MAX_WORKER_CONNECTIONS=4096
+      # Configuration de base
+      - JWT_ENABLED=true
+      - JWT_SECRET=your-secret-key
+      - JWT_HEADER=Authorization
+      - JWT_IN_BODY=true
+      # Configuration des services
+      - DOCSERVICE_PORT_OFFSET=0
+      - DOCSERVICE_PORT=8000
+      - CONVERTER_PORT=8001
+      # Configuration des logs
+      - LOG_LEVEL=DEBUG
+      # Configuration système
+      - ONLYOFFICE_CORE_MACHINEKEY=your-core-key
     ports:
       - "8080:80"
+      - "8000:8000"
+      - "8001:8001"
     volumes:
       - /DATA/AppData/$AppID/data:/var/www/onlyoffice/Data
       - /DATA/AppData/$AppID/logs:/var/log/onlyoffice
-      - /DATA/AppData/$AppID/fonts:/usr/share/fonts/truetype/custom  # Pour les polices personnalisées
+      - /DATA/AppData/$AppID/db:/var/lib/postgresql
+      - /DATA/AppData/$AppID/rabbitmq:/var/lib/rabbitmq
+      - /DATA/AppData/$AppID/redis:/var/lib/redis
+      - /DATA/AppData/$AppID/fonts:/usr/share/fonts/truetype/custom
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      test: ["CMD", "curl", "-f", "http://localhost:80/healthcheck"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 60s
     networks:
       pcs: null
 
@@ -52,4 +58,7 @@ x-casaos:
   volumes:
     - /DATA/AppData/$AppID/data
     - /DATA/AppData/$AppID/logs
+    - /DATA/AppData/$AppID/db
+    - /DATA/AppData/$AppID/rabbitmq
+    - /DATA/AppData/$AppID/redis
     - /DATA/AppData/$AppID/fonts
