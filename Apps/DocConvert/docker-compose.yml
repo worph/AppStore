@@ -1,31 +1,21 @@
-name: stirling-pdf
+name: pdfarranger
 
 services:
-  stirling-pdf:
-    image: frooodle/s-pdf:latest
-    container_name: stirling-pdf
+  pdfarranger:
+    image: lscr.io/linuxserver/pdfarranger:latest
+    container_name: pdfarranger
     restart: unless-stopped
     ports:
-      - "8989:8989"
+      - "3000:3000"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
     volumes:
-      - /DATA/AppData/$AppID/config:/configs
-      - /DATA/AppData/$AppID/data:/usr/share/tesseract-ocr/4.00/tessdata
-      - /DATA/AppData/$AppID/logs:/logs
+      - /DATA/AppData/$AppID/config:/config
+      - /DATA/AppData/$AppID/data:/data
     networks:
       pcs: null
-    environment:
-      - DOCKER_ENABLE_SECURITY=false
-      - BASE_URL=/
-      - ALLOW_HTTP=true
-      - SYSTEM_DEFAULTLOCALE=fr-FR
-      - SECURITY_ENABLELOGIN=false
-      - ENDPOINTS_TOREMOVE=[]
-      - SYSTEM_TESSDATADIR=/usr/share/tesseract-ocr/4.00/tessdata
-      - SERVER_PORT=8989
-      - LOGGING_CONFIG=classpath:logback-spring.xml
-      - SPRING_PROFILES_ACTIVE=prod
-    user: "1000:1000"
-    network_mode: host
 
 networks:
   pcs:
@@ -35,14 +25,14 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  main: stirling-pdf
+  main: pdfarranger
   author: UgEff
   category: Office
   description:
-    en_us: Powerful PDF manipulation tool - Split, merge, convert, and more
+    en_us: Simple application for PDF file merging, splitting, and reordering/rotating PDF pages
   title:
-    en_us: Stirling PDF
-  port_map: "8989"
+    en_us: PDF Arranger
+  port_map: "3000"
   volumes:
     - /DATA/AppData/$AppID/config
-    - /DATA/AppData/$AppID/data    - /DATA/AppData/$AppID/logs
+    - /DATA/AppData/$AppID/data
