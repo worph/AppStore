@@ -1,22 +1,15 @@
-name: libreoffice
+name: stirling-pdf
 
 services:
-  collabora:
-    image: collabora/code:latest
-    container_name: collabora
+  stirling-pdf:
+    image: frooodle/s-pdf:latest
+    container_name: stirling-pdf
     restart: unless-stopped
-    environment:
-      - username=admin
-      - password=admin
-      - extra_params=--o:ssl.enable=false
-      - aliasgroup1=http://localhost:9980
-    cap_add:
-      - MKNOD
     ports:
-      - "9980:9980"
+      - "8080:8080"
     volumes:
-      - /DATA/AppData/$AppID/config:/etc/loolwsd
-      - /DATA/AppData/$AppID/data:/var/lib/lool
+      - /DATA/AppData/$AppID/config:/configs
+      - /DATA/AppData/$AppID/data:/usr/share/tesseract-ocr/4.00/tessdata
     networks:
       pcs: null
 
@@ -28,14 +21,14 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  main: collabora
+  main: stirling-pdf
   author: UgEff
   category: Office
   description:
-    en_us: LibreOffice Online - Edit documents, spreadsheets and presentations in your browser
+    en_us: Powerful PDF manipulation tool - Split, merge, convert, and more
   title:
-    en_us: LibreOffice Online
-  port_map: "9980"
+    en_us: Stirling PDF
+  port_map: "8080"
   volumes:
     - /DATA/AppData/$AppID/config
     - /DATA/AppData/$AppID/data
