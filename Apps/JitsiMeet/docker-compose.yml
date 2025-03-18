@@ -40,3 +40,8 @@ x-casaos:
   port_map: "9000"
   volumes:
     - /DATA/AppData/$AppID/config
+  icon: https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/JitsiMeet/icon.png
+  screenshot_link:
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/JitsiMeet/screen1.png
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/JitsiMeet/screen2.png
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/JitsiMeet/screen3.png
