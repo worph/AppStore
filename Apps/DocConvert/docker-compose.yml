@@ -1,16 +1,17 @@
-name: gotenberg
+name: stirling-pdf
 
 services:
-  gotenberg:
-    image: gotenberg/gotenberg:7.10
-    container_name: gotenberg
+  stirling-pdf:
+    image: frooodle/s-pdf:latest
+    container_name: stirling-pdf
     restart: unless-stopped
     ports:
-      - "3000:3000"
-    environment:
-      - DISABLE_GOOGLE_CHROME=1
+      - "8080:8080"
     volumes:
       - /DATA/AppData/$AppID/data:/data
+    environment:
+      - DOCKER_ENABLE_SECURITY=false
+      - ALLOW_HTTP=true
     networks:
       pcs: null
 
@@ -22,13 +23,13 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  main: gotenberg
+  main: stirling-pdf
   author: UgEff
   category: Office
   description:
-    en_us: A Docker-powered stateless API for PDF files - Convert, Merge, and manipulate PDFs
+    en_us: Powerful PDF manipulation tool with web interface
   title:
-    en_us: Gotenberg PDF
-  port_map: "3000"
+    en_us: Stirling PDF
+  port_map: "8080"
   volumes:
     - /DATA/AppData/$AppID/data
