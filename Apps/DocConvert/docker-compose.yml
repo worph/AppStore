@@ -10,6 +10,7 @@ services:
     volumes:
       - /DATA/AppData/$AppID/config:/configs
       - /DATA/AppData/$AppID/data:/usr/share/tesseract-ocr/4.00/tessdata
+      - /DATA/AppData/$AppID/logs:/logs
     networks:
       pcs: null
     environment:
@@ -20,6 +21,8 @@ services:
       - SECURITY_ENABLELOGIN=false
       - ENDPOINTS_TOREMOVE=[]
       - SYSTEM_TESSDATADIR=/usr/share/tesseract-ocr/4.00/tessdata
+      - LOGGING_CONFIG=classpath:logback-spring.xml
+      - SPRING_PROFILES_ACTIVE=prod
     user: "1000:1000"
 
 networks:
@@ -40,4 +43,4 @@ x-casaos:
   port_map: "8989"
   volumes:
     - /DATA/AppData/$AppID/config
-    - /DATA/AppData/$AppID/data
+    - /DATA/AppData/$AppID/data    - /DATA/AppData/$AppID/logs
