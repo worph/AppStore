@@ -6,12 +6,23 @@ services:
     container_name: stirling-pdf
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8585:8080"
     volumes:
-      - /DATA/AppData/$AppID/data:/data
+      - /DATA/AppData/$AppID/config:/configs
+      - /DATA/AppData/$AppID/data:/workdir
     environment:
       - DOCKER_ENABLE_SECURITY=false
       - ALLOW_HTTP=true
+      - SYSTEM_DEFAULTLOCALE=fr-FR
+      - SECURITY_ENABLELOGIN=false
+      - SYSTEM_CUSTOMHTMLFILES=false
+      - SYSTEM_SHOWUPDATE=false
+      - SERVER_SERVLET_CONTEXT_PATH=/
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       pcs: null
 
@@ -30,6 +41,7 @@ x-casaos:
     en_us: Powerful PDF manipulation tool with web interface
   title:
     en_us: Stirling PDF
-  port_map: "8080"
+  port_map: "8585"
   volumes:
+    - /DATA/AppData/$AppID/config
     - /DATA/AppData/$AppID/data
