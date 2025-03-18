@@ -1,28 +1,25 @@
-name: stirling-pdf
+name: jitsi
 
 services:
-  stirling-pdf:
-    image: frooodle/s-pdf:latest
-    container_name: stirling-pdf
+  web:
+    image: jitsi/web:stable
+    container_name: jitsi-web
     restart: unless-stopped
     ports:
-      - "8585:8080"
+      - "9000:80"
     volumes:
-      - /DATA/AppData/$AppID/config:/configs
-      - /DATA/AppData/$AppID/data:/workdir
+      - /DATA/AppData/$AppID/config:/config
     environment:
-      - DOCKER_ENABLE_SECURITY=false
-      - ALLOW_HTTP=true
-      - SYSTEM_DEFAULTLOCALE=fr-FR
-      - SECURITY_ENABLELOGIN=false
-      - SYSTEM_CUSTOMHTMLFILES=false
-      - SYSTEM_SHOWUPDATE=false
-      - SERVER_SERVLET_CONTEXT_PATH=/
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - ENABLE_AUTH=0
+      - ENABLE_GUESTS=1
+      - DISABLE_HTTPS=1
+      - PUBLIC_URL=https://${APP_URL}
+      - ENABLE_XMPP_WEBSOCKET=0
+      - ENABLE_IPV6=0
+      - ENABLE_HTTP_REDIRECT=0
+      - ENABLE_WELCOME_PAGE=1
+      - ENABLE_CLOSE_PAGE=0
+      - TZ=Europe/Paris
     networks:
       pcs: null
 
@@ -33,15 +30,13 @@ networks:
 x-casaos:
   architectures:
     - amd64
-    - arm64
-  main: stirling-pdf
+  main: web
   author: UgEff
-  category: Office
+  category: Communication
   description:
-    en_us: Powerful PDF manipulation tool with web interface
+    en_us: Secure and simple video conferencing
   title:
-    en_us: Stirling PDF
-  port_map: "8585"
+    en_us: Jitsi Meet (Lite)
+  port_map: "9000"
   volumes:
     - /DATA/AppData/$AppID/config
-    - /DATA/AppData/$AppID/data
