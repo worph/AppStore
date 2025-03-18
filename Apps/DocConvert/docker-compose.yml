@@ -2,18 +2,15 @@ name: pdfarranger
 
 services:
   pdfarranger:
-    image: lscr.io/linuxserver/pdfarranger:latest
+    image: jeromerobert/pdfarranger-docker-ci:latest
     container_name: pdfarranger
     restart: unless-stopped
-    ports:
-      - "3000:3000"
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Paris
+      - DISPLAY=:0
     volumes:
-      - /DATA/AppData/$AppID/config:/config
+      - /DATA/AppData/$AppID/config:/home/user/.config
       - /DATA/AppData/$AppID/data:/data
+      - /tmp/.X11-unix:/tmp/.X11-unix
     networks:
       pcs: null
 
@@ -32,7 +29,7 @@ x-casaos:
     en_us: Simple application for PDF file merging, splitting, and reordering/rotating PDF pages
   title:
     en_us: PDF Arranger
-  port_map: "3000"
+  port_map: ""
   volumes:
     - /DATA/AppData/$AppID/config
     - /DATA/AppData/$AppID/data
