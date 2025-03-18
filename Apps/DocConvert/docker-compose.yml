@@ -16,6 +16,11 @@ services:
       - DOCKER_ENABLE_SECURITY=false
       - BASE_URL=/
       - ALLOW_HTTP=true
+      - SYSTEM_DEFAULTLOCALE=fr-FR
+      - SECURITY_ENABLELOGIN=false
+      - ENDPOINTS_TOREMOVE=[]
+      - SYSTEM_TESSDATADIR=/usr/share/tesseract-ocr/4.00/tessdata
+    user: "1000:1000"
 
 networks:
   pcs:
