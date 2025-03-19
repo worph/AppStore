@@ -1,0 +1,56 @@
+name: silex
+services:
+  silex:
+    image: silexlabs/silex:v3.0.3
+    restart: unless-stopped
+    network_mode: bridge
+    x-casaos:
+      volumes:
+        - container: /app/data
+          description:
+            en_us: Contains Silex website files and settings.
+      ports:
+        - container: '6805'
+          description:
+            en_us: Silex web editor port
+    expose:
+      - 6805
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/silex
+        target: /app/data
+    container_name: silex
+x-casaos:
+  architectures:
+    - amd64
+    - arm
+    - arm64
+  main: silex
+  tagline:
+    en_us: Open Source Web Design Editor.
+    fr_fr: Éditeur de conception web open-source.
+    es_es: Editor de diseño web de código abierto.
+    de_de: Open-Source-Web-Design-Editor.
+    it_it: Editor di design web open-source.
+    ru_ru: Редактор веб-дизайна с открытым исходным кодом.
+    zh_cn: 开源网页设计编辑器。
+  description:
+    en_us: Silex is a free and open-source website builder with a visual editor.
+    fr_fr: Silex est un constructeur de site web gratuit et open-source avec un éditeur visuel.
+    es_es: Silex es un creador de sitios web gratuito y de código abierto con un editor visual.
+    de_de: Silex ist ein kostenloser und Open-Source-Website-Builder mit visuellem Editor.
+    it_it: Silex è un costruttore di siti web gratuito e open-source con un editor visivo.
+    ru_ru: Silex — это бесплатный конструктор сайтов с открытым исходным кодом и визуальным редактором.
+    zh_cn: Silex 是一个免费的开源网站构建器，具有可视化编辑器。
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Silex/screenshot-1.jpg
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Silex/screenshot-2.jpg
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Silex/screenshot-3.jpg
+  developer: Silex Labs
+  author: Silex Community
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Silex/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Silex/thumbnail.jpg
+  category: Web
+  title:
+    en_us: Silex Web Builder
+  webui_port: 6805
