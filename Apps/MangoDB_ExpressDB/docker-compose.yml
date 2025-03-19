@@ -4,42 +4,39 @@ name: mongodb
 services:
   # Service pour le serveur MongoDB
   mongodb:
-    image: mongo:latest                            # Image officielle MongoDB
-    container_name: mongodb                         # Nom du conteneur
-    restart: unless-stopped                         # Redémarrage automatique
+    image: mongo:6
+    container_name: mongodb
+    restart: unless-stopped
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin           # Utilisateur root MongoDB
-      - MONGO_INITDB_ROOT_PASSWORD=admin           # Mot de passe root MongoDB
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin
     volumes:
-      - /DATA/AppData/$AppID/mongodb:/data/db      # Volume pour persister les données
-    ports:
-      - "27017:27017"                               # Port MongoDB exposé
+      - /DATA/AppData/$AppID/data:/data/db
     networks:
-      pcs: null                                    # Connexion au réseau partagé
+      - mongodb_network
 
   # Service pour l'interface web Mongo-Express
   mongo-express:
-    image: mongo-express:latest
+    image: mongo-express:1.0.0-alpha.4
     container_name: mongo-express
     restart: unless-stopped
+    ports:
+      - "8888:8081"
     environment:
-      - ME_CONFIG_MONGODB_URL=mongodb://admin:admin@mongodb:27017/  # URL de connexion à MongoDB
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=admin
+      - ME_CONFIG_MONGODB_SERVER=mongodb
       - ME_CONFIG_BASICAUTH_USERNAME=admin
       - ME_CONFIG_BASICAUTH_PASSWORD=admin
-    ports:
-      - "8081:8081"                                # Port Mongo Express exposé
-    volumes:
-      - /DATA/AppData/$AppID/mongo-express:/data  # Volume pour persister les données de Mongo Express
-    depends_on:
-      mongodb:
-        condition: service_healthy                  # Dépendance sur MongoDB
     networks:
-      pcs: null                                    # Connexion au réseau partagé
+      - mongodb_network
+    depends_on:
+      - mongodb
 
 # Définition du réseau partagé
 networks:
-  pcs:
-    name: pcs
+  mongodb_network:
+    driver: bridge
 
 # Configuration spécifique à CasaOS
 x-casaos:
@@ -50,14 +47,13 @@ x-casaos:
   author: UgEff
   category: Database
   description:
-    en_us: Mongo-Express - A web-based interface to manage MongoDB easily.
+    en_us: MongoDB database with web interface Mongo Express
   title:
     en_us: MongoDB + Mongo Express
   icon: https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/MangoDB_ExpressDB/IconMangoDB.png
   screenshot_link:
     - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/MangoDB_ExpressDB/screen1.png
     - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/MangoDB_ExpressDB/screen2.jpg
-  port_map: "8081"
+  port_map: "8888"
   volumes:
-    - /DATA/AppData/$AppID/mongo-express
-    - /DATA/AppData/$AppID/mongodb
+    - /DATA/AppData/$AppID/data
