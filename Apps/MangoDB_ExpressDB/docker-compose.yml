@@ -12,8 +12,8 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=admin           # Mot de passe root MongoDB
     volumes:
       - /DATA/AppData/$AppID/mongodb:/data/db
-    expose:
-      - 27017                                      # Port MongoDB (interne uniquement)
+    ports:
+      - "27017:27017"                               # Port MongoDB exposé
     # Vérification de la santé du service
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
@@ -33,7 +33,7 @@ services:
       - ME_CONFIG_BASICAUTH_USERNAME=admin
       - ME_CONFIG_BASICAUTH_PASSWORD=admin
     ports:
-      - "8081:8081"
+      - "8081:8081"                                # Port Mongo Express exposé
     volumes:
       - /DATA/AppData/$AppID/mongo-express:/data
     depends_on:
