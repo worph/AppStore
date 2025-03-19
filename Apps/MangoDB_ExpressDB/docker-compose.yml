@@ -11,15 +11,9 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=admin           # Utilisateur root MongoDB
       - MONGO_INITDB_ROOT_PASSWORD=admin           # Mot de passe root MongoDB
     volumes:
-      - /DATA/AppData/$AppID/mongodb:/data/db
+      - /DATA/AppData/$AppID/mongodb:/data/db      # Volume pour persister les données
     ports:
       - "27017:27017"                               # Port MongoDB exposé
-    # Vérification de la santé du service
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     networks:
       pcs: null                                    # Connexion au réseau partagé
 
@@ -29,18 +23,18 @@ services:
     container_name: mongo-express
     restart: unless-stopped
     environment:
-      - ME_CONFIG_MONGODB_URL=mongodb://admin:admin@mongodb:27017/
+      - ME_CONFIG_MONGODB_URL=mongodb://admin:admin@mongodb:27017/  # URL de connexion à MongoDB
       - ME_CONFIG_BASICAUTH_USERNAME=admin
       - ME_CONFIG_BASICAUTH_PASSWORD=admin
     ports:
       - "8081:8081"                                # Port Mongo Express exposé
     volumes:
-      - /DATA/AppData/$AppID/mongo-express:/data
+      - /DATA/AppData/$AppID/mongo-express:/data  # Volume pour persister les données de Mongo Express
     depends_on:
       mongodb:
-        condition: service_healthy
+        condition: service_healthy                  # Dépendance sur MongoDB
     networks:
-      pcs: null
+      pcs: null                                    # Connexion au réseau partagé
 
 # Définition du réseau partagé
 networks:
