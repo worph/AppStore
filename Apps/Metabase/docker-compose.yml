@@ -37,6 +37,11 @@ x-casaos:
     en_us: Easy analytics and data visualization for your team
   title:
     en_us: Metabase
+  icon: https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/Metabase/icon.png
+  screenshot_link:
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/Metabase/screen1.png
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/Metabase/screen2.png
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/Metabase/screen3.png
   index: /
   port_map: "3000"
   volumes:
