@@ -16,6 +16,11 @@ services:
       - "27017:27017"  # Port exposé pour MongoDB
     networks:
       pcs: null
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]  # Vérification de la santé
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Service pour l'interface web Mongo-Express
   mongo-express:
