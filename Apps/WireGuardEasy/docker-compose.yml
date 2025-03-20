@@ -8,7 +8,7 @@ services:
       PASSWORD: '$default_pwd'
       WG_HOST: '$public_ip'
       WG_PORT: '51820'
-      WG_DEFAULT_DNS: '127.0.0.11'
+      WG_DEFAULT_DNS: '9.9.9.9'
     x-casaos:
       volumes:
         - container: /etc/wireguard
