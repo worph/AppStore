@@ -15,7 +15,7 @@ services:
     volumes:
       - /DATA/AppData/$AppID/mongodb:/data/db
     ports:
-      - "27017:27017"
+      - "27018:27017"
     networks:
       - pcs
     healthcheck:
@@ -31,7 +31,7 @@ services:
     container_name: mongo-express
     restart: unless-stopped
     ports:
-      - "8081:8081"
+      - "8082:8081"
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: admin
       ME_CONFIG_MONGODB_ADMINPASSWORD: admin
@@ -39,7 +39,7 @@ services:
       ME_CONFIG_BASICAUTH_USERNAME: admin
       ME_CONFIG_BASICAUTH_PASSWORD: admin
       ME_CONFIG_SITE_BASEURL: /
-      VCAP_APP_PORT: 8081
+      VCAP_APP_PORT: 8082
     depends_on:
       mongodb:
         condition: service_healthy
@@ -65,7 +65,7 @@ x-casaos:
   description:
     en_us: MongoDB database server with Mongo Express web management interface
   category: Database
-  port_map: "8081"
+  port_map: "8082"
   author: UgEff
   screenshot_link:
     - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/MangoDB_ExpressDB/screen1.png
