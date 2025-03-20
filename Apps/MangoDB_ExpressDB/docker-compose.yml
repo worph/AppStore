@@ -1,25 +1,28 @@
+# Nom du projet Docker Compose
 name: mongodb
 
 services:
+  # Service pour le serveur MongoDB
   mongodb:
     image: mongo:latest
     container_name: mongodb
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: admin
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin
     volumes:
       - /DATA/AppData/$AppID/mongodb:/data/db
-    ports:
-      - "27017:27017"
-    networks:
-      - pcs
+    expose:
+      - 27017
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      pcs: null
 
+  # Service pour l'interface web Mongo-Express
   mongo-express:
     image: mongo-express:latest
     container_name: mongo-express
@@ -27,22 +30,21 @@ services:
     ports:
       - "8888:8081"
     environment:
-      ME_CONFIG_MONGODB_SERVER: mongodb
-      ME_CONFIG_MONGODB_PORT: 27017
-      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
-      ME_CONFIG_MONGODB_ADMINPASSWORD: admin
-      ME_CONFIG_BASICAUTH_USERNAME: admin
-      ME_CONFIG_BASICAUTH_PASSWORD: admin
+      - ME_CONFIG_MONGODB_URL=mongodb://admin:admin@mongodb:27017/
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin
     depends_on:
       mongodb:
         condition: service_healthy
     networks:
-      - pcs
+      pcs: null
 
+# Définition du réseau partagé
 networks:
   pcs:
     name: pcs
 
+# Configuration spécifique à CasaOS
 x-casaos:
   architectures:
     - amd64
@@ -51,7 +53,9 @@ x-casaos:
   author: UgEff
   category: Database
   description:
-    en_us: MongoDB database with web interface Mongo Express
+    en_us: A pre-configured package combining MongoDB database server and Mongo Express web interface. MongoDB is a powerful, open-source NoSQL database, and Mongo Express is its web-based management tool.
+  tagline:
+    en_us: Ready-to-use MongoDB database with Mongo Express management interface
   title:
     en_us: MongoDB + Mongo Express
   icon: https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/MangoDB_ExpressDB/IconMangoDB.png
@@ -60,5 +64,7 @@ x-casaos:
     - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/MangoDB_ExpressDB/screen2.jpg
   port_map: "8888"
   volumes:
-    - /DATA/AppData/$AppID/mongodb
-    - /DATA/AppData/$AppID/mongo-express
+    - container: /data/db
+      description: MongoDB Data
+    - container: /data
+      description: Mongo Express Data
