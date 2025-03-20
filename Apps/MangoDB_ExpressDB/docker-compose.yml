@@ -12,8 +12,8 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=admin
     volumes:
       - /DATA/AppData/$AppID/mongodb:/data/db
-    expose:
-      - 27017
+    ports:
+      - "27017:27017"
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
