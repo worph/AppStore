@@ -17,12 +17,13 @@ services:
     ports:
       - "27017:27017"
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "mongodb://admin:admin@localhost:27017/admin", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 40s
     networks:
-      pcs: null
+      - mongodb_network
 
   # Service pour l'interface web Mongo-Express
   mongo-express:
@@ -32,8 +33,10 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - ME_CONFIG_MONGODB_URL=mongodb://admin:admin@mongodb:27017/
-      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=admin
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_PORT=27017
       - ME_CONFIG_BASICAUTH_USERNAME=admin
       - ME_CONFIG_BASICAUTH_PASSWORD=admin
       - ME_CONFIG_SITE_BASEURL=/
@@ -43,12 +46,12 @@ services:
       mongodb:
         condition: service_healthy
     networks:
-      pcs: null
+      - mongodb_network
 
 # Définition du réseau partagé
 networks:
-  pcs:
-    name: pcs
+  mongodb_network:
+    driver: bridge
 
 # Configuration spécifique à CasaOS
 x-casaos:
@@ -59,7 +62,7 @@ x-casaos:
   author: UgEff
   category: Database
   description:
-    en_us: A pre-configured package combining MongoDB database server and Mongo Express web interface. MongoDB is a powerful, open-source NoSQL database, and Mongo Express is its web-based management tool.
+    en_us: A pre-configured package combining MongoDB database server and Mongo Express web interface.
   tagline:
     en_us: Ready-to-use MongoDB database with Mongo Express management interface
   title:
