@@ -1,50 +1,47 @@
-# Nom du projet Docker Compose
 name: mongodb
 
 services:
-  # Service pour le serveur MongoDB
   mongodb:
     image: mongo:latest
     container_name: mongodb
     restart: unless-stopped
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=admin
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
     volumes:
       - /DATA/AppData/$AppID/mongodb:/data/db
     ports:
-      - "27017:27017"  # Port exposé pour MongoDB
+      - "27017:27017"
     networks:
-      pcs: null
+      - pcs
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]  # Vérification de la santé
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Service pour l'interface web Mongo-Express
   mongo-express:
     image: mongo-express:latest
     container_name: mongo-express
     restart: unless-stopped
     ports:
-      - "8888:8081"  # Port exposé pour Mongo Express
+      - "8888:8081"
     environment:
-      - ME_CONFIG_MONGODB_URL=mongodb://admin:admin@mongodb:27017/
-      - ME_CONFIG_BASICAUTH_USERNAME=admin
-      - ME_CONFIG_BASICAUTH_PASSWORD=admin
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: admin
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin
     depends_on:
       mongodb:
-        condition: service_healthy  # Assurez-vous que MongoDB est sain avant de démarrer
+        condition: service_healthy
     networks:
-      pcs: null
+      - pcs
 
-# Définition du réseau partagé
 networks:
   pcs:
     name: pcs
 
-# Configuration spécifique à CasaOS
 x-casaos:
   architectures:
     - amd64
