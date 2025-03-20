@@ -15,11 +15,11 @@ services:
     ports:
       - "27017:27017"  # Port exposé pour MongoDB
     networks:
-      - mongodb_network
+      pcs: null
 
   # Service pour l'interface web Mongo-Express
   mongo-express:
-    image: mongo-express:1.0.0-alpha.4
+    image: mongo-express:latest
     container_name: mongo-express
     restart: unless-stopped
     ports:
@@ -27,18 +27,21 @@ services:
     environment:
       - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
       - ME_CONFIG_MONGODB_ADMINPASSWORD=admin
-      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_URL=mongodb://admin:admin@mongodb:27017/
       - ME_CONFIG_BASICAUTH_USERNAME=admin
       - ME_CONFIG_BASICAUTH_PASSWORD=admin
+      - ME_CONFIG_SITE_BASEURL=/
+      - ME_CONFIG_OPTIONS_EDITORTHEME=ambiance
+      - VCAP_APP_HOST=0.0.0.0
     depends_on:
       - mongodb
     networks:
-      - mongodb_network
+      pcs: null
 
 # Définition du réseau partagé
 networks:
-  mongodb_network:
-    driver: bridge
+  pcs:
+    name: pcs
 
 # Configuration spécifique à CasaOS
 x-casaos:
