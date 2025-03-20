@@ -4,7 +4,7 @@ name: mongodb
 services:
   # Service pour le serveur MongoDB
   mongodb:
-    image: mongo:6
+    image: mongo:latest
     container_name: mongodb
     restart: unless-stopped
     environment:
@@ -32,12 +32,12 @@ services:
       mongodb:
         condition: service_healthy  # Assurez-vous que MongoDB est sain avant de démarrer
     networks:
-      - mongodb_network
+      pcs: null
 
 # Définition du réseau partagé
 networks:
-  mongodb_network:
-    driver: bridge
+  pcs:
+    name: pcs
 
 # Configuration spécifique à CasaOS
 x-casaos:
