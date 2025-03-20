@@ -10,20 +10,20 @@ services:
     container_name: mongodb
     restart: unless-stopped
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=admin
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
     volumes:
       - /DATA/AppData/$AppID/mongodb:/data/db
     ports:
       - "27017:27017"
+    networks:
+      - pcs
     healthcheck:
-      test: ["CMD", "mongosh", "mongodb://admin:admin@localhost:27017/admin", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--eval", "'db.runCommand({ping:1})'"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 40s
-    networks:
-      - mongodb_network
 
   # Service pour l'interface web Mongo-Express
   mongo-express:
@@ -33,27 +33,23 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
-      - ME_CONFIG_MONGODB_ADMINPASSWORD=admin
-      - ME_CONFIG_MONGODB_AUTH_DATABASE=admin
-      - ME_CONFIG_MONGODB_AUTH_USERNAME=admin
-      - ME_CONFIG_MONGODB_AUTH_PASSWORD=admin
-      - ME_CONFIG_MONGODB_URL=mongodb://admin:admin@mongodb:27017/
-      - ME_CONFIG_BASICAUTH_USERNAME=admin
-      - ME_CONFIG_BASICAUTH_PASSWORD=admin
-      - ME_CONFIG_SITE_BASEURL=/
-      - VCAP_APP_HOST=0.0.0.0
-      - NODE_ENV=production
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: admin
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin
+      ME_CONFIG_SITE_BASEURL: /
+      VCAP_APP_PORT: 8081
     depends_on:
       mongodb:
         condition: service_healthy
     networks:
-      - mongodb_network
+      - pcs
 
 # Définition du réseau partagé
 networks:
-  mongodb_network:
-    driver: bridge
+  pcs:
+    external: true
 
 # Configuration spécifique à CasaOS
 x-casaos:
@@ -61,18 +57,18 @@ x-casaos:
     - amd64
     - arm64
   main: mongo-express
-  author: UgEff
-  category: Database
-  description:
-    en_us: A pre-configured package combining MongoDB database server and Mongo Express web interface.
-  tagline:
-    en_us: Ready-to-use MongoDB database with Mongo Express management interface
   title:
     en_us: MongoDB + Mongo Express
   icon: https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/MangoDB_ExpressDB/IconMangoDB.png
+  tagline:
+    en_us: MongoDB database with web interface
+  description:
+    en_us: MongoDB database server with Mongo Express web management interface
+  category: Database
+  port_map: "8081"
+  author: UgEff
   screenshot_link:
     - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/MangoDB_ExpressDB/screen1.png
     - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/MangoDB_ExpressDB/screen2.jpg
-  port_map: "8081"
   volumes:
     - /DATA/AppData/$AppID/mongodb
