@@ -64,7 +64,4 @@ x-casaos:
     - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/MangoDB_ExpressDB/screen2.jpg
   port_map: "8888"
   volumes:
-    - container: /data/db
-      description: MongoDB Data
-    - container: /data
-      description: Mongo Express Data
+    - /DATA/AppData/$AppID/mongodb
