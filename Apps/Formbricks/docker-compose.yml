@@ -1,0 +1,94 @@
+name: formbricks
+services:
+  formbricks:
+    image: formbricks/formbricks:latest
+    restart: unless-stopped
+    network_mode: bridge
+    environment:
+      # Database
+      DATABASE_URL: 'postgresql://postgres:$default_pwd@postgres:5432/formbricks'
+      # Next Auth
+      NEXTAUTH_URL: 'https://$domain'
+      NEXTAUTH_SECRET: '$default_pwd'
+      # Email (optional)
+      # MAIL_FROM: 'noreply@yourdomain.com'
+      # SMTP_HOST: 'smtp.yourdomain.com'
+      # SMTP_PORT: '587'
+      # SMTP_USER: 'your_username'
+      # SMTP_PASSWORD: 'your_password'
+      # SMTP_SECURE: 'false'
+    x-casaos:
+      volumes:
+        - container: /app/packages/database
+          description:
+            en_us: Contains database migrations and schema.
+        - container: /app/storage
+          description:
+            en_us: Contains uploaded files and assets.
+      ports:
+        - container: '3000'
+          description:
+            en_us: Formbricks web interface port
+    expose:
+      - 3000
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/database
+        target: /app/packages/database
+      - type: bind
+        source: /DATA/AppData/$AppID/storage
+        target: /app/storage
+    depends_on:
+      - postgres
+    container_name: formbricks
+
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: '$default_pwd'
+      POSTGRES_USER: 'postgres'
+      POSTGRES_DB: 'formbricks'
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/postgresql
+        target: /var/lib/postgresql/data
+    container_name: formbricks-postgres
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: formbricks
+  tagline:
+    en_us: Open-source survey & experience management solution.
+    zh_cn: 开源调查和体验管理解决方案。
+    de_de: Open-Source-Umfrage- und Experience-Management-Lösung.
+    es_es: Solución de gestión de encuestas y experiencias de código abierto.
+    fr_fr: Solution open-source de gestion d'enquêtes et d'expériences.
+    it_it: Soluzione open-source per la gestione di sondaggi ed esperienze.
+    ru_ru: Решение с открытым исходным кодом для управления опросами и взаимодействием.
+    pl_pl: Rozwiązanie do zarządzania ankietami i doświadczeniami o otwartym kodzie źródłowym.
+    pt_br: Solução de código aberto para gestão de pesquisas e experiências.
+  description:
+    en_us: Formbricks is an open source experience management platform that helps teams build better products through surveys, user interviews, and customer feedback. Collect responses, analyze data, and act on insights all in one place.
+    zh_cn: Formbricks 是一个开源体验管理平台，通过调查、用户访谈和客户反馈帮助团队构建更好的产品。在一个地方收集回复、分析数据并采取行动。
+    de_de: Formbricks ist eine Open-Source-Plattform für Erfahrungsmanagement, die Teams dabei hilft, bessere Produkte durch Umfragen, Benutzerinterviews und Kundenfeedback zu entwickeln. Sammeln Sie Antworten, analysieren Sie Daten und handeln Sie aufgrund von Erkenntnissen an einem Ort.
+    es_es: Formbricks es una plataforma de gestión de experiencias de código abierto que ayuda a los equipos a crear mejores productos a través de encuestas, entrevistas con usuarios y comentarios de clientes. Recopile respuestas, analice datos y actúe según los conocimientos, todo en un solo lugar.
+    fr_fr: Formbricks est une plateforme open source de gestion de l'expérience qui aide les équipes à créer de meilleurs produits grâce à des enquêtes, des entretiens utilisateurs et des retours clients. Collectez des réponses, analysez des données et agissez sur les insights, le tout au même endroit.
+    it_it: Formbricks è una piattaforma open source di gestione dell'esperienza che aiuta i team a costruire prodotti migliori attraverso sondaggi, interviste agli utenti e feedback dei clienti. Raccogli risposte, analizza dati e agisci in base alle informazioni, tutto in un unico posto.
+    ru_ru: Formbricks — это платформа управления взаимодействием с открытым исходным кодом, которая помогает командам создавать лучшие продукты с помощью опросов, интервью с пользователями и отзывов клиентов. Собирайте ответы, анализируйте данные и действуйте на основе полученных сведений — все в одном месте.
+    pl_pl: Formbricks to platforma zarządzania doświadczeniami o otwartym kodzie źródłowym, która pomaga zespołom budować lepsze produkty poprzez ankiety, wywiady z użytkownikami i opinie klientów. Zbieraj odpowiedzi, analizuj dane i działaj na podstawie wniosków, wszystko w jednym miejscu.
+    pt_br: Formbricks é uma plataforma de gerenciamento de experiência de código aberto que ajuda as equipes a criar produtos melhores por meio de pesquisas, entrevistas com usuários e feedback de clientes. Colete respostas, analise dados e aja com base em insights, tudo em um só lugar.
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Formbricks/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Formbricks/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Formbricks/screenshot-3.png
+  developer: Formbricks
+  author: Sawy
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Formbricks/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Formbricks/icon.png
+  category: Productivity
+  title:
+    en_us: Formbricks
+  webui_port: 3000
