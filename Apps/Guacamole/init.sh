@@ -21,7 +21,6 @@ if ! PGPASSWORD=some_password psql -h localhost -U guacamole_user -d guacamole_d
   mkdir -p /init
 
   # Download initialization scripts
-  apt-get update && apt-get install -y curl
   curl -o /init/initdb.sql https://raw.githubusercontent.com/apache/guacamole-client/master/extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-postgresql/schema/upgrade/upgrade-pre-0.9.14.sql
   curl -o /init/001_create_schema.sql https://raw.githubusercontent.com/apache/guacamole-client/master/extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-postgresql/schema/001-create-schema.sql
   curl -o /init/002_create_admin_user.sql https://raw.githubusercontent.com/apache/guacamole-client/master/extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-postgresql/schema/002-create-admin-user.sql
