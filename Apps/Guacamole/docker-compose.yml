@@ -105,6 +105,20 @@ x-casaos:
   icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Guacamole/icon.png
   thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Guacamole/icon.png
   category: Productivity
+  tips:
+    before_install:
+      en_us: |
+        Default Account
+
+        | Username | Password |
+        | -------- | -------- |
+        | `guacadmin`    | `guacadmin`    |
+      zh_cn: |
+        默认账号
+
+        | 用户名 | 密码 |
+        | -------- | -------- |
+        | `guacadmin`    | `guacadmin`    |
   title:
     en_us: Guacamole
   main: guacamole
