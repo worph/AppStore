@@ -75,7 +75,6 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  main: guacamole
   tagline:
     en_us: Open-source remote desktop gateway.
     zh_cn: 开源远程桌面网关。
@@ -108,4 +107,6 @@ x-casaos:
   category: Productivity
   title:
     en_us: Guacamole
+  main: guacamole
   webui_port: 8080
+  index: /guacamole
