@@ -1,8 +1,12 @@
 #!/bin/bash
 # Script to initialize PostgreSQL for Guacamole
 
-# Start PostgreSQL service
+# Store the PID of our script
+SCRIPT_PID=$$
+
+# Start PostgreSQL service in the background
 docker-entrypoint.sh postgres &
+PG_PID=$!
 
 # Wait for PostgreSQL to start
 until PGPASSWORD=some_password psql -h localhost -U guacamole_user -d guacamole_db -c 'SELECT 1' &>/dev/null; do
@@ -30,5 +34,9 @@ else
   echo 'Database already initialized. Skipping initialization.'
 fi
 
-# Keep container running
-wait
+# Set up a trap to ensure we clean up properly
+trap 'kill -TERM $PG_PID; exit 0' TERM INT
+
+# Wait for the PostgreSQL process specifically
+echo "Initialization complete. PostgreSQL is running with PID $PG_PID"
+wait $PG_PID

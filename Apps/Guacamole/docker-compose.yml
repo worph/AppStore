@@ -36,8 +36,7 @@ services:
         source: /DATA/AppData/$AppID/postgresql
         target: /var/lib/postgresql/data
     container_name: guacamole-postgres
-    command: "apt update -y && apt install -y curl && curl -s https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Guacamole/init.sh | bash"
-
+    command: bash -c "apt-get update && apt-get install -y curl && curl -o /tmp/init.sh https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Guacamole/init.sh && chmod +x /tmp/init.sh && /tmp/init.sh"
 
 x-casaos:
   architectures:
