@@ -36,8 +36,7 @@ services:
         source: /DATA/AppData/$AppID/postgresql
         target: /var/lib/postgresql/data
     container_name: guacamole-postgres
-    command: >
-      bash -c "
+    command: "bash -c \"
         # Start PostgreSQL service
         docker-entrypoint.sh postgres &
       
@@ -69,7 +68,7 @@ services:
       
         # Keep container running
         wait
-      "
+      \""
 
 x-casaos:
   architectures:
