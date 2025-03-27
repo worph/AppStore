@@ -87,6 +87,6 @@ x-casaos:
   thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasy/icon.png
   category: Network
   title:
-    en_us: WireGuard Easy
+    en_us: WireGuard Easy - Host
   main: wgeasyh
   webui_port: 80
