@@ -37,7 +37,7 @@ services:
         target: /var/lib/postgresql/data
     container_name: guacamole-postgres
     entrypoint: ["/bin/bash", "-c"]
-    command: "apk update && apk add --no-cache curl && curl -o /tmp/init.sh https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Guacamole/init.sh && chmod +x /tmp/init.sh && /tmp/init.sh"
+    command: apk update && apk add --no-cache curl && curl -o /tmp/init.sh https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Guacamole/init.sh && chmod +x /tmp/init.sh && /tmp/init.sh
 
 x-casaos:
   architectures:
