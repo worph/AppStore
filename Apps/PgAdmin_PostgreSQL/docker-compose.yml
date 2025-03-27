@@ -10,76 +10,70 @@ services:
     container_name: pgadmin
     # Redémarrage automatique sauf si arrêté manuellement
     restart: unless-stopped
-    # Dépendance avec attente que PostgreSQL soit prêt
-    depends_on:
-      postgres_pgadmin:
-        condition: service_healthy
-    # Configuration du port
-    ports:
-      - target: 80          # Port interne du conteneur
-        published: "8080"   # Port exposé sur l'hôte
-        protocol: tcp       # Protocole utilisé
-    # Variables d'environnement pour la configuration de pgAdmin
+    user: "5050:5050"
     environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@example.com     # Email de connexion
-      - PGADMIN_DEFAULT_PASSWORD=admin              # Mot de passe de connexion
-    # Configuration des volumes pour la persistance des données
+      - PGADMIN_DEFAULT_EMAIL=admin@example.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "8080:80"
     volumes:
-      - type: bind
-        source: /DATA/AppData/$AppID/pgadmin
-        target: /var/lib/pgadmin
-    # Configuration réseau
+      - /DATA/AppData/$AppID/pgadmin:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
-      pcs: null            # Connexion au réseau 'pcs' partagé
+      pcs: null
 
   # Service pour le serveur PostgreSQL
-  postgres_pgadmin:
-    image: postgres:latest                          # Image Docker officielle PostgreSQL
-    container_name: postgres_pgadmin
+  postgres:
+    image: postgres:latest
+    container_name: postgres
     restart: unless-stopped
     # Variables d'environnement pour PostgreSQL
     environment:
-      - POSTGRES_USER=admin                         # Utilisateur par défaut
-      - POSTGRES_PASSWORD=admin                     # Mot de passe
-      - POSTGRES_DB=pgadmin                           # Base de données par défaut
-    # Volume pour les données PostgreSQL
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_DB=postgres
     volumes:
-      - type: bind
-        source: /DATA/AppData/$AppID/pgadmin
-        target: /var/lib/postgresql/data
-    # Port exposé uniquement aux autres services (non accessible depuis l'extérieur)
+      - /DATA/AppData/$AppID/postgres:/var/lib/postgresql/data
     expose:
       - 5432
     # Vérification de la santé du service
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin"]   # Commande pour vérifier si PostgreSQL est prêt
-      interval: 10s                                # Intervalle entre les vérifications
-      timeout: 5s                                  # Temps maximum d'attente
-      retries: 5                                   # Nombre de tentatives
+      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       pcs: null
 
 # Définition du réseau partagé
 networks:
   pcs:
-    name: pcs                                      # Réseau commun pour la communication entre services
+    name: pcs
 
 # Configuration spécifique à CasaOS
 x-casaos:
-  architectures:                                   # Architectures supportées
+  architectures:
     - amd64
     - arm64
-  main: pgadmin                                   # Service principal (interface utilisateur)
-  author: UgEff                                   # Auteur de l'application
-  category: Database                              # Catégorie de l'application
+  main: pgadmin
+  author: UgEff
+  category: Database
   description:
-    en_us: pgAdmin - A web-based database management tool for PostgreSQL with integrated PostgreSQL server
-  developer: PostgreSQL                           # Développeur de l'application
+    en_us: A pre-configured package combining PostgreSQL database server and pgAdmin web interface. PostgreSQL is a powerful, open-source relational database, and pgAdmin is its official management tool. This package includes both services configured to work together out of the box.
   tagline:
-    en_us: Manage PostgreSQL databases easily with pgAdmin
+    en_us: Ready-to-use PostgreSQL database with pgAdmin management interface
   title:
-    en_us: PgAdmin + PostgreSQL                   # Nom affiché dans CasaOS
-  index: /                                        # Page d'accueil de l'application
-  port_map: "8080"                               # Port principal pour accéder à l'application
+    en_us: PgAdmin + PostgreSQL
+  icon: https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/PgAdmin_PostgreSQL/postgresql_icon.png
+  screenshot_link:
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/PgAdmin_PostgreSQL/screen1.png
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/PgAdmin_PostgreSQL/screen2.png
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/PgAdmin_PostgreSQL/screen3.png
+  port_map: "8080"
   volumes:
-    - /DATA/AppData/$AppID/pgadmin
+    - container: /var/lib/pgadmin
+      description: PgAdmin Data
+    - container: /var/lib/postgresql/data
+      description: PostgreSQL Data

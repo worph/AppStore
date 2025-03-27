@@ -71,6 +71,11 @@ x-casaos:
     en_us: A powerful open-source chat solution for teams.
   title:
     en_us: Rocket.Chat
+  icon: https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/RocketChat_MangoDB/IconRocketChat.png
+  screenshot_link:
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/RocketChat_MangoDB/screen1.jpg
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/RocketChat_MangoDB/screen2.png
+    - https://raw.githubusercontent.com/UgEff/AppStore/BiApp/Apps/RocketChat_MangoDB/screen3.png
   index: /
   port_map: "3000"
   volumes:
