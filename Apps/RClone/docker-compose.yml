@@ -1,0 +1,80 @@
+name: rclone
+services:
+  rclone:
+    image: rclone/rclone:latest
+    restart: unless-stopped
+    network_mode: bridge
+    environment:
+      PUID: 1000
+      PGID: 1000
+    x-casaos:
+      volumes:
+        - container: /config/rclone
+          description:
+            en_us: Contains Rclone configuration files
+        - container: /cache
+          description:
+            en_us: Cache directory for improved performance
+        - container: /data
+          description:
+            en_us: Mount point for your remote storage
+      ports:
+        - container: '8080'
+          description:
+            en_us: Rclone web interface port
+    ports:
+      - target: 8080
+        published: 8080
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/config
+        target: /config/rclone
+      - type: bind
+        source: /DATA/AppData/$AppID/cache
+        target: /cache
+      - type: bind
+        source: /DATA/AppData/$AppID/mount
+        target: /data
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    devices:
+      - /dev/fuse:/dev/fuse
+    sysctls:
+      - net.ipv4.ip_forward=1
+    command: rcd --rc-web-gui --rc-addr :8080 --rc-user admin --rc-pass $default_pwd --rc-allow-origin * --config /config/rclone/rclone.conf --cache-dir /cache
+    container_name: rclone
+x-casaos:
+  architectures:
+    - amd64
+    - arm
+    - arm64
+  tagline:
+    en_us: Web UI to manage and mount cloud storage.
+    zh_cn: 管理和挂载云存储的 Web UI。
+    de_de: Web-UI zum Verwalten und Einbinden von Cloud-Speicher.
+    es_es: Interfaz web para gestionar y montar almacenamiento en la nube.
+    fr_fr: Interface web pour gérer et monter le stockage cloud.
+    it_it: Interfaccia web per gestire e montare l'archiviazione cloud.
+  description:
+    en_us: Rclone is a command-line program to manage files on cloud storage. It mounts cloud storage as a local disk, allowing you to access your cloud files as if they were on your local machine.
+    zh_cn: Rclone 是一个管理云存储文件的命令行程序。它将云存储挂载为本地磁盘，使您能够像访问本地文件一样访问云文件。
+    de_de: Rclone ist ein Kommandozeilenprogramm zur Verwaltung von Dateien in der Cloud. Es bindet Cloud-Speicher als lokale Festplatte ein, sodass Sie auf Ihre Cloud-Dateien zugreifen können, als wären sie auf Ihrem lokalen Computer.
+    es_es: Rclone es un programa de línea de comandos para gestionar archivos en almacenamiento en la nube. Monta el almacenamiento en la nube como un disco local, lo que le permite acceder a sus archivos en la nube como si estuvieran en su máquina local.
+    fr_fr: Rclone est un programme en ligne de commande pour gérer les fichiers sur le stockage cloud. Il monte le stockage cloud comme un disque local, vous permettant d'accéder à vos fichiers cloud comme s'ils étaient sur votre machine locale.
+    it_it: Rclone è un programma a riga di comando per gestire i file su cloud storage. Monta il cloud storage come disco locale, permettendo di accedere ai file cloud come se fossero sulla macchina locale.
+  developer: Rclone
+  author: Rclone
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/RClone/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/RClone/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/RClone/screenshot-3.png
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/RClone/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/RClone/icon.png
+  category: Storage
+  title:
+    en_us: Rclone
+  main: rclone
+  webui_port: 8080

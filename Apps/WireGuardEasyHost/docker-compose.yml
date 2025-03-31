@@ -78,13 +78,13 @@ x-casaos:
     sv_se: Du har hittat det enklaste sättet att installera och hantera WireGuard på en Linux-värd!
     uk_ua: Ви знайшли найпростіший спосіб встановити WireGuard та керувати ним на будь-якому комп'ютері з Linux!
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasy/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasy/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasy/screenshot-3.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasyHost/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasyHost/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasyHost/screenshot-3.png
   developer: WeejeWel
   author: Sawy
-  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasy/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasy/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasyHost/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasyHost/icon.png
   category: Network
   title:
     en_us: WireGuard Easy - Host
