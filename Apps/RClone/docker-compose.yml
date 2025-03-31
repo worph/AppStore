@@ -2,11 +2,9 @@ name: rclone
 services:
   rclone:
     image: rclone/rclone:latest
+    container_name: rclone
+    hostname: rclone
     restart: unless-stopped
-    network_mode: bridge
-    environment:
-      PUID: 1000
-      PGID: 1000
     x-casaos:
       volumes:
         - container: /config/rclone
@@ -18,34 +16,24 @@ services:
         - container: /data
           description:
             en_us: Mount point for your remote storage
-      ports:
-        - container: '8080'
-          description:
-            en_us: Rclone web interface port
-    ports:
-      - target: 8080
-        published: 8080
-        protocol: tcp
+    expose:
+      - 8080
     volumes:
-      - type: bind
-        source: /DATA/AppData/$AppID/config
-        target: /config/rclone
-      - type: bind
-        source: /DATA/AppData/$AppID/cache
-        target: /cache
-      - type: bind
-        source: /DATA/AppData/$AppID/mount
-        target: /data
+      - /DATA/AppData/rclone/config:/config/rclone
+      - /DATA/AppData/rclone/cache:/cache
+      - /DATA/AppData/rclone/mount:/data:shared
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+      - /etc/fuse.conf:/etc/fuse.conf:ro
     cap_add:
       - SYS_ADMIN
+    privileged: true
     security_opt:
       - apparmor:unconfined
     devices:
-      - /dev/fuse:/dev/fuse
-    sysctls:
-      - net.ipv4.ip_forward=1
-    command: rcd --rc-web-gui --rc-addr :8080 --rc-user admin --rc-pass $default_pwd --rc-allow-origin * --config /config/rclone/rclone.conf --cache-dir /cache
-    container_name: rclone
+      - /dev/fuse:/dev/fuse:rwm
+    command: "rcd --rc-web-gui --rc-addr :8080 --rc-user admin --rc-pass $default_pwd --rc-allow-origin * --config /config/rclone/rclone.conf --cache-dir /cache"
+
 x-casaos:
   architectures:
     - amd64
