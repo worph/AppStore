@@ -32,7 +32,8 @@ services:
       - apparmor:unconfined
     devices:
       - /dev/fuse:/dev/fuse:rwm
-    command: "rcd --rc-web-gui --rc-addr :8080 --rc-user admin --rc-pass $default_pwd --rc-allow-origin * --config /config/rclone/rclone.conf --cache-dir /cache"
+    command:
+      - rcd --rc-web-gui --rc-addr :8080 --rc-user admin --rc-pass $default_pwd --rc-allow-origin * --config /config/rclone/rclone.conf --cache-dir /cache
 
 x-casaos:
   architectures:
