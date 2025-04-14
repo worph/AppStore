@@ -1,0 +1,149 @@
+name: hysteria2
+services:
+
+  hui:
+    image: jonssonyan/h-ui:latest
+    container_name: hui
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - /DATA/AppData/$AppID/h-ui/bin:/h-ui/bin
+      - /DATA/AppData/$AppID/h-ui/data:/h-ui/data
+      - /DATA/AppData/$AppID/h-ui/export:/h-ui/export
+      - /DATA/AppData/$AppID/h-ui/logs:/h-ui/logs
+    expose:
+      - 8081
+      - 8082
+    environment:
+      - TZ=UTC
+    x-casaos:
+      envs:
+        - container: TZ
+          description:
+            en_us: Timezone for the h-ui container.
+      volumes:
+        - container: /h-ui/bin
+          description:
+            en_us: Contains h-ui binary files.
+        - container: /h-ui/data
+          description:
+            en_us: Contains h-ui data files.
+        - container: /h-ui/export
+          description:
+            en_us: Directory for exported configuration files.
+        - container: /h-ui/logs
+          description:
+            en_us: Contains h-ui log files.
+      ports:
+        - container: '8081'
+          description:
+            en_us: h-ui web management interface
+        - container: '8082'
+          description:
+            en_us: h-ui SSH local forwarded port
+
+  hysteria2:
+    image: tobyxdd/hysteria:v2.2.2
+    restart: unless-stopped
+    network_mode: bridge
+    command: server -c /etc/hysteria/config.yaml --password $public_ip
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/config
+        target: /etc/hysteria
+    ports:
+      - target: 10801
+        published: 10801
+        protocol: udp
+    expose:
+      - 80
+    x-casaos:
+      envs:
+        - container: TZ
+          description:
+            en_us: TimeZone
+        - container: PUID
+          description:
+            en_us: Run Hysteria2 as specified uid.
+        - container: PGID
+          description:
+            en_us: Run Hysteria2 as specified gid.
+        - container: PASSWORD
+          description:
+            en_us: Password for Hysteria2 server authentication.
+        - container: SERVER_IP
+          description:
+            en_us: Public IP address of the server.
+        - container: SERVER_PORT
+          description:
+            en_us: UDP port for Hysteria2 protocol.
+        - container: OBFS_PASSWORD
+          description:
+            en_us: Password for traffic obfuscation.
+      volumes:
+        - container: /etc/hysteria
+          description:
+            en_us: Contains Hysteria2 configuration files.
+      ports:
+        - container: '10801'
+          description:
+            en_us: Hysteria2 UDP server port
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.ip_forward=1
+    container_name: hysteria2
+
+x-casaos:
+  pre-install-cmd: docker run -v /DATA/AppData/hysteria/:/DATA/AppData/hysteria/ -e PWD=$public_ip pre-install-toolbox https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Hysteria/pre-install/init.sh
+  architectures:
+    - amd64
+    - arm64
+  main: hui
+  tagline:
+    en_us: A powerful proxy and relay utility optimized for unstable networks, now with management UI.
+    zh_cn: 为不稳定网络优化的强大代理和中继工具，现在带有管理界面。
+    de_de: Ein leistungsstarkes Proxy- und Relay-Dienstprogramm, optimiert für instabile Netzwerke, jetzt mit Management-UI.
+    es_es: Potente utilidad de proxy y relé optimizada para redes inestables, ahora con interfaz de administración.
+    fr_fr: Un puissant utilitaire de proxy et de relais optimisé pour les réseaux instables, maintenant avec interface de gestion.
+    hu_hu: Erőteljes proxy és relay eszköz, instabil hálózatokra optimalizálva, most kezelőfelülettel.
+    it_it: Potente utilità di proxy e relay ottimizzata per reti instabili, ora con interfaccia di gestione.
+    ru_ru: Мощная утилита прокси и ретранслятора, оптимизированная для нестабильных сетей, теперь с интерфейсом управления.
+    pl_pl: Potężne narzędzie proxy i przekaźnikowe zoptymalizowane dla niestabilnych sieci, teraz z interfejsem zarządzania.
+    pt_br: Poderoso utilitário de proxy e retransmissão otimizado para redes instáveis, agora com interface de gerenciamento.
+    sv_se: Ett kraftfullt proxy- och relä-verktyg optimerat för instabila nätverk, nu med hanteringsgränssnitt.
+    uk_ua: Потужний інструмент проксі та ретрансляції, оптимізований для нестабільних мереж, тепер з інтерфейсом управління.
+  description:
+    en_us: Hysteria2 is a powerful, feature-packed proxy & relay utility optimized for less-than-ideal networks (satellite, congested public Wi-Fi, etc.). It offers high-speed connections with obfuscation capabilities to bypass network restrictions. Now includes h-ui management interface for easy user and traffic management, system monitoring, and more.
+    zh_cn: Hysteria2 是一个功能强大的代理和中继工具，专为非理想网络（卫星、拥挤的公共 Wi-Fi 等）优化。它提供高速连接和混淆功能，可绕过网络限制。现在包含 h-ui 管理界面，轻松管理用户和流量，监控系统等。
+    de_de: Hysteria2 ist ein leistungsstarkes, funktionsreiches Proxy- und Relay-Dienstprogramm, das für weniger als ideale Netzwerke (Satellit, überlastetes öffentliches WLAN usw.) optimiert ist. Es bietet Hochgeschwindigkeitsverbindungen mit Verschleierungsfunktionen, um Netzwerkbeschränkungen zu umgehen. Jetzt mit h-ui-Verwaltungsschnittstelle für einfache Benutzer- und Verkehrsverwaltung, Systemüberwachung und mehr.
+    es_es: Hysteria2 es una potente utilidad de proxy y relé repleta de funciones, optimizada para redes menos que ideales (satélite, Wi-Fi público congestionado, etc.). Ofrece conexiones de alta velocidad con capacidades de ofuscación para evitar restricciones de red. Ahora incluye interfaz de administración h-ui para fácil gestión de usuarios y tráfico, monitoreo del sistema y más.
+  developer: HyNetwork & jonssonyan
+  author: TobyXDD & jonssonyan
+  category: Network
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Hysteria/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Hysteria/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Hysteria/screenshot-3.png
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Hysteria/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Hysteria/icon.png
+  tips:
+    before_install:
+      en_us: >
+        🚀 Getting Started with Hysteria2
+        - A default configuration will be automatically created when you first run the application.
+
+        📱 Client Setup:
+          - To use Hysteria2, you'll need to install a client on your devices.
+          - We recommend Furious, a user-friendly client: https://github.com/LorenEteval/Furious/releases
+        
+        ⚙️ Advanced Configuration:
+          - Want to customize your setup? You can edit the configuration file at:
+            /DATA/AppData/hysteria/config/config.yaml
+
+  title:
+    en_us: Hysteria2
+  index: /
+  webui_port: 8081

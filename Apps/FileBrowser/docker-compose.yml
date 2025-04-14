@@ -6,10 +6,6 @@ services:
       PUID: $PUID
       TZ: $TZ
     image: filebrowser/filebrowser:v2.23.0
-    deploy:
-      resources:
-        reservations:
-          memory: 64M
     network_mode: bridge
     restart: unless-stopped
     volumes:
