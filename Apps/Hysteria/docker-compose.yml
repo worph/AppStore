@@ -48,7 +48,7 @@ services:
     image: tobyxdd/hysteria:v2.2.2
     restart: unless-stopped
     network_mode: bridge
-    command: server -c /etc/hysteria/config.yaml --password $public_ip
+    command: server -c /etc/hysteria/config.yaml
     volumes:
       - type: bind
         source: /DATA/AppData/$AppID/config
@@ -97,7 +97,7 @@ services:
     container_name: hysteria2
 
 x-casaos:
-  pre-install-cmd: docker run -v /DATA/AppData/hysteria/:/DATA/AppData/hysteria/ -e PWD=$public_ip pre-install-toolbox https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Hysteria/pre-install/init.sh
+  pre-install-cmd: docker run -v /DATA/AppData/hysteria2/:/data/ -e PASSWORD=$default_pwd nasselle/pre-install-toolbox https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Hysteria/pre-install/init.sh
   architectures:
     - amd64
     - arm64
