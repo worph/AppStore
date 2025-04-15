@@ -53,6 +53,9 @@ services:
       - type: bind
         source: /DATA/AppData/$AppID/config
         target: /etc/hysteria
+      - type: bind
+        source: /DATA/AppData/$AppID/acme
+        target: /acme
     ports:
       - target: 10801
         published: 10801
