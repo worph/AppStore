@@ -5,9 +5,6 @@ services:
     image: jonssonyan/h-ui:latest
     container_name: hui
     restart: unless-stopped
-    network_mode: host
-    cap_add:
-      - NET_ADMIN
     volumes:
       - /DATA/AppData/$AppID/h-ui/bin:/h-ui/bin
       - /DATA/AppData/$AppID/h-ui/data:/h-ui/data
@@ -15,7 +12,6 @@ services:
       - /DATA/AppData/$AppID/h-ui/logs:/h-ui/logs
     expose:
       - 8081
-      - 8082
     environment:
       - TZ=UTC
     x-casaos:
@@ -40,12 +36,9 @@ services:
         - container: '8081'
           description:
             en_us: h-ui web management interface
-        - container: '8082'
-          description:
-            en_us: h-ui SSH local forwarded port
 
   hysteria2:
-    image: tobyxdd/hysteria:v2.2.2
+    image: tobyxdd/hysteria:v2.6.1
     restart: unless-stopped
     network_mode: bridge
     command: server -c /etc/hysteria/config.yaml
@@ -57,42 +50,19 @@ services:
         source: /DATA/AppData/$AppID/acme
         target: /acme
     ports:
-      - target: 10801
-        published: 10801
+      - target: 443
+        published: 443
         protocol: udp
+      - target: 443
+        published: 443
+        protocol: tcp
     expose:
       - 80
     x-casaos:
-      envs:
-        - container: TZ
-          description:
-            en_us: TimeZone
-        - container: PUID
-          description:
-            en_us: Run Hysteria2 as specified uid.
-        - container: PGID
-          description:
-            en_us: Run Hysteria2 as specified gid.
-        - container: PASSWORD
-          description:
-            en_us: Password for Hysteria2 server authentication.
-        - container: SERVER_IP
-          description:
-            en_us: Public IP address of the server.
-        - container: SERVER_PORT
-          description:
-            en_us: UDP port for Hysteria2 protocol.
-        - container: OBFS_PASSWORD
-          description:
-            en_us: Password for traffic obfuscation.
       volumes:
         - container: /etc/hysteria
           description:
             en_us: Contains Hysteria2 configuration files.
-      ports:
-        - container: '10801'
-          description:
-            en_us: Hysteria2 UDP server port
     cap_add:
       - NET_ADMIN
     sysctls:
