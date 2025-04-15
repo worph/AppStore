@@ -100,7 +100,7 @@ services:
     container_name: hysteria2
 
 x-casaos:
-  pre-install-cmd: docker run -v /DATA/AppData/hysteria2/:/data/ -e PASSWORD=$default_pwd nasselle/pre-install-toolbox https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Hysteria/pre-install/init.sh
+  pre-install-cmd: docker run --rm -v /DATA/AppData/hysteria2/:/data/ -e PASSWORD=$default_pwd nasselle/pre-install-toolbox https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Hysteria/pre-install/init.sh
   architectures:
     - amd64
     - arm64
