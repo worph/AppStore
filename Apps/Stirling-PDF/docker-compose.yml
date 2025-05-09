@@ -48,11 +48,11 @@ x-casaos:
     en_us: Stirling-PDF is an open-source local web-based tool that allows you to easily edit, convert, merge and split PDF files.
     zh_cn: Stirling-PDF 是一个开源的本地网页工具，可以让您轻松地编辑、转换、合并和分割PDF文件。
     ko_kr: Stirling-PDF는 PDF 파일을 쉽게 편집, 변환, 병합, 분할할 수 있는 오픈소스 로컬 웹 기반 도구입니다.
-  icon: https://raw.githubusercontent.com/BookJJun-IJ/AppStore/main/Apps/Stirling-PDF/icons.png
+  icon: https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/Stirling-PDF/icons.png
   screenshot_link:
-    - https://raw.githubusercontent.com/BookJJun-IJ/AppStore/main/Apps/Stirling-PDF/screenshots1.png
-    - https://raw.githubusercontent.com/BookJJun-IJ/AppStore/main/Apps/Stirling-PDF/screenshots2.png
-    - https://raw.githubusercontent.com/BookJJun-IJ/AppStore/main/Apps/Stirling-PDF/screenshots3.png
+    - https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/Stirling-PDF/screenshots1.png
+    - https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/Stirling-PDF/screenshots2.png
+    - https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/Stirling-PDF/screenshots3.png
   tagline:
     en_us: PDF editing, conversion, and management in one open-source local tool
     zh_cn: 用于编辑、转换和管理PDF文件的开源本地工具

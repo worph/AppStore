@@ -38,7 +38,11 @@ x-casaos:
     - arm64
   author: self
   category: office
-  icon: https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/libreoffice-logo.png
+  icon: https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/LibreOffice/icons.png
+  screenshot_link:
+    - https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/LibreOffice/screenshots1.png
+    - https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/LibreOffice/screenshots2.png
+    - https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/LibreOffice/screenshots3.png
   index: /
   is_uncontrolled: false
   port_map: "3000"
