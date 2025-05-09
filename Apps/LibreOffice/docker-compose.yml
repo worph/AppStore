@@ -38,7 +38,7 @@ x-casaos:
     - arm64
   author: self
   category: office
-   description:
+  description:
     en_us: LibreOffice - A powerful productivity suite featuring Writer, Calc, Impress, Draw, Base, and Math applications for creating professional documents, spreadsheets, presentations, and more
     zh_cn: Stirling-PDF LibreOffice - 功能强大的生产力套件，包含 Writer、Calc、Impress、Draw、Base 和 Math 应用程序，用于创建专业文档、电子表格、演示文稿等
     ko_kr: LibreOffice - 전문적인 문서, 스프레드시트, 프레젠테이션 등을 만들 수 있는 Writer, Calc, Impress, Draw, Base, Math 응용 프로그램을 갖춘 강력한 생산성 도구 모음 입니다.
@@ -56,3 +56,5 @@ x-casaos:
   port_map: "3000"
   title: 
     en_us: LibreOffice
+    zh_cn: LibreOffice
+    ko_kr: LibreOffice
