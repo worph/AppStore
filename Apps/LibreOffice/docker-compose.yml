@@ -1,0 +1,46 @@
+name: libreoffice
+
+services:
+  main_app:
+    image: linuxserver/libreoffice:latest
+    container_name: libreoffice
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - type: bind
+        source: /DATA/AppData/libreoffice/documents
+        target: /config/Documents
+      - type: bind
+        source: /DATA/AppData/libreoffice/config
+        target: /config/.config/libreoffice
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Seoul
+      - ID = abc
+      - PASSWORD=libreoffice
+      - SECURE_CONNECTION=0
+      - NOVNC_PORT=3000
+    security_opt:
+      - seccomp:unconfined
+    shm_size: "2gb"
+    networks:
+      pcs: null
+
+networks:
+  pcs:
+    name: pcs
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  author: self
+  category: office
+  icon: https://raw.githubusercontent.com/linuxserver/docker-templates/master/linuxserver.io/img/libreoffice-logo.png
+  index: /
+  is_uncontrolled: false
+  port_map: "3000"
+  title: 
+    en_us: LibreOffice
