@@ -48,11 +48,11 @@ x-casaos:
     en_us: WordPress - A flexible content management system powering millions of websites worldwide, with customizable themes, plugins, and a user-friendly interface.
     zh_cn: WordPress - 一个灵活的内容管理系统，为全球数百万网站提供支持，具有可定制的主题、插件和用户友好的界面
     ko_kr: WordPress - 전 세계 수백만 개의 웹사이트를 운영하는 유연한 콘텐츠 관리 시스템으로, 맞춤형 테마, 플러그인 및 사용자 친화적인 인터페이스 제공합니다.
-  icon: https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/Worldpress/icons.png
+  icon: https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/Wordpress/icons.png
   screenshot_link:
-    - https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/Worldpress/screenshots1.png
-    - https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/Worldpress/screenshots2.png
-    - https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/Worldpress/screenshots3.png
+    - https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/Wordpress/screenshots1.png
+    - https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/Wordpress/screenshots2.png
+    - https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/Wordpress/screenshots3.png
   index: /
   is_uncontrolled: false
   tagline:
@@ -62,9 +62,10 @@ x-casaos:
   port_map: "80"
   store_app_id: wordpress
   title:
-    en_us: Worldpress
-    zh_cn: Worldpress
-    ko_kr: Worldpress
+    en_us: Wordpress
+    zh_cn: Wordpress
+    ko_kr: Wordpress
+  main: wordpress
   volumes:
     - /DATA/AppData/$AppID/wordpress
     - /DATA/AppData/$AppID/db
