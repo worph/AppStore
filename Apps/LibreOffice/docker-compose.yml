@@ -1,0 +1,60 @@
+name: libreoffice
+
+services:
+  main_app:
+    image: linuxserver/libreoffice:latest
+    container_name: libreoffice
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - type: bind
+        source: /DATA/AppData/libreoffice/documents
+        target: /config/Documents
+      - type: bind
+        source: /DATA/AppData/libreoffice/config
+        target: /config/.config/libreoffice
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Seoul
+      - ID = abc
+      - PASSWORD=libreoffice
+      - SECURE_CONNECTION=0
+      - NOVNC_PORT=3000
+    security_opt:
+      - seccomp:unconfined
+    shm_size: "2gb"
+    networks:
+      pcs: null
+
+networks:
+  pcs:
+    name: pcs
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  author: self
+  category: office
+  description:
+    en_us: LibreOffice - A powerful productivity suite featuring Writer, Calc, Impress, Draw, Base, and Math applications for creating professional documents, spreadsheets, presentations, and more
+    zh_cn: Stirling-PDF LibreOffice - 功能强大的生产力套件，包含 Writer、Calc、Impress、Draw、Base 和 Math 应用程序，用于创建专业文档、电子表格、演示文稿等
+    ko_kr: LibreOffice - 전문적인 문서, 스프레드시트, 프레젠테이션 등을 만들 수 있는 Writer, Calc, Impress, Draw, Base, Math 응용 프로그램을 갖춘 강력한 생산성 도구 모음 입니다.
+  icon: https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/LibreOffice/icons.png
+  screenshot_link:
+    - https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/LibreOffice/screenshots1.png
+    - https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/LibreOffice/screenshots2.png
+    - https://raw.githubusercontent.com/BookJJun-IJ/AppStore/create/Apps/LibreOffice/screenshots3.png
+  index: /
+  tagline:
+    en_us: The free, open-source office suite for all your document needs
+    zh_cn: 满足所有文档需求的免费开源办公套件
+    ko_kr: 모든 문서 작업을 위한 무료 오픈소스 사무용 프로그램 모음
+  is_uncontrolled: false
+  port_map: "3000"
+  title: 
+    en_us: LibreOffice
+    zh_cn: LibreOffice
+    ko_kr: LibreOffice
