@@ -6,6 +6,10 @@ services:
       PGID: $PGID
       PUID: $PUID
       TZ: $TZ
+      SETTINGS_ENCRYPTION_KEY: '$default_pwd'
+      DUPLICATI__WEBSERVICE_PASSWORD: '$default_pwd'
+    expose:
+      - 8200
     deploy:
       resources:
         reservations:
@@ -18,7 +22,7 @@ services:
         target: /config
       - type: bind
         source: /DATA/
-        target: /source/
+        target: /config/DATA
     container_name: duplicati
 
 x-casaos:
