@@ -10,8 +10,11 @@ services:
       DUPLICATI__WEBSERVICE_PASSWORD: '$default_pwd'
     expose:
       - 8200
+    cpu_shares: 10
     deploy:
       resources:
+        limits:
+          memory: 256M
         reservations:
           memory: 64M
     network_mode: bridge
