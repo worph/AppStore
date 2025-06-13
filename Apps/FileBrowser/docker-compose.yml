@@ -89,16 +89,9 @@ x-casaos:
     before_install:
       en_us: |
         Default Account
-
-        | Username | Password |
-        | -------- | -------- |
-        | `admin`    | `admin`    |
-      zh_cn: |
-        默认账号
-
-        | 用户名 | 密码 |
-        | -------- | -------- |
-        | `admin`    | `admin`    |
+        | Username   | Password       |
+        | --------   | ------------   |
+        | `admin`    | `$default_pwd` |
   title:
     en_us: FileBrowser
   index: /
