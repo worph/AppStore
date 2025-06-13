@@ -92,8 +92,7 @@ x-casaos:
         | Username   | Password       |
         | --------   | ------------   |
         | `admin`    | `$default_pwd` |
-    custom:
-      en_us: |
+    custom: |
         Default Account (custom)
         | Username   | Password       |
         | --------   | ------------   |
