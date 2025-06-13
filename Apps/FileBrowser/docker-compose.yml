@@ -92,6 +92,12 @@ x-casaos:
         | Username   | Password       |
         | --------   | ------------   |
         | `admin`    | `$default_pwd` |
+    custom:
+      en_us: |
+        Default Account (custom)
+        | Username   | Password       |
+        | --------   | ------------   |
+        | `admin`    | `$default_pwd` |
   title:
     en_us: FileBrowser
   index: /
