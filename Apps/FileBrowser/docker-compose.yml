@@ -88,12 +88,7 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        Default Account
-        | Username   | Password       |
-        | --------   | ------------   |
-        | `admin`    | `$default_pwd` |
-    custom: |
-        Default Account (custom)
+        Default Account $PGID $PUID $TZ
         | Username   | Password       |
         | --------   | ------------   |
         | `admin`    | `$default_pwd` |
