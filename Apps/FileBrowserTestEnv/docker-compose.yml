@@ -96,6 +96,6 @@ x-casaos:
         Default user : `$DefaultUserName`
         Default Password : `$DefaultPassword`
   title:
-    en_us: FileBrowser
+    en_us: FileBrowserTestEnv
   index: /
   webui_port: 80

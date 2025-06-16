@@ -1,0 +1,53 @@
+name: jellyfin
+
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    #ports:
+    # Port mappings can be uncommented when the ip feature is available
+    #  - "8920:8920"
+    #  - "7359:7359/udp"
+    #  - "1900:1900/udp"
+    expose:
+      - 8096
+    volumes:
+      - /DATA/AppData/jellyfin/config:/config
+      - /DATA/AppData/jellyfin/cache:/cache
+      - /DATA/Media/Movies:/media/movies:ro
+      - /DATA/Media/TV Show:/media/tvshows:ro
+      - /DATA/Media/Music:/media/music:ro
+      - /DATA/Downloads:/media/downloads:ro
+    environment:
+      PGID: $PGID
+      PUID: $PUID
+      TZ: $TZ
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  author: self
+  category: media
+  description:
+    en_us: Jellyfin - The Free Software Media System that puts you in control of managing and streaming your media. Stream to any device from your own server.
+    zh_cn: Jellyfin - 免费开源媒体系统，让您完全控制媒体的管理和流媒体播放。从您自己的服务器流式传输到任何设备。
+    ko_kr: Jellyfin - 미디어 관리 및 스트리밍을 완전히 제어할 수 있는 무료 오픈소스 미디어 시스템입니다. 자체 서버에서 모든 기기로 스트리밍하세요.
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Jellyfin/thumbnail.jpg
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Jellyfin/icons.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Jellyfin/screenshots1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Jellyfin/screenshots2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Jellyfin/screenshots3.png
+  index: /
+  tagline:
+    en_us: Your personal media streaming server with no strings attached
+    zh_cn: 您的个人媒体流媒体服务器，完全自由
+    ko_kr: 완전히 자유로운 개인 미디어 스트리밍 서버
+  store_app_id: jellyfin
+  title:
+    en_us: Jellyfin
+  main: jellyfin
+  is_uncontrolled: false
+  webui_port: 8096
