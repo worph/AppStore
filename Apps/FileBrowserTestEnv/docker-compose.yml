@@ -1,18 +1,17 @@
-name: filebrowser
+name: filebrowsertest
 services:
   filebrowser:
     environment:
       PGID: $PGID
       PUID: $PUID
       TZ: $TZ
-      FB_DATABASE: /db/database.db
-    image: filebrowser/filebrowser:v2.32.0
+    image: filebrowser/filebrowser:v2.23.0
     network_mode: bridge
     restart: unless-stopped
     volumes:
       - type: bind
-        source: /DATA/AppData/filebrowser/db/
-        target: /db/
+        source: /DATA/AppData/$AppID/db
+        target: /db
       - type: bind
         source: /DATA
         target: /srv
@@ -44,9 +43,6 @@ services:
             zh_cn: FileBrowser管理的目录
     container_name: filebrowser
 x-casaos:
-  pre-install-cmd: |
-    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser config init --database /db/database.db &&
-    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser users add admin $default_pwd --perm.admin --database /db/database.db
   architectures:
     - amd64
     - arm64
@@ -92,10 +88,13 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        Default Account
+        Default Account $PGID $PUID $TZ
         | Username   | Password       |
         | --------   | ------------   |
         | `admin`    | `$default_pwd` |
+        
+        Default user : `$DefaultUserName`
+        Default Password : `$DefaultPassword`
   title:
     en_us: FileBrowser
   index: /
