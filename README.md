@@ -15,8 +15,8 @@ All apps are accessible over HTTPS by default.
 All apps are tested on Yundera servers using a nsl.sh routing domain.
 
 ## Related Projects
-- [CasaIMG](https://github.com/worph/casa-img) - Docker-based CasaOS image manager with mesh router compatibility
-- [Mesh-Router](https://github.com/worph/mesh-router) - Domain management system for containerized applications, integrated with CasaIMG
+- [CasaIMG](https://github.com/yundera/casa-img) - Docker-based CasaOS image manager with mesh router compatibility
+- [Mesh-Router](https://github.com/yundera/mesh-router) - Domain management system for containerized applications, integrated with CasaIMG
 
 ## Sponsors
 * **Yundera** - [yundera.com](https://yundera.com)  
@@ -32,8 +32,8 @@ We welcome contributions to help grow this AppStore:
 3. Check issues labeled `help wanted` for specific areas needing assistance
 
 ## Contributors
-<a href="https://github.com/worph/Yundera-AppStore/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=worph/Yundera-AppStore" />
+<a href="https://github.com/yundera/AppStore/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=yundera/AppStore" />
 </a>
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->

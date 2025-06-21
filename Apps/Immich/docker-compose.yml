@@ -8,8 +8,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1024M
-    image: altran1502/immich-server:v1.129.0
+          memory: 2048M
+          cpus: '1.0'
+    image: altran1502/immich-server:v1.135.3
     volumes:
       - /DATA/Gallery/immich:/usr/src/app/upload
       - /etc/localtime:/etc/localtime:ro
@@ -17,8 +18,12 @@ services:
       DB_DATABASE_NAME: immich
       DB_PASSWORD: postgres
       DB_USERNAME: postgres
+      IMMICH_PORT: 80
+      PGID: $PGID
+      PUID: $PUID
+      TZ: $TZ
     expose:
-      - 2283
+      - 80
     depends_on:
       - redis
       - database
@@ -29,11 +34,14 @@ services:
   immich-machine-learning:
     container_name: immich-machine-learning
     hostname: immich-machine-learning
-    image: altran1502/immich-machine-learning:v1.129.0
+    image: altran1502/immich-machine-learning:v1.135.3
     environment:
       DB_DATABASE_NAME: immich
       DB_PASSWORD: postgres
       DB_USERNAME: postgres
+      PGID: $PGID
+      PUID: $PUID
+      TZ: $TZ
     restart: unless-stopped
     volumes:
       - /DATA/AppData/immich/model-cache:/cache
@@ -46,6 +54,10 @@ services:
     image: docker.io/redis:6.2-alpine@sha256:148bb5411c184abd288d9aaed139c98123eeb8824c5d3fce03cf721db58066d8
     healthcheck:
       test: redis-cli ping || exit 1
+    environment:
+      PGID: $PGID
+      PUID: $PUID
+      TZ: $TZ
     volumes:
       - /DATA/AppData/immich/redis:/data
     restart: unless-stopped
@@ -61,6 +73,9 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: immich
       POSTGRES_INITDB_ARGS: '--data-checksums'
+      PGID: $PGID
+      PUID: $PUID
+      TZ: $TZ
     volumes:
       - /DATA/AppData/immich/pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -101,12 +116,12 @@ x-casaos:
   category: Gallery
   author: Cp0204
   developer: alextran1502
-  icon: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/Immich/icon.png
+  icon: https://cdn.jsdelivr.net/gh/worph/Yundera-AppStore@main/Apps/Immich/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/Immich/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/Immich/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/Immich/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/Immich/thumbnail.png
+    - https://cdn.jsdelivr.net/gh/worph/Yundera-AppStore@main/Apps/Immich/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/worph/Yundera-AppStore@main/Apps/Immich/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/worph/Yundera-AppStore@main/Apps/Immich/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/worph/Yundera-AppStore@main/Apps/Immich/thumbnail.png
   description:
     en_US: |
       Immich: Revolutionizing Your Home Media Experience
@@ -248,4 +263,4 @@ x-casaos:
   title:
     en_us: Immich
   index: /
-  webui_port: 2283
+  webui_port: 80

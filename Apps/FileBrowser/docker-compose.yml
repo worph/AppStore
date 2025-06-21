@@ -27,9 +27,9 @@ services:
           memory: 256M
 x-casaos:
   pre-install-cmd: |
-    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser config init --database /db/database.db &&
-    docker run --rm -v /DATA/AppData/filebrowser/:/data ubuntu chown -R $PUID:$PGID /data &&
-    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser users add admin $default_pwd --perm.admin --database /db/database.db
+    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 config init --database /db/database.db &&
+    docker run --rm -v /DATA/AppData/filebrowser/:/data ubuntu:22.04 chown -R $PUID:$PGID /data &&
+    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 users add admin $default_pwd --perm.admin --database /db/database.db
   architectures:
     - amd64
     - arm64
@@ -78,7 +78,6 @@ x-casaos:
       로컬 호스팅을 기반으로 설계되어 파일은 서버에만 저장되고 외부 서비스에 의존하지 않습니다. 창작자, 팀, 개인정보 중시 사용자 모두에게 이상적입니다. 다중 사용자 접근과 역할 기반 권한 설정을 지원하여 홈 또는 비즈니스 환경에 적합합니다.
       
       Yundera PCS에 FileBrowser를 설치하면 로컬 호스팅의 속도, 오픈 소스의 자유, 현대적인 파일 탐색기의 편리함을 모두 누릴 수 있습니다。
-          en_us: File Browser - Webbased File Browser including sharing functions etc.
     ar_sa: متصفح الملفات - متصفح ملفات Webbased يشمل وظائف المشاركة وما إلى ذلك
     de_de: Datei Browser - Webbasierte Datei Browser, einschließlich Sharing-Funktionen usw.
     es_es: File Browser - Navegador de archivos Webbased que incluye funciones de compartición, etc.
@@ -96,7 +95,7 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/screenshot-2.jpg
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/screenshot-3.jpg
   tagline:
-    en_us: Upload, delete, preview, rename, edit and share your files.
+    en_us: This is your Cloud. Your own Drive alternative - upload, organize, and share files with full control and privacy.
     zh_cn: 上传，删除，预览，重命名，编辑和共享您的文件。
     ar_sa: قم بتحميل، حذف، معاينة، إعادة تسمية، تحرير ومشاركة ملفاتك.
     de_de: Hochladen, Löschen, Vorschau, Umbenennen, Bearbeiten und Freigeben Ihrer Dateien.
@@ -109,6 +108,7 @@ x-casaos:
     pt_br: Faça upload, exclua, visualize, renomeie, edite e compartilhe seus arquivos.
     sv_se: Ladda upp, ta bort, förhandsgranska, byt namn, redigera och dela dina filer.
     uk_ua: Завантажте, видаліть, перегляньте, перейменуйте, відредагуйте і поділіться своїми файлами.
+    ko_kr: 파일을 업로드, 삭제, 미리보기, 이름 변경, 편집 및 공유하세요.
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/thumbnail.jpg
   tips:
     before_install:
