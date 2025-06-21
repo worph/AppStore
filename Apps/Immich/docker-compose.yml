@@ -284,5 +284,15 @@ x-casaos:
     tr_TR: Kendi kendine barındırılan medya yönetimi çözümü
   title:
     en_us: Immich
+  tips:
+    before_install:
+      en_us: |
+        **Setup Information:**
+        
+        📱 **Mobile App**: After installation, you can download the Immich mobile app by scanning the QR code from the web interface settings page.
+        
+        ⏰ **Startup Time**: Immich takes approximately 5 minutes to fully start up. Please wait before accessing the web panel to ensure all services are ready.
+        
+        🔐 **First Setup**: Create your admin account on first visit to the web interface.
   index: /
   webui_port: 80
