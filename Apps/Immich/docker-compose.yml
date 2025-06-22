@@ -47,6 +47,9 @@ services:
       DB_PASSWORD: postgres
       DB_USERNAME: postgres
       TZ: $TZ
+      HOME: /cache
+      MPLCONFIGDIR: /cache/.config/matplotlib
+      TRANSFORMERS_CACHE: /cache
     restart: unless-stopped
     volumes:
       - /DATA/AppData/immich/model-cache:/cache
