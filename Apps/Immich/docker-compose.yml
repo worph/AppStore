@@ -11,7 +11,6 @@ services:
           memory: 2048M
           cpus: '1.0'
     image: altran1502/immich-server:v1.135.3
-    user: $PUID:$PGID
     volumes:
       - /DATA/AppData/immich/upload:/usr/src/app/upload
       - /etc/localtime:/etc/localtime:ro
@@ -35,7 +34,7 @@ services:
   immich-machine-learning:
     container_name: immich-machine-learning
     hostname: immich-machine-learning
-    cpu_shares: 10
+    cpu_shares: 5
     deploy:
       resources:
         limits:
@@ -47,8 +46,6 @@ services:
       DB_DATABASE_NAME: immich
       DB_PASSWORD: postgres
       DB_USERNAME: postgres
-      PGID: $PGID
-      PUID: $PUID
       TZ: $TZ
     restart: unless-stopped
     volumes:
@@ -66,7 +63,6 @@ services:
           memory: 256M
           cpus: '0.25'
     image: docker.io/redis:6.2-alpine@sha256:148bb5411c184abd288d9aaed139c98123eeb8824c5d3fce03cf721db58066d8
-    user: $PUID:$PGID
     healthcheck:
       test: redis-cli ping || exit 1
     environment:
@@ -89,7 +85,6 @@ services:
           memory: 1024M
           cpus: '0.5'
     image: docker.io/tensorchord/pgvecto-rs:pg14-v0.2.0@sha256:739cdd626151ff1f796dc95a6591b55a714f341c737e27f045019ceabf8e8c52
-    user: $PUID:$PGID
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
@@ -138,6 +133,7 @@ x-casaos:
   category: Gallery
   author: Cp0204
   developer: alextran1502
+  pre-install-cmd: docker run --rm -v /DATA/AppData/$AppID/:/data/ alpine:latest sh -c "mkdir -p /data/model-cache /data/upload /data/pgdata /data/redis"
   icon: https://cdn.jsdelivr.net/gh/worph/Yundera-AppStore@main/Apps/Immich/icon.png
   screenshot_link:
     - https://cdn.jsdelivr.net/gh/worph/Yundera-AppStore@main/Apps/Immich/screenshot-1.png
@@ -291,8 +287,12 @@ x-casaos:
         
         📱 **Mobile App**: After installation, you can download the Immich mobile app by scanning the QR code from the web interface settings page.
         
-        ⏰ **Startup Time**: Immich takes approximately 5 minutes to fully start up. Please wait before accessing the web panel to ensure all services are ready.
+        ⏰ **Startup Time**: Immich takes approximately 5-10 minutes to fully start up. The machine learning service downloads AI models on first run, which may take additional time depending on your internet connection.
+        
+        🤖 **Machine Learning**: The ML service automatically downloads face recognition and object detection models (several GB) on first startup. This is normal and only happens once.
         
         🔐 **First Setup**: Create your admin account on first visit to the web interface.
+        
+        📁 **Storage**: Photos and videos are stored in `/DATA/AppData/immich/upload` with automatic backup from mobile devices.
   index: /
   webui_port: 80
