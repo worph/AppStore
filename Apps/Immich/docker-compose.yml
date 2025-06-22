@@ -42,8 +42,11 @@ services:
           memory: 1024M
           cpus: '0.5'
     image: ghcr.io/immich-app/immich-machine-learning:v1.135.3
+    user: 0:0
     environment:
       TZ: $TZ
+      PGID: 0
+      PUID: 0
     restart: unless-stopped
     volumes:
       - model-cache:/cache
