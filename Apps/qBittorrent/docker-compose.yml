@@ -29,13 +29,12 @@ x-casaos:
   main: qbittorrent
   webui_port: 80
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/$$AppID/config/qBittorrent && 
-    if [ ! -f "/DATA/AppData/$$AppID/config/qBittorrent/qBittorrent.conf" ]; then
-      SALT_HEX=$$(openssl rand -hex 16)
-      SALT_B64=$$(printf '%s' "$$SALT_HEX" | sed 's/\(..\)/\\x\1/g' | xargs -0 printf | base64 -w0)
-      PASSWORD="$${default_pwd:-adminadmin}"
-      HASH=$$(printf '%s' "$$PASSWORD" | openssl kdf -keylen 64 -binary -kdfopt digest:sha512 -kdfopt pass:stdin -kdfopt salt:"$$SALT_HEX" -kdfopt iter:100000 PBKDF2 | base64 -w0)
-      printf '[Preferences]\nWebUI\\Password_PBKDF2=@ByteArray(%s:%s)\nWebUI\\Username=admin\n' "$$SALT_B64" "$$HASH" > /DATA/AppData/$$AppID/config/qBittorrent/qBittorrent.conf
+    mkdir -p /DATA/AppData/qbittorrent/config/qBittorrent && 
+    if [ ! -f "/DATA/AppData/qbittorrent/config/qBittorrent/qBittorrent.conf" ]; then
+      printf '[Preferences]\nWebUI\\Password_PBKDF2=@ByteArray(%s:%s)\nWebUI\\Username=admin\n' \
+        "$(openssl rand -hex 16 | sed 's/\(..\)/\\x\1/g' | xargs -0 printf | base64 -w0)" \
+        "$(printf '%s' "${default_pwd:-adminadmin}" | openssl kdf -keylen 64 -binary -kdfopt digest:sha512 -kdfopt pass:stdin -kdfopt salt:"$(openssl rand -hex 16)" -kdfopt iter:100000 PBKDF2 | base64 -w0)" \
+        > /DATA/AppData/qbittorrent/config/qBittorrent/qBittorrent.conf
     fi
   tips:
     before_install:
