@@ -31,10 +31,12 @@ x-casaos:
   pre-install-cmd: |
     mkdir -p /DATA/AppData/qbittorrent/config/qBittorrent && 
     if [ ! -f "/DATA/AppData/qbittorrent/config/qBittorrent/qBittorrent.conf" ]; then
+      openssl rand -hex 16 > /tmp/salt.hex && \
       printf '[Preferences]\nWebUI\\Password_PBKDF2=@ByteArray(%s:%s)\nWebUI\\Username=admin\n' \
-        "$(openssl rand -hex 16 | sed 's/\(..\)/\\x\1/g' | xargs -0 printf | base64 -w0)" \
-        "$(printf '%s' "${default_pwd:-adminadmin}" | openssl kdf -keylen 64 -binary -kdfopt digest:sha512 -kdfopt pass:stdin -kdfopt salt:"$(openssl rand -hex 16)" -kdfopt iter:100000 PBKDF2 | base64 -w0)" \
-        > /DATA/AppData/qbittorrent/config/qBittorrent/qBittorrent.conf
+        "$(cat /tmp/salt.hex | sed 's/\(..\)/\\x\1/g' | xargs -0 printf | base64 -w0)" \
+        "$(printf '%s' "${default_pwd:-adminadmin}" | openssl kdf -keylen 64 -binary -kdfopt digest:sha512 -kdfopt pass:stdin -kdfopt salt:"$(cat /tmp/salt.hex)" -kdfopt iter:100000 PBKDF2 | base64 -w0)" \
+        > /DATA/AppData/qbittorrent/config/qBittorrent/qBittorrent.conf && \
+      rm -f /tmp/salt.hex
     fi
   tips:
     before_install:
