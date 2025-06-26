@@ -19,11 +19,11 @@ services:
     volumes:
       - /DATA/AppData/qbittorrent/config:/config
       - /DATA/Downloads:/downloads
+    cpu_shares: 10
     deploy:
       resources:
         limits:
           memory: 512M
-          cpus: '1.0'
 
 x-casaos:
   main: qbittorrent
@@ -34,7 +34,7 @@ x-casaos:
       -v /DATA/AppData/qbittorrent/config/qBittorrent:/output \
       -e QB_PASSWORD="${default_pwd:-adminadmin}" \
       -e QB_USERNAME=admin \
-      ghcr.io/worph/qbittorrent-config:1.0.0
+      ghcr.io/worph/qbittorrent-config:1.0.2
   tips:
     before_install:
       en_us: |
