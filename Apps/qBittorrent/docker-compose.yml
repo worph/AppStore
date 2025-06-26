@@ -31,12 +31,13 @@ x-casaos:
   pre-install-cmd: |
     mkdir -p /DATA/AppData/qbittorrent/config/qBittorrent &&
     docker run --rm -v /DATA/AppData/qbittorrent/config/qBittorrent:/data ghcr.io/yundera/pre-install-toolbox:1.1.0 \
-    'if [ ! -f "/data/config/qBittorrent/qBittorrent.conf" ]; then
-      SALT_HEX=$(openssl rand -hex 16) && \
+    'if [ ! -f "/data/qBittorrent.conf" ]; then
+      openssl rand -hex 16 > /tmp/salt.hex && \
       printf "[Preferences]\nWebUI\\Password_PBKDF2=@ByteArray(%s:%s)\nWebUI\\Username=admin\n" \
-        "$(echo -n "$SALT_HEX" | xxd -r -p | base64 -w0)" \
-        "$(printf "%s" "'"${default_pwd:-adminadmin}"'" | openssl kdf -keylen 64 -binary -kdfopt digest:SHA512 -kdfopt pass:stdin -kdfopt hexsalt:"$SALT_HEX" -kdfopt iter:100000 PBKDF2 | base64 -w0)" \
-        > /data/qBittorrent.conf
+        "$(cat /tmp/salt.hex | xxd -r -p | base64 -w0)" \
+        "$(printf "%s" "'"${default_pwd:-adminadmin}"'" | openssl kdf -keylen 64 -binary -kdfopt digest:SHA512 -kdfopt pass:stdin -kdfopt hexsalt:"$(cat /tmp/salt.hex)" -kdfopt iter:100000 PBKDF2 | base64 -w0)" \
+        > /data/qBittorrent.conf && \
+      rm -f /tmp/salt.hex
     fi'
   tips:
     before_install:
