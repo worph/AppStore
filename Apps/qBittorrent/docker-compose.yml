@@ -40,6 +40,7 @@ x-casaos:
       en_us: |
         Login : `admin`
         Password : `$default_pwd`
+        The download directory is `/DATA/Downloads`
   architectures:
     - amd64
     - arm64
