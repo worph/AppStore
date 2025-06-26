@@ -37,7 +37,7 @@ x-casaos:
         "$(cat /tmp/salt.hex | xxd -r -p | base64 -w0)" \
         "$(printf "%s" "'"${default_pwd:-adminadmin}"'" | openssl kdf -keylen 64 -binary -kdfopt digest:SHA512 -kdfopt pass:stdin -kdfopt hexsalt:"$(cat /tmp/salt.hex)" -kdfopt iter:100000 PBKDF2 | base64 -w0)" \
         > /data/qBittorrent.conf && \
-      rm -f /tmp/salt.hex
+      cat /data/qBittorrent.conf
     fi'
   tips:
     before_install:
