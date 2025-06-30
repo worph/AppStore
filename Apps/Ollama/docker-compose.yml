@@ -1,6 +1,7 @@
 name: ollama
 services:
   ollama:
+    user: 0:0
     image: ghcr.io/ollama-webui/ollama-webui:git-f4000f4
     container_name: ollama
     restart: unless-stopped
@@ -17,9 +18,10 @@ services:
     image: ollama/ollama:0.5.8
     container_name: ollama-api
     restart: unless-stopped
+    user: 0:0
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/data
+        source: /DATA/AppData/ollama/data
         target: /root/.ollama
     expose:
       - 11434
