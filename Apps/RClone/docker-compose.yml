@@ -1,21 +1,10 @@
 name: rclone
 services:
   rclone:
-    image: rclone/rclone:latest
+    image: rclone/rclone:1.70.3
     container_name: rclone
     hostname: rclone
     restart: unless-stopped
-    x-casaos:
-      volumes:
-        - container: /config/rclone
-          description:
-            en_us: Contains Rclone configuration files
-        - container: /cache
-          description:
-            en_us: Cache directory for improved performance
-        - container: /data
-          description:
-            en_us: Mount point for your remote storage
     expose:
       - 8080
     volumes:
