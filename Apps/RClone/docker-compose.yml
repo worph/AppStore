@@ -37,7 +37,11 @@ services:
       - /config/rclone/rclone.conf
       - --cache-dir
       - /cache
+      - --allow-other
 x-casaos:
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/rclone/config /DATA/AppData/rclone/cache /DATA/Shared-Rclone &&
+    chown -R $PUID:$PGID /DATA/AppData/rclone/ /DATA/Shared-Rclone/
   architectures:
     - amd64
     - arm
@@ -70,12 +74,35 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        **Important**: After mounting a remote, files will be accessible at `/DATA/Shared-Rclone/` on your host system.
+        **Setup Steps**:
+        1. **Configure Remote**: Use "Config" to add your cloud storage (Google Drive, OneDrive, etc.)
+        2. **Verify Connection**: Use "Explorer" to browse and test access to your remote files
+        3. **Mount Remote**: Use "Mount" to mount your remote to `/data` path
+        
+        **Important**: After mounting, files will be accessible at `/DATA/Shared-Rclone/` on your host system and to other containers.
         
         **Mount Configuration**:
         - Always mount remotes to `/data` inside the rclone web UI
         - This maps to `/DATA/Shared-Rclone/` on your CasaOS system
-        - Files mounted inside the container will be visible outside the container at this location
+        - Files will be accessible to other containers that mount this directory
+        - Other apps can access your cloud files by mounting `/DATA/Shared-Rclone/`
+        
+        **Virtual Files Setup (OneDrive/Dropbox style)**:
+        For virtual files that download on-demand (like cloud sync clients):
+        - **VFS Cache Mode**: Set to `minimal` for virtual files or `writes` for better performance
+        - **VFS Cache Max Size**: Set based on available disk space (e.g., `10G` or `50G`)
+        - **VFS Cache Max Age**: How long to keep cached files (e.g., `24h` or `168h` for 1 week)
+        - **VFS Read Chunk Size**: Use `128M` for faster streaming of large files
+        - **VFS Cache Poll Interval**: Set to `15s` to check for remote changes
+        
+        **Recommended Settings for Virtual Files**:
+        ```
+        VFS Cache Mode: minimal
+        VFS Cache Max Size: 10G
+        VFS Cache Max Age: 168h
+        VFS Read Chunk Size: 128M
+        VFS Cache Poll Interval: 15s
+        ```
         
         **Default Account**:
         | Username | Password |
