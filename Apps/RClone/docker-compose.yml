@@ -1,6 +1,7 @@
 name: rclone
 services:
   rclone:
+    user: 0:0 #root user
     image: rclone/rclone:1.70.3
     container_name: rclone
     hostname: rclone
