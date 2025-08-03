@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Session Startup
+
+**IMPORTANT**: At the start of every session, read the `CONTRIBUTING.md` file to understand the current contribution guidelines, security requirements, and app submission process.
+
 ## Repository Overview
 
 This is the **Yundera CasaOS 3rd-Party AppStore** - a curated collection of Docker Compose applications configured for CasaOS with NSL.SH mesh router integration. The repository contains containerized applications that run on CasaIMG (dockerized CasaOS) with HTTPS-enabled URLs.

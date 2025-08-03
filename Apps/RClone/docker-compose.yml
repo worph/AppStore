@@ -11,7 +11,7 @@ services:
     volumes:
       - /DATA/AppData/rclone/config:/config/rclone
       - /DATA/AppData/rclone/cache:/cache
-      - /DATA/AppData/rclone/mount:/data:shared
+      - /DATA/Shared-Rclone:/data:rshared,z
       - /etc/passwd:/etc/passwd:ro
       - /etc/group:/etc/group:ro
       - /etc/fuse.conf:/etc/fuse.conf:ro
@@ -67,5 +67,19 @@ x-casaos:
   category: Storage
   title:
     en_us: Rclone
+  tips:
+    before_install:
+      en_us: |
+        **Important**: After mounting a remote, files will be accessible at `/DATA/Shared-Rclone/` on your host system.
+        
+        **Mount Configuration**:
+        - Always mount remotes to `/data` inside the rclone web UI
+        - This maps to `/DATA/Shared-Rclone/` on your CasaOS system
+        - Files mounted inside the container will be visible outside the container at this location
+        
+        **Default Account**:
+        | Username | Password |
+        |----------|----------|
+        | `admin`  | `$default_pwd` |
   main: rclone
   webui_port: 80
