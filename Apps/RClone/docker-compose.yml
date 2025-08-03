@@ -39,9 +39,6 @@ services:
       - /cache
       - --allow-other
 x-casaos:
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/rclone/config /DATA/AppData/rclone/cache /DATA/Shared-Rclone &&
-    chown -R $PUID:$PGID /DATA/AppData/rclone/ /DATA/Shared-Rclone/
   architectures:
     - amd64
     - arm
