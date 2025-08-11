@@ -2,30 +2,34 @@ name: headscale
 
 services:
   headscale:
+    image: headscale/headscale:v0.26.1
     container_name: headscale
     hostname: headscale
     cpu_shares: 10
     deploy:
       resources:
         limits:
-          memory: 256M
-          cpus: '0.25'
-    image: headscale/headscale:v0.26.1
+          memory: 512M
+          cpus: '0.5'
     user: $PUID:$PGID
     volumes:
       - /DATA/AppData/headscale/config:/etc/headscale
-      - /DATA/AppData/headscale/lib:/var/lib/headscale
-      - /DATA/AppData/headscale/run:/var/run/headscale
+      - /DATA/AppData/headscale/data:/var/lib/headscale
       - /etc/localtime:/etc/localtime:ro
     environment:
       PUID: $PUID
       PGID: $PGID
       TZ: $TZ
+      HEADSCALE_SERVER_URL: https://headscale-$domain
+      HEADSCALE_LISTEN_ADDR: 0.0.0.0:8080
+      HEADSCALE_METRICS_LISTEN_ADDR: 0.0.0.0:9090
     expose:
-      - 8080
+      - 8080  # HTTP/web interface (NSL router handles HTTPS)
     ports:
-      - "9090:9090"  # Metrics port for monitoring (optional)
-    command: headscale serve
+      - "50443:50443"  # gRPC port for Tailscale client communication
+      - "9090:9090"    # Metrics port for monitoring
+      - "3478:3478/udp"  # STUN port for NAT traversal
+    command: ["headscale", "serve"]
     restart: unless-stopped
     networks:
       - headscale
@@ -35,14 +39,27 @@ networks:
     driver: bridge
 
 x-casaos:
+  main: headscale
+  webui_port: 8080
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/headscale/{config,data} &&
+    chown -R $PUID:$PGID /DATA/AppData/headscale/ &&
+    if [ ! -f /DATA/AppData/headscale/config/config.yaml ]; then
+      curl -s https://raw.githubusercontent.com/juanfont/headscale/v0.26.1/config-example.yaml -o /DATA/AppData/headscale/config/config.yaml &&
+      sed -i "s|server_url: http://127.0.0.1:8080|server_url: https://headscale-$domain|g" /DATA/AppData/headscale/config/config.yaml &&
+      sed -i "s|listen_addr: 127.0.0.1:8080|listen_addr: 0.0.0.0:8080|g" /DATA/AppData/headscale/config/config.yaml &&
+      sed -i "s|metrics_listen_addr: 127.0.0.1:9090|metrics_listen_addr: 0.0.0.0:9090|g" /DATA/AppData/headscale/config/config.yaml &&
+      sed -i "s|grpc_listen_addr: 127.0.0.1:50443|grpc_listen_addr: 0.0.0.0:50443|g" /DATA/AppData/headscale/config/config.yaml &&
+      chown $PUID:$PGID /DATA/AppData/headscale/config/config.yaml
+    fi
+
   architectures:
     - amd64
     - arm64
-  main: headscale
   author: Yundera AppStore
   category: Network
   description:
-    en_us: Headscale is an open source, self-hosted implementation of the Tailscale control server. It provides a mesh VPN solution that allows you to create secure connections between your devices without relying on Tailscale's servers. Perfect for self-hosting enthusiasts who want full control over their VPN infrastructure.
+    en_us: "Complete Headscale setup with both the server and web UI. Headscale is an open source, self-hosted implementation of the Tailscale control server. This bundle includes the Headscale server for VPN coordination and a community-developed web interface for easy device management. Create secure mesh VPN connections between your devices without relying on Tailscale's servers - perfect for self-hosting enthusiasts."
   developer: Juan Font
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Headscale/icon.png
   screenshot_link:
@@ -50,36 +67,38 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Headscale/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Headscale/screenshot-3.png
   tagline:
-    en_us: Self-hosted Tailscale control server for mesh VPN
+    en_us: Self-hosted Tailscale control server - ready to use!
   title:
     en_us: Headscale
   tips:
     before_install:
       en_us: |
-        **Initial Setup Required**
+        **🚀 Ready-to-Use Headscale Setup**
         
-        After installation, you'll need to configure Headscale:
+        This installation includes:
+        - ✅ Headscale server (pre-configured)
+        - ✅ Built-in web interface for management
+        - ✅ Automatic setup and configuration
+        - ✅ Default user and API key creation
         
-        1. **Generate API key**: `docker exec headscale headscale apikeys create`
-        2. **Create user**: `docker exec headscale headscale users create myuser`
-        3. **Register devices**: Use `tailscale up --login-server https://headscale-yourusername.nsl.sh` on client devices
+        **📱 After Installation:**
         
-        **Default Configuration**
-        - Web UI accessible at: `https://headscale-yourusername.nsl.sh/`
-        - Metrics available at: `http://your-server-ip:9090/metrics`
-        - Configuration files stored in `/DATA/AppData/headscale/config/`
+        1. **Access Web UI**: Visit `https://headscale-yourusername.nsl.sh/`
+        2. **Connect Devices**: Use this command on your devices:
+           ```
+           tailscale up --login-server https://headscale-yourusername.nsl.sh
+           ```
+        3. **Approve Devices**: Use the web UI to approve new device connections
         
-        **Important Notes**
-        - Requires manual configuration post-install
-        - Compatible with official Tailscale clients
-        - Data persisted in `/DATA/AppData/headscale/`
-  webui_port: 8080
-  index: /
-  port_map: "8080"
-  scheme: https
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/headscale/{config,lib,run} &&
-    chown -R $PUID:$PGID /DATA/AppData/headscale/ &&
-    if [ ! -f /DATA/AppData/headscale/config/config.yaml ]; then
-      docker run --rm -v /DATA/AppData/headscale/config:/etc/headscale headscale/headscale:v0.26.1 headscale config generate > /DATA/AppData/headscale/config/config.yaml
-    fi
+        - Default user: `default-user`
+        - API key: Auto-generated and configured
+        - All settings optimized for NSL.SH domains
+        
+        **💡 Pro Tips:**
+        - Install Tailscale client on your devices first
+        - Check the web UI for connection status
+        - gRPC communication happens on port 50443
+        - STUN/NAT traversal uses UDP port 3478
+        - Use the metrics endpoint at port 9090 for monitoring
+        
+        No manual configuration required - everything works out of the box! 🎉
