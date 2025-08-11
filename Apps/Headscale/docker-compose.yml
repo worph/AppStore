@@ -11,25 +11,43 @@ services:
         limits:
           memory: 512M
           cpus: '0.5'
-    user: $PUID:$PGID
     volumes:
       - /DATA/AppData/headscale/config:/etc/headscale
       - /DATA/AppData/headscale/data:/var/lib/headscale
       - /etc/localtime:/etc/localtime:ro
     environment:
-      PUID: $PUID
-      PGID: $PGID
       TZ: $TZ
-      HEADSCALE_SERVER_URL: https://headscale-$domain
+      HEADSCALE_SERVER_URL: https://headscaleconnect-$domain
       HEADSCALE_LISTEN_ADDR: 0.0.0.0:8080
       HEADSCALE_METRICS_LISTEN_ADDR: 0.0.0.0:9090
     expose:
-      - 8080  # HTTP/web interface (NSL router handles HTTPS)
+      - 8080  # HTTP API for headscale-ui communication
     ports:
       - "50443:50443"  # gRPC port for Tailscale client communication
       - "9090:9090"    # Metrics port for monitoring
       - "3478:3478/udp"  # STUN port for NAT traversal
-    command: ["headscale", "serve"]
+    command: ["serve"]
+    restart: unless-stopped
+    networks:
+      - headscale
+
+  headscale-ui:
+    image: ghcr.io/gurucomputing/headscale-ui:latest
+    container_name: headscale-ui
+    hostname: headscale-ui
+    cpu_shares: 10
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+    environment:
+      TZ: $TZ
+      HEADSCALE_URL: http://headscale:8080
+    expose:
+      - 80  # Web UI (NSL router handles HTTPS)
+    depends_on:
+      - headscale
     restart: unless-stopped
     networks:
       - headscale
@@ -39,18 +57,16 @@ networks:
     driver: bridge
 
 x-casaos:
-  main: headscale
-  webui_port: 8080
+  main: headscale-ui
+  webui_port: 80
   pre-install-cmd: |
     mkdir -p /DATA/AppData/headscale/{config,data} &&
-    chown -R $PUID:$PGID /DATA/AppData/headscale/ &&
     if [ ! -f /DATA/AppData/headscale/config/config.yaml ]; then
       curl -s https://raw.githubusercontent.com/juanfont/headscale/v0.26.1/config-example.yaml -o /DATA/AppData/headscale/config/config.yaml &&
-      sed -i "s|server_url: http://127.0.0.1:8080|server_url: https://headscale-$domain|g" /DATA/AppData/headscale/config/config.yaml &&
+      sed -i "s|server_url: http://127.0.0.1:8080|server_url: https://headscaleconnect-$domain|g" /DATA/AppData/headscale/config/config.yaml &&
       sed -i "s|listen_addr: 127.0.0.1:8080|listen_addr: 0.0.0.0:8080|g" /DATA/AppData/headscale/config/config.yaml &&
       sed -i "s|metrics_listen_addr: 127.0.0.1:9090|metrics_listen_addr: 0.0.0.0:9090|g" /DATA/AppData/headscale/config/config.yaml &&
-      sed -i "s|grpc_listen_addr: 127.0.0.1:50443|grpc_listen_addr: 0.0.0.0:50443|g" /DATA/AppData/headscale/config/config.yaml &&
-      chown $PUID:$PGID /DATA/AppData/headscale/config/config.yaml
+      sed -i "s|grpc_listen_addr: 127.0.0.1:50443|grpc_listen_addr: 0.0.0.0:50443|g" /DATA/AppData/headscale/config/config.yaml
     fi
 
   architectures:
@@ -83,10 +99,10 @@ x-casaos:
         
         **📱 After Installation:**
         
-        1. **Access Web UI**: Visit `https://headscale-yourusername.nsl.sh/`
+        1. **Access Web UI**: Visit `https://headscale-yourusername.nsl.sh/` for management
         2. **Connect Devices**: Use this command on your devices:
            ```
-           tailscale up --login-server https://headscale-yourusername.nsl.sh
+           tailscale up --login-server https://headscaleconnect-yourusername.nsl.sh
            ```
         3. **Approve Devices**: Use the web UI to approve new device connections
         
