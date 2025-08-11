@@ -2,13 +2,13 @@
 
 ## Security Exceptions
 
-### Root User (user: 0:0)
-**Rationale**: Rclone requires root privileges for FUSE filesystem mounting operations. FUSE mounts need `SYS_ADMIN` capability and access to `/dev/fuse`, which requires elevated permissions.
+### User Permissions (user: $PUID:$PGID)
+**Rationale**: Rclone runs as the system user to ensure proper file ownership and permissions. FUSE mounting is enabled through `SYS_ADMIN` capability and `/dev/fuse` device access.
 
-**Mitigation**: 
-- Container runs with minimal required capabilities (`SYS_ADMIN` only)
-- Access is restricted to AppData directories only (`/DATA/AppData/rclone/` and `/DATA/Shared-Rclone/`)
-- No access to user directories (`/DATA/Documents/`, `/DATA/Media/`, etc.)
+**Benefits**: 
+- Files created/mounted have correct user ownership
+- No root-owned files that users cannot modify
+- Follows CasaOS security best practices
 
 ### Privileged Container
 **Rationale**: Required for FUSE mount propagation to work correctly. The `privileged: true` setting is necessary for:

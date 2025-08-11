@@ -1,7 +1,7 @@
 name: rclone
 services:
   rclone:
-    user: 0:0 #root user
+    user: $PUID:$PGID
     image: rclone/rclone:1.70.3
     container_name: rclone
     hostname: rclone
@@ -37,7 +37,6 @@ services:
       - /config/rclone/rclone.conf
       - --cache-dir
       - /cache
-      - --allow-other
 x-casaos:
   architectures:
     - amd64
@@ -91,6 +90,7 @@ x-casaos:
         - **VFS Cache Max Age**: How long to keep cached files (e.g., `24h` or `168h` for 1 week)
         - **VFS Read Chunk Size**: Use `128M` for faster streaming of large files
         - **VFS Cache Poll Interval**: Set to `15s` to check for remote changes
+        - **Mount Options**: Add `--allow-other` to make files accessible to other containers
         
         **Recommended Settings for Virtual Files**:
         ```
@@ -99,6 +99,7 @@ x-casaos:
         VFS Cache Max Age: 168h
         VFS Read Chunk Size: 128M
         VFS Cache Poll Interval: 15s
+        Mount Options: --allow-other
         ```
         
         **Default Account**:
