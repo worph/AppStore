@@ -5,6 +5,7 @@ services:
     image: headscale/headscale:v0.26.1
     container_name: headscale
     hostname: headscale
+    user: 0:0 # Run as root for full permissions
     cpu_shares: 10
     deploy:
       resources:
@@ -35,6 +36,7 @@ services:
     image: ghcr.io/gurucomputing/headscale-ui:latest
     container_name: headscale-ui
     hostname: headscale-ui
+    user: 0:0 # Run as root for full permissions
     cpu_shares: 10
     deploy:
       resources:
