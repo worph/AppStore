@@ -134,10 +134,34 @@ When working with this repository:
 - Test URL accessibility via NSL router
 - Ensure proper localization (English required, multi-language preferred)
 
-## Testing Commands
+## Validation Commands
 
-No specific build/test commands - validation is done through:
-- Docker Compose syntax validation
-- CasaOS instance testing
-- Asset file verification
-- Security checklist review
+### Docker Compose Validation
+```bash
+# Basic syntax validation
+docker compose -f Apps/[AppName]/docker-compose.yml config
+
+# Test container startup locally
+cd Apps/[AppName] && docker compose up -d
+
+# Clean up test containers
+cd Apps/[AppName] && docker compose down --volumes
+```
+
+### Common Validation Tasks
+- Verify all required `x-casaos` fields are present and correctly formatted
+- Check that asset URLs point to main repository via jsdelivr CDN
+- Validate icon dimensions (192x192px) and screenshot dimensions (1280x720px)
+- Ensure specific version tags are used (no `:latest`)
+- Test that applications start without errors using `docker compose up -d`
+- Verify resource limits and security requirements from CONTRIBUTING.md checklist
+
+### Quick Asset URL Fix
+When creating PRs, remember to update asset URLs from your fork to the main repository:
+```yaml
+# Change from (fork):
+icon: https://cdn.jsdelivr.net/gh/username/AppStore@main/Apps/AppName/icon.png
+
+# To (main repo):
+icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AppName/icon.png
+```

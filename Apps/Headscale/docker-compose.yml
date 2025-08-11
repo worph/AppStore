@@ -1,0 +1,85 @@
+name: headscale
+
+services:
+  headscale:
+    container_name: headscale
+    hostname: headscale
+    cpu_shares: 10
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+    image: headscale/headscale:v0.26.1
+    user: $PUID:$PGID
+    volumes:
+      - /DATA/AppData/headscale/config:/etc/headscale
+      - /DATA/AppData/headscale/lib:/var/lib/headscale
+      - /DATA/AppData/headscale/run:/var/run/headscale
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+    expose:
+      - 8080
+    ports:
+      - "9090:9090"  # Metrics port for monitoring (optional)
+    command: headscale serve
+    restart: unless-stopped
+    networks:
+      - headscale
+
+networks:
+  headscale:
+    driver: bridge
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: headscale
+  author: Yundera AppStore
+  category: Network
+  description:
+    en_us: Headscale is an open source, self-hosted implementation of the Tailscale control server. It provides a mesh VPN solution that allows you to create secure connections between your devices without relying on Tailscale's servers. Perfect for self-hosting enthusiasts who want full control over their VPN infrastructure.
+  developer: Juan Font
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Headscale/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Headscale/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Headscale/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Headscale/screenshot-3.png
+  tagline:
+    en_us: Self-hosted Tailscale control server for mesh VPN
+  title:
+    en_us: Headscale
+  tips:
+    before_install:
+      en_us: |
+        **Initial Setup Required**
+        
+        After installation, you'll need to configure Headscale:
+        
+        1. **Generate API key**: `docker exec headscale headscale apikeys create`
+        2. **Create user**: `docker exec headscale headscale users create myuser`
+        3. **Register devices**: Use `tailscale up --login-server https://headscale-yourusername.nsl.sh` on client devices
+        
+        **Default Configuration**
+        - Web UI accessible at: `https://headscale-yourusername.nsl.sh/`
+        - Metrics available at: `http://your-server-ip:9090/metrics`
+        - Configuration files stored in `/DATA/AppData/headscale/config/`
+        
+        **Important Notes**
+        - Requires manual configuration post-install
+        - Compatible with official Tailscale clients
+        - Data persisted in `/DATA/AppData/headscale/`
+  webui_port: 8080
+  index: /
+  port_map: "8080"
+  scheme: https
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/headscale/{config,lib,run} &&
+    chown -R $PUID:$PGID /DATA/AppData/headscale/ &&
+    if [ ! -f /DATA/AppData/headscale/config/config.yaml ]; then
+      docker run --rm -v /DATA/AppData/headscale/config:/etc/headscale headscale/headscale:v0.26.1 headscale config generate > /DATA/AppData/headscale/config/config.yaml
+    fi
