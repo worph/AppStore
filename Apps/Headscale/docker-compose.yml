@@ -46,6 +46,7 @@ services:
     environment:
       TZ: $TZ
       HEADSCALE_URL: http://headscale:8080
+      HTTP_PORT: 80
     expose:
       - 80  # Web UI (NSL router handles HTTPS)
     depends_on:
