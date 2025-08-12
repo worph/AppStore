@@ -4,7 +4,7 @@ services:
   headscale:
     image: headscale/headscale:v0.26.1
     container_name: headscale
-    hostname: headscale
+    hostname: headscaleconnect
     user: 0:0 # Run as root for full permissions
     cpu_shares: 10
     deploy:
@@ -18,7 +18,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
     environment:
       TZ: $TZ
-      HEADSCALE_SERVER_URL: https://headscaleconnect-$domain
+      HEADSCALE_SERVER_URL: https://headscaleconnect-$DOMAIN
       HEADSCALE_LISTEN_ADDR: 0.0.0.0:8080
       HEADSCALE_METRICS_LISTEN_ADDR: 0.0.0.0:9090
     expose:
@@ -35,7 +35,7 @@ services:
   headscale-ui:
     image: ghcr.io/gurucomputing/headscale-ui:latest
     container_name: headscale-ui
-    hostname: headscale-ui
+    hostname: headscale
     user: 0:0 # Run as root for full permissions
     cpu_shares: 10
     deploy:
@@ -45,7 +45,6 @@ services:
           cpus: '0.25'
     environment:
       TZ: $TZ
-      HEADSCALE_URL: http://headscale:8080
       HTTP_PORT: 80
     expose:
       - 80  # Web UI (NSL router handles HTTPS)
@@ -60,17 +59,18 @@ networks:
     driver: bridge
 
 x-casaos:
-  main: headscale-ui
+  main: headscale
   webui_port: 80
   pre-install-cmd: |
     mkdir -p /DATA/AppData/headscale/{config,data} &&
     if [ ! -f /DATA/AppData/headscale/config/config.yaml ]; then
       curl -s https://raw.githubusercontent.com/juanfont/headscale/v0.26.1/config-example.yaml -o /DATA/AppData/headscale/config/config.yaml &&
-      sed -i "s|server_url: http://127.0.0.1:8080|server_url: https://headscaleconnect-$domain|g" /DATA/AppData/headscale/config/config.yaml &&
+      sed -i "s|server_url: http://127.0.0.1:8080|server_url: https://headscaleconnect-$DOMAIN|g" /DATA/AppData/headscale/config/config.yaml &&
       sed -i "s|listen_addr: 127.0.0.1:8080|listen_addr: 0.0.0.0:8080|g" /DATA/AppData/headscale/config/config.yaml &&
       sed -i "s|metrics_listen_addr: 127.0.0.1:9090|metrics_listen_addr: 0.0.0.0:9090|g" /DATA/AppData/headscale/config/config.yaml &&
       sed -i "s|grpc_listen_addr: 127.0.0.1:50443|grpc_listen_addr: 0.0.0.0:50443|g" /DATA/AppData/headscale/config/config.yaml
     fi
+
 
   architectures:
     - amd64
@@ -96,22 +96,32 @@ x-casaos:
         
         This installation includes:
         - ✅ Headscale server (pre-configured)
-        - ✅ Built-in web interface for management
-        - ✅ Automatic setup and configuration
-        - ✅ Default user and API key creation
+        - ✅ Modern web interface for management
+        - ✅ Ready-to-use configuration
+        - ✅ Simple command-line setup
         
         **📱 After Installation:**
         
-        1. **Access Web UI**: Visit `https://headscale-yourusername.nsl.sh/` for management
+        1. **Setup Web UI**: Visit `https://headscale-yourusername.nsl.sh/web`
+           - Create a user: `docker exec headscale headscale users create myuser`
+           - Generate API key: `docker exec headscale headscale apikeys create --user myuser --expiration 90d`
+           - In web UI settings, enter:
+             - **Server URL**: `https://headscaleconnect-yourusername.nsl.sh`
+             - **API Key**: (from command above)
+        
         2. **Connect Devices**: Use this command on your devices:
            ```
            tailscale up --login-server https://headscaleconnect-yourusername.nsl.sh
            ```
+        
         3. **Approve Devices**: Use the web UI to approve new device connections
         
-        - Default user: `default-user`
-        - API key: Auto-generated and configured
-        - All settings optimized for NSL.SH domains
+        **🔧 Quick Setup Commands:**
+        ```
+        docker exec headscale headscale users create myuser
+        docker exec headscale headscale apikeys create --user myuser --expiration 90d
+        docker exec headscale headscale preauthkeys create --user myuser --expiration 1h
+        ```
         
         **💡 Pro Tips:**
         - Install Tailscale client on your devices first

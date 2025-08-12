@@ -8,7 +8,7 @@ services:
       # Database
       DATABASE_URL: 'postgresql://postgres:$default_pwd@postgres:5432/formbricks'
       # Next Auth
-      NEXTAUTH_URL: 'https://$domain'
+      NEXTAUTH_URL: 'https://$DOMAIN'
       NEXTAUTH_SECRET: '$default_pwd'
       # Email (optional)
       # MAIL_FROM: 'noreply@yourdomain.com'
