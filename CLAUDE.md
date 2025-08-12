@@ -10,6 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is the **Yundera CasaOS 3rd-Party AppStore** - a curated collection of Docker Compose applications configured for CasaOS with NSL.SH mesh router integration. The repository contains containerized applications that run on CasaIMG (dockerized CasaOS) with HTTPS-enabled URLs.
 
+**Note**: This repository is currently a fork maintained at https://github.com/worph/AppStore. When referencing repository URLs for downloading configuration files, use this fork's URL structure.
+
 ## Architecture
 
 ### Core Structure
