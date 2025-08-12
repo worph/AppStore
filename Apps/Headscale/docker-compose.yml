@@ -1,37 +1,6 @@
 name: headscale
 
 services:
-  headscale:
-    image: headscale/headscale:v0.26.1
-    container_name: headscale
-    hostname: headscaleconnect
-    user: 0:0 # Run as root for full permissions
-    cpu_shares: 10
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '0.5'
-    volumes:
-      - /DATA/AppData/headscale/config:/etc/headscale
-      - /DATA/AppData/headscale/data:/var/lib/headscale
-      - /etc/localtime:/etc/localtime:ro
-    environment:
-      TZ: $TZ
-      HEADSCALE_SERVER_URL: https://headscaleconnect-$DOMAIN
-      HEADSCALE_LISTEN_ADDR: 0.0.0.0:8080
-      HEADSCALE_METRICS_LISTEN_ADDR: 0.0.0.0:9090
-    expose:
-      - 8080  # HTTP API for headscale-ui communication
-    ports:
-      - "50443:50443"  # gRPC port for Tailscale client communication
-      - "9090:9090"    # Metrics port for monitoring
-      - "3478:3478/udp"  # STUN port for NAT traversal
-    command: ["serve"]
-    restart: unless-stopped
-    networks:
-      - headscale
-
   headscale-ui:
     image: ghcr.io/gurucomputing/headscale-ui:latest
     container_name: headscale-ui
@@ -50,6 +19,37 @@ services:
       - 80  # Web UI (NSL router handles HTTPS)
     depends_on:
       - headscale
+    restart: unless-stopped
+    networks:
+      - headscale
+
+  headscale:
+    image: headscale/headscale:v0.26.1
+    container_name: headscale
+    hostname: headscaleconnect
+    user: 0:0 # Run as root for full permissions
+    cpu_shares: 10
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    volumes:
+      - /DATA/AppData/headscale/config:/etc/headscale
+      - /DATA/AppData/headscale/data:/var/lib/headscale
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      HEADSCALE_SERVER_URL: https://headscaleconnect-$DOMAIN
+      HEADSCALE_LISTEN_ADDR: 0.0.0.0:80
+      HEADSCALE_METRICS_LISTEN_ADDR: 0.0.0.0:9090
+    expose:
+      - 80  # HTTP API for headscale-ui communication
+    ports:
+      - "50443:50443"  # gRPC port for Tailscale client communication
+      - "9090:9090"    # Metrics port for monitoring
+      - "3478:3478/udp"  # STUN port for NAT traversal
+    command: ["serve"]
     restart: unless-stopped
     networks:
       - headscale
@@ -92,42 +92,23 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        **🚀 Ready-to-Use Headscale Setup**
-        
-        This installation includes:
-        - ✅ Headscale server (pre-configured)
-        - ✅ Modern web interface for management
-        - ✅ Ready-to-use configuration
-        - ✅ Simple command-line setup
-        
         **📱 After Installation:**
-        
-        1. **Setup Web UI**: Visit `https://headscale-yourusername.nsl.sh/web`
-           - Create a user: `docker exec headscale headscale users create myuser`
-           - Generate API key: `docker exec headscale headscale apikeys create --user myuser --expiration 90d`
+        0. ** Genrate API Key**: 
+           - Go to the **Settings** tab of the Heasdscale application in CasaOS
+           - Open a terminal and run:
+             ```
+             headscale users create api
+             headscale apikeys create --user api --expiration 90d
+             ```
+           - Copy the generated API key for later use.
+        1. **Setup Web UI**: Visit `https://headscale-$domain.nsl.sh/web`
+           - Go to the **Settings** tab
            - In web UI settings, enter:
-             - **Server URL**: `https://headscaleconnect-yourusername.nsl.sh`
+             - **Server URL**: `https://headscaleconnect-$domain.nsl.sh`
              - **API Key**: (from command above)
         
         2. **Connect Devices**: Use this command on your devices:
            ```
-           tailscale up --login-server https://headscaleconnect-yourusername.nsl.sh
+           tailscale up --login-server https://headscaleconnect-$domain.nsl.sh
            ```
-        
         3. **Approve Devices**: Use the web UI to approve new device connections
-        
-        **🔧 Quick Setup Commands:**
-        ```
-        docker exec headscale headscale users create myuser
-        docker exec headscale headscale apikeys create --user myuser --expiration 90d
-        docker exec headscale headscale preauthkeys create --user myuser --expiration 1h
-        ```
-        
-        **💡 Pro Tips:**
-        - Install Tailscale client on your devices first
-        - Check the web UI for connection status
-        - gRPC communication happens on port 50443
-        - STUN/NAT traversal uses UDP port 3478
-        - Use the metrics endpoint at port 9090 for monitoring
-        
-        No manual configuration required - everything works out of the box! 🎉
