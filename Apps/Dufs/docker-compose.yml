@@ -112,6 +112,14 @@ x-casaos:
         • Windows: Map Network Drive → https://dufs-$domain/
         • macOS: Finder → Go → Connect to Server → https://dufs-$domain/
         • Linux: Files → Other Locations → Connect to Server → dav://dufs-$domain/
+        
+        For large file on windows you can increase the upload size limit by running the following commands in an elevated command prompt:
+        ```
+        reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\WebClient\Parameters" /v FileSizeLimitInBytes /t REG_DWORD /d 4294967295 /f
+        reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\WebClient\Parameters" /v FileAttributesLimitInBytes /t REG_DWORD /d 100000000 /f
+        net stop webclient
+        net start webclient
+        ```
   title:
     en_us: Dufs
   index: /
