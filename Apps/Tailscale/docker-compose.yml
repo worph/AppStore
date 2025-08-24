@@ -1,0 +1,102 @@
+name: tailscale
+
+services:
+  tailscale:
+    image: tailscale/tailscale:v1.82.1
+    container_name: tailscale-node
+    hostname: tailscale-casaos
+    user: 0:0  # Root required for network operations
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    environment:
+      - TZ=$TZ
+      - TS_AUTHKEY=${TS_AUTHKEY:-}
+      - TS_HOSTNAME=casaos-${HOSTNAME:-server}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_EXTRA_ARGS=--webclient --accept-routes --advertise-exit-node
+      - TS_USERSPACE=false
+      - PUID=$PUID
+      - PGID=$PGID
+    volumes:
+      - /DATA/AppData/tailscale/state:/var/lib/tailscale
+      - /DATA/AppData/tailscale/config:/config
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+    expose:
+      - 8080  # Web UI port
+    ports:
+      - "41641:41641/udp"  # Tailscale UDP port for mesh networking
+    restart: unless-stopped
+    command: >
+      sh -c "
+        if [ -z \"$$TS_AUTHKEY\" ]; then
+          echo 'Starting Tailscale without auth key - configure manually via web UI'
+          tailscaled --state=/var/lib/tailscale/tailscaled.state &
+          sleep 5
+          tailscale web --listen=0.0.0.0:8080 --insecure-dev
+        else
+          echo 'Starting Tailscale with provided auth key'
+          tailscaled --state=/var/lib/tailscale/tailscaled.state &
+          sleep 5
+          tailscale up --hostname=casaos-${HOSTNAME:-server} --accept-routes --advertise-exit-node --auth-key=$$TS_AUTHKEY
+          tailscale web --listen=0.0.0.0:8080 --insecure-dev
+        fi
+      "
+
+x-casaos:
+  main: tailscale
+  webui_port: 8080
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/tailscale/{state,config} &&
+    chown -R $PUID:$PGID /DATA/AppData/tailscale
+
+  architectures:
+    - amd64
+    - arm64
+  author: Yundera AppStore
+  category: Network
+  description:
+    en_us: "Tailscale is a secure mesh VPN that creates encrypted connections between your devices. This container runs the Tailscale node daemon with web UI enabled for easy device management. Connect your CasaOS server to your Tailscale network to access it securely from anywhere. Includes exit node functionality to route traffic through your server and accept routes from other nodes. Perfect for secure remote access to your home lab and services."
+  developer: Tailscale Inc.
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tailscale/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tailscale/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tailscale/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tailscale/screenshot-3.png
+  tagline:
+    en_us: Zero-config mesh VPN for secure device connections
+  title:
+    en_us: Tailscale
+  tips:
+    before_install:
+      en_us: |
+        **🔐 Authentication Setup:**
+        
+        **Option 1 - Auth Key (Recommended):**
+        1. Go to [Tailscale Admin Console](https://login.tailscale.com/admin/settings/keys)
+        2. Generate an auth key with desired settings
+        3. Set the `TS_AUTHKEY` environment variable in CasaOS before starting
+        
+        **Option 2 - Manual Setup:**
+        1. Start the container without TS_AUTHKEY
+        2. Visit the web UI at `https://8080-tailscale-$domain/`
+        3. Follow the login prompts to authenticate
+        
+        **📡 After Installation:**
+        - Your server will appear as `casaos-[hostname]` in your Tailscale network
+        - Exit node functionality is enabled by default
+        - Use web UI for device management and status monitoring
+        - Access other Tailscale devices using their Tailscale IPs
+        
+        **⚠️ Important Notes:**
+        - Requires privileged container access for networking
+        - UDP port 41641 is exposed for mesh connectivity
+        - Container runs as root for network operations
