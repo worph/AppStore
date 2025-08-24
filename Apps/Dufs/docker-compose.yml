@@ -67,9 +67,6 @@ x-casaos:
       • Read/write access control for different users
       
       Perfect for personal cloud storage, team file sharing, media libraries, or as a lightweight alternative to complex file management systems. Built with Rust for exceptional performance and minimal resource usage.
-      
-      Connect via WebDAV at: https://dufs-[username].nsl.sh/
-      Default credentials: admin / [your secure password]
     zh_cn: |
       Dufs - 现代文件服务器，支持 WebDAV
       
@@ -91,19 +88,16 @@ x-casaos:
       • 不同用户的读/写访问控制
       
       非常适合个人云存储、团队文件共享、媒体库，或作为复杂文件管理系统的轻量级替代方案。使用 Rust 构建，具有卓越的性能和最小的资源使用。
-      
-      通过 WebDAV 连接：https://dufs-[用户名].nsl.sh/
-      默认凭据：admin / [您的安全密码]
   developer: Sigoden
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dufs/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Dufs/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dufs/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dufs/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dufs/screenshot-3.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Dufs/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Dufs/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Dufs/screenshot-3.png
   tagline:
     en_us: Modern file server with WebDAV support - access your files anywhere, anytime
     zh_cn: 支持 WebDAV 的现代文件服务器 - 随时随地访问您的文件
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dufs/thumbnail.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Dufs/thumbnail.png
   tips:
     before_install:
       en_us: |
@@ -112,12 +106,12 @@ x-casaos:
         | --------   | ------------   | ------ |
         | `admin`    | `$default_pwd` | Read/Write |
         
-        WebDAV URL: https://dufs-[username].nsl.sh/
+        WebDAV URL: https://dufs-$domain/
         
         Mount Instructions:
-        • Windows: Map Network Drive → https://dufs-[username].nsl.sh/
-        • macOS: Finder → Go → Connect to Server → https://dufs-[username].nsl.sh/
-        • Linux: Files → Other Locations → Connect to Server → dav://dufs-[username].nsl.sh/
+        • Windows: Map Network Drive → https://dufs-$domain/
+        • macOS: Finder → Go → Connect to Server → https://dufs-$domain/
+        • Linux: Files → Other Locations → Connect to Server → dav://dufs-$domain/
   title:
     en_us: Dufs
   index: /
