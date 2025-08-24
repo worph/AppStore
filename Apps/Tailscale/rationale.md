@@ -1,31 +1,32 @@
 # Tailscale Security Rationale
 
-## Userspace Networking Mode
+## Root User Exception
 
-This application runs in userspace networking mode (`TS_USERSPACE=true`) with the following security considerations:
+This application runs as `user: 0:0` (root) which is an exception to the standard CasaOS security policy.
 
-### User Permissions
-- Runs as `user: $PUID:$PGID` (non-root) for enhanced security
-- No special capabilities or privileges required
-- Uses userspace networking instead of kernel TUN/TAP interfaces
+### Justification for Root Access
+- Required for direct TUN device access (`/dev/net/tun`)
+- Tailscale daemon needs privileged networking capabilities
+- Enables full mesh VPN functionality without limitations
 
-### Security Benefits
-- Reduced attack surface by avoiding root privileges
-- No access to kernel networking interfaces
-- All operations contained within user permissions
-- Persistent data stored in user-owned directories under `/DATA/AppData/tailscale/`
+### Security Mitigations
+- Uses userspace networking mode (`TS_USERSPACE=true`) to reduce kernel attack surface
+- Container is isolated from the host system
+- Network traffic is encrypted end-to-end via WireGuard protocol
+- Persistent data stored in dedicated directories under `/DATA/AppData/tailscale/`
 
-### Functional Limitations
-Userspace mode has some limitations compared to kernel mode:
-- Slightly reduced network performance
-- Some advanced networking features may be limited
-- Exit node functionality available but with userspace constraints
+### Functional Benefits
+Running with root privileges enables:
+- Full networking performance without userspace overhead
+- Complete VPN functionality including exit node capabilities
+- Reliable TUN interface management
+- Optimal mesh networking between devices
 
 ### Design Decision
-Userspace mode was chosen to:
-- Maximize security by avoiding root privileges
-- Ensure compatibility with container security policies
-- Provide stable operation in diverse container environments
-- Follow container security best practices
+Root access was chosen to:
+- Provide complete Tailscale functionality
+- Ensure reliable VPN performance
+- Maintain compatibility with standard Tailscale deployment patterns
+- Enable advanced networking features like subnet routing
 
-This configuration prioritizes security while maintaining core Tailscale functionality for most use cases.
+This configuration balances security considerations with full VPN functionality requirements.

@@ -15,6 +15,8 @@ services:
       - TZ=$TZ
       # if you want to use headscale instead of tailscale.com, add the next line and set your domain
       # - TS_EXTRA_ARGS=--login-server=https://headscale-$domain
+      - TS_AUTHKEY_INFO="Connect to the Tailscale Admin Console to generate an auth key and set it in the app settings before starting."
+      - TS_AUTHKEY=  # Set this in CasaOS before starting for automatic auth, or leave blank for manual setup
       - TS_ACCEPT_DNS=true
       - TS_HOSTNAME=$domain
     volumes:
@@ -37,7 +39,7 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  author: Yundera AppStore
+  author: Yundera
   category: Network
   description:
     en_us: "Tailscale is a secure mesh VPN that creates encrypted connections between your devices. This container runs the Tailscale node daemon with web UI enabled for easy device management. Connect your CasaOS server to your Tailscale network to access it securely from anywhere. Includes exit node functionality to route traffic through your server and accept routes from other nodes. Perfect for secure remote access to your home lab and services."
@@ -54,26 +56,9 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        **🔐 Authentication Setup:**
+        **📡 After Installation:**
         
-        **Option 1 - Auth Key (Recommended):**
         1. Go to [Tailscale Admin Console](https://login.tailscale.com/admin/settings/keys)
         2. Generate an auth key with desired settings
-        3. Set the `TS_AUTHKEY` environment variable in CasaOS before starting
-        
-        **Option 2 - Manual Setup:**
-        1. Start the container without TS_AUTHKEY
-        2. Visit the web UI at `https://tailscale-$domain/`
-        3. Follow the login prompts to authenticate
-        
-        **📡 After Installation:**
-        - Your server will appear as `casaos-[hostname]` in your Tailscale network
-        - Exit node functionality is enabled by default
-        - Use web UI for device management and status monitoring
-        - Access other Tailscale devices using their Tailscale IPs
-        
-        **⚠️ Important Notes:**
-        - Uses userspace networking for enhanced security
-        - UDP port 41641 is exposed for mesh connectivity
-        - Container runs as non-root user ($PUID:$PGID)
-        - Some advanced networking features may have limitations in userspace mode
+        3. Set the `TS_AUTHKEY` in the app settings before starting
+        4. Your server will appear in your Tailscale network
