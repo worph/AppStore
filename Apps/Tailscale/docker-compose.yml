@@ -5,7 +5,7 @@ services:
     image: ghcr.io/tailscale/tailscale:v1.86.5
     container_name: tailscale-node
     hostname: tailscale-casaos
-    user: 0:0  # Root required for network operations
+    user: $PUID:$PGID  # Userspace mode doesn't require root
     deploy:
       resources:
         limits:
@@ -17,43 +17,35 @@ services:
       - TS_HOSTNAME=casaos-${HOSTNAME:-server}
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_EXTRA_ARGS=--webclient --accept-routes --advertise-exit-node
-      - TS_USERSPACE=false
+      - TS_USERSPACE=true
       - PUID=$PUID
       - PGID=$PGID
     volumes:
       - /DATA/AppData/tailscale/state:/var/lib/tailscale
       - /DATA/AppData/tailscale/config:/config
-      - /dev/net/tun:/dev/net/tun
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
-    sysctls:
-      - net.ipv4.ip_forward=1
-      - net.ipv6.conf.all.forwarding=1
     expose:
-      - 8080  # Web UI port
+      - 80  # Web UI port
     ports:
       - "41641:41641/udp"  # Tailscale UDP port for mesh networking
     restart: unless-stopped
     command: >
       sh -c "
-        if [ -z \"$$TS_AUTHKEY\" ]; then
-          echo 'Starting Tailscale without auth key - configure manually via web UI'
-          tailscaled --state=/var/lib/tailscale/tailscaled.state &
-          sleep 5
-          tailscale web --listen=0.0.0.0:8080 --insecure-dev
+        echo 'Starting Tailscale daemon...'
+        tailscaled --state=/var/lib/tailscale/tailscaled.state --userspace-networking &
+        sleep 3
+        if [ -n \"$$TS_AUTHKEY\" ]; then
+          echo 'Connecting with auth key...'
+          tailscale up --hostname=casaos-$${HOSTNAME:-server} --accept-routes --advertise-exit-node --auth-key=$$TS_AUTHKEY
         else
-          echo 'Starting Tailscale with provided auth key'
-          tailscaled --state=/var/lib/tailscale/tailscaled.state &
-          sleep 5
-          tailscale up --hostname=casaos-${HOSTNAME:-server} --accept-routes --advertise-exit-node --auth-key=$$TS_AUTHKEY
-          tailscale web --listen=0.0.0.0:8080 --insecure-dev
+          echo 'No auth key provided - use web UI to authenticate'
         fi
+        echo 'Starting web interface on :80'
+        exec tailscale web --listen=0.0.0.0:80
       "
 
 x-casaos:
   main: tailscale
-  webui_port: 8080
+  webui_port: 80
   pre-install-cmd: |
     mkdir -p /DATA/AppData/tailscale/{state,config} &&
     chown -R $PUID:$PGID /DATA/AppData/tailscale
@@ -87,7 +79,7 @@ x-casaos:
         
         **Option 2 - Manual Setup:**
         1. Start the container without TS_AUTHKEY
-        2. Visit the web UI at `https://8080-tailscale-$domain/`
+        2. Visit the web UI at `https://tailscale-$domain/`
         3. Follow the login prompts to authenticate
         
         **📡 After Installation:**
@@ -97,6 +89,7 @@ x-casaos:
         - Access other Tailscale devices using their Tailscale IPs
         
         **⚠️ Important Notes:**
-        - Requires privileged container access for networking
+        - Uses userspace networking for enhanced security
         - UDP port 41641 is exposed for mesh connectivity
-        - Container runs as root for network operations
+        - Container runs as non-root user ($PUID:$PGID)
+        - Some advanced networking features may have limitations in userspace mode

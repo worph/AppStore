@@ -1,32 +1,31 @@
 # Tailscale Security Rationale
 
-## Root User Requirement
+## Userspace Networking Mode
 
-This application runs as `user: 0:0` (root) for the following technical reasons:
+This application runs in userspace networking mode (`TS_USERSPACE=true`) with the following security considerations:
 
-### Network Operations Requirement
-Tailscale requires root privileges to:
-- Create and manage TUN/TAP network interfaces (`/dev/net/tun`)
-- Modify routing tables and network configuration
-- Set up mesh VPN connections at the kernel level
-- Configure IP forwarding and NAT traversal
+### User Permissions
+- Runs as `user: $PUID:$PGID` (non-root) for enhanced security
+- No special capabilities or privileges required
+- Uses userspace networking instead of kernel TUN/TAP interfaces
 
-### Container Capabilities
-The container also requires:
-- `NET_ADMIN` capability for network interface management
-- `NET_RAW` capability for raw socket operations
-- System control parameters (`net.ipv4.ip_forward=1`)
+### Security Benefits
+- Reduced attack surface by avoiding root privileges
+- No access to kernel networking interfaces
+- All operations contained within user permissions
+- Persistent data stored in user-owned directories under `/DATA/AppData/tailscale/`
 
-### Security Considerations
-- Root access is confined to the container environment
-- Network operations are isolated within the container's network namespace
-- Tailscale's security model is based on cryptographic authentication, not filesystem permissions
-- All persistent data is stored in user-owned directories under `/DATA/AppData/tailscale/`
+### Functional Limitations
+Userspace mode has some limitations compared to kernel mode:
+- Slightly reduced network performance
+- Some advanced networking features may be limited
+- Exit node functionality available but with userspace constraints
 
-### Alternative Considered
-Running as non-root user with userspace networking (`TS_USERSPACE=true`) was considered but rejected because:
-- Reduces performance significantly
-- Limits exit node functionality
-- May cause compatibility issues with advanced Tailscale features
+### Design Decision
+Userspace mode was chosen to:
+- Maximize security by avoiding root privileges
+- Ensure compatibility with container security policies
+- Provide stable operation in diverse container environments
+- Follow container security best practices
 
-This follows Tailscale's official Docker documentation recommendations for VPN server deployments.
+This configuration prioritizes security while maintaining core Tailscale functionality for most use cases.
