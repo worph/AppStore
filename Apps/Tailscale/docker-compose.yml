@@ -20,6 +20,7 @@ services:
       - TS_AUTHKEY=  # Set this in CasaOS before starting for automatic auth, or leave blank for manual setup
       - TS_ACCEPT_DNS=true
       - TS_HOSTNAME=$domain
+      - TS_STATE_DIR=/var/lib/tailscale
     volumes:
       - /DATA/AppData/tailscale/state:/var/lib/tailscale
       - /dev/net/tun:/dev/net/tun
@@ -39,7 +40,7 @@ x-casaos:
   main: tailscale
   webui_port: 80
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/tailscale/{state,config} &&
+    mkdir -p /DATA/AppData/tailscale/state &&
     chown -R $PUID:$PGID /DATA/AppData/tailscale
 
   #this is the link for the webui port
