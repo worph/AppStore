@@ -14,34 +14,24 @@ services:
     environment:
       - TZ=$TZ
       - TS_AUTHKEY=${TS_AUTHKEY:-}
-      - TS_HOSTNAME=casaos-${HOSTNAME:-server}
       - TS_STATE_DIR=/var/lib/tailscale
-      - TS_EXTRA_ARGS=--webclient --accept-routes --advertise-exit-node
+      # if you want to use headscale instead of tailscale.com, add the next line and set your domain
+      # - TS_EXTRA_ARGS=--login-server=https://headscale-$domain
+      - TS_EXTRA_ARGS=--webclient --accept-routes
       - TS_USERSPACE=true
       - PUID=$PUID
       - PGID=$PGID
+      - TS_ACCEPT_DNS=true
+      - TS_HOSTNAME=$domain
     volumes:
       - /DATA/AppData/tailscale/state:/var/lib/tailscale
       - /DATA/AppData/tailscale/config:/config
+      - /dev/net/tun:/dev/net/tun
     expose:
       - 80  # Web UI port
     ports:
       - "41641:41641/udp"  # Tailscale UDP port for mesh networking
     restart: unless-stopped
-    command: >
-      sh -c "
-        echo 'Starting Tailscale daemon...'
-        tailscaled --state=/var/lib/tailscale/tailscaled.state --userspace-networking &
-        sleep 3
-        if [ -n \"$$TS_AUTHKEY\" ]; then
-          echo 'Connecting with auth key...'
-          tailscale up --hostname=casaos-$${HOSTNAME:-server} --accept-routes --advertise-exit-node --auth-key=$$TS_AUTHKEY
-        else
-          echo 'No auth key provided - use web UI to authenticate'
-        fi
-        echo 'Starting web interface on :80'
-        exec tailscale web --listen=0.0.0.0:80
-      "
 
 x-casaos:
   main: tailscale
