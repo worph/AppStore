@@ -3,9 +3,9 @@ name: tailscale
 services:
   tailscale:
     image: ghcr.io/tailscale/tailscale:v1.86.5
-    container_name: tailscale-node
-    hostname: tailscale-casaos
-    user: $PUID:$PGID  # Userspace mode doesn't require root
+    container_name: tailscale
+    hostname: tailscale
+    user: 0:0
     deploy:
       resources:
         limits:
@@ -13,14 +13,8 @@ services:
           cpus: '0.5'
     environment:
       - TZ=$TZ
-      - TS_AUTHKEY=${TS_AUTHKEY:-}
-      - TS_STATE_DIR=/var/lib/tailscale
       # if you want to use headscale instead of tailscale.com, add the next line and set your domain
       # - TS_EXTRA_ARGS=--login-server=https://headscale-$domain
-      - TS_EXTRA_ARGS=--webclient --accept-routes
-      - TS_USERSPACE=true
-      - PUID=$PUID
-      - PGID=$PGID
       - TS_ACCEPT_DNS=true
       - TS_HOSTNAME=$domain
     volumes:
