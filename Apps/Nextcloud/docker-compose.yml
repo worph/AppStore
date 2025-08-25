@@ -1,0 +1,267 @@
+name: nextcloud
+
+services:
+  nextcloud:
+    image: nextcloud:31.0.8
+    container_name: nextcloud
+    user: $PUID:$PGID
+    depends_on:
+      - db
+      - redis
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+          cpus: '2.0'
+    expose:
+      - 80
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - MYSQL_HOST=db
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD=$default_pwd
+      - NEXTCLOUD_TRUSTED_DOMAINS=localhost $domain nextcloud
+      - OVERWRITEPROTOCOL=https
+      - OVERWRITEHOST=$domain
+      - REDIS_HOST=redis
+      - REDIS_HOST_PORT=6379
+      - REDIS_HOST_PASSWORD=$default_pwd
+      - NEXTCLOUD_INIT_HTACCESS=true
+      - PHP_MEMORY_LIMIT=2048M
+      - PHP_UPLOAD_LIMIT=1024M
+      - TRUSTED_PROXIES=172.16.0.0/12 10.0.0.0/8 192.168.0.0/16
+    volumes:
+      - /DATA/AppData/$AppID/html:/var/www/html
+      - /DATA/AppData/$AppID/config:/var/www/html/config
+      - /DATA/AppData/$AppID/data:/var/www/html/data
+    restart: unless-stopped
+    networks:
+      - nextcloud-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/status.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    cpu_shares: 70
+
+  db:
+    image: mariadb:11.2
+    container_name: nextcloud_db
+    user: $PUID:$PGID
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    environment:
+      - TZ=$TZ                                        # Timezone setting / 시간대 설정
+      - MYSQL_ROOT_PASSWORD=$default_pwd              # MySQL root user password / MySQL root 사용자 비밀번호
+      - MYSQL_DATABASE=nextcloud                      # Database name to create / 생성할 데이터베이스명
+      - MYSQL_USER=nextcloud                          # Database user to create / 생성할 데이터베이스 사용자
+      - MYSQL_PASSWORD=$default_pwd                   # Password for database user / 데이터베이스 사용자 비밀번호
+      - MARIADB_AUTO_UPGRADE=1                        # Enable automatic database upgrades / 자동 데이터베이스 업그레이드 활성화
+      - MARIADB_DISABLE_UPGRADE_BACKUP=1              # Disable backup during upgrades / 업그레이드 시 백업 비활성화
+    volumes:
+      - /DATA/AppData/$AppID/db:/var/lib/mysql
+    restart: unless-stopped
+    networks:
+      - nextcloud-network
+
+    command: >
+      --innodb-buffer-pool-size=256M
+      --transaction-isolation=READ-COMMITTED
+      --binlog-format=ROW
+      --innodb-file-per-table=1
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$default_pwd"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    cpu_shares: 70
+
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: nextcloud_redis
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.2'
+    command: redis-server --requirepass $default_pwd --appendonly yes
+    volumes:
+      - /DATA/AppData/$AppID/redis:/data
+    restart: unless-stopped
+    networks:
+      - nextcloud-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "$default_pwd", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  nextcloud-network:
+    driver: bridge
+
+x-casaos:
+  main: nextcloud
+  webui_port: 80
+  category: Utilities
+  architectures: [amd64, arm64]
+  author: Yundera Team
+  developer: Nextcloud GmbH
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/$AppID/{config,data,html,db,redis} &&
+    chown -R $PUID:$PGID /DATA/AppData/$AppID &&
+    chmod -R 755 /DATA/AppData/$AppID
+  title:
+    en_us: Nextcloud
+    ko_kr: Nextcloud
+  tagline:
+    en_us: Build your Teams alternative with guided app installation
+    ko_kr: 가이드를 통한 Teams 대안 구축
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/thumbnail.png
+  description:
+    en_us: |
+      **☁️ What is Nextcloud?**
+
+      **Nextcloud** is your own personal cloud: like **Google Drive, Dropbox, Microsoft Teams, and WhatsApp all-in-one**, but fully under your control.
+
+      If you want to sync your files across devices, you'll need to use the Nextcloud Files app — it's like your own private version of Google Drive or Dropbox.
+
+      You can **store files, share them, collaborate, chat, and even manage calendars and tasks**, all from a single private space.
+
+      Think of it as your **own private workspace**, with apps you choose, running on your own server.
+
+      **🔧 What Can You Do with Nextcloud?**
+
+      Nextcloud is modular: you can **add features like apps on a phone**. Here are some of the most popular ones:
+
+      • 📁 **Nextcloud Files**: Upload, access, and share files — like your own Google Drive
+      • 🗓️ **Calendar**: Manage events and sync with your phone or laptop
+      • 📇 **Contacts**: Store and sync all your contacts privately
+      • 🗣️ **Talk**: Chat and video call with your team or family — like a private WhatsApp or Zoom
+      • ✅ **Deck**: Organize tasks and projects like Trello or Notion
+      • 📝 **Nextcloud Office**: Open and edit Word, Excel, and PowerPoint files in your browser — just like Google Docs
+      • 📦 **More Apps**: Over 100+ apps available to customize your workspace
+
+      **🚀 Why Use Nextcloud?**
+
+      • **No more Google or Microsoft** — keep your files and data private
+      • **Fully customizable** — add only the tools you need
+      • **Accessible anywhere** — use the official Nextcloud mobile app or desktop app
+      • **Share with others** — send files, create shared folders, or chat securely
+      • **Control your data** — your files, your server, your rules
+
+      **🛠️ Example Use Cases**
+
+      • Use **Nextcloud Files** like Google Drive
+      • Use **Talk** to message and call like WhatsApp or Zoom
+      • Use **Office + Calendar + Deck** to replace Microsoft Teams
+      • Invite your team or family and manage everything from one place
+    ko_kr: |
+      **☁️ Nextcloud란 무엇인가요?**
+
+      **Nextcloud**는 **Google Drive, Dropbox, Microsoft Teams, WhatsApp을 모두 합친** 것과 같은 개인 클라우드이지만, 완전히 당신의 통제 하에 있습니다.
+
+      기기 간에 파일을 동기화하려면 Nextcloud Files 앱을 사용해야 합니다 — 이것은 Google Drive나 Dropbox의 개인적인 버전과 같습니다.
+
+      **파일을 저장하고, 공유하고, 협업하고, 채팅하고, 심지어 일정과 작업을 관리**할 수 있습니다. 모든 것을 하나의 개인 공간에서 처리할 수 있습니다.
+
+      당신이 선택한 앱으로 당신의 서버에서 실행되는 **자신만의 개인 작업공간**이라고 생각하세요.
+
+      **🔧 Nextcloud로 무엇을 할 수 있나요?**
+
+      Nextcloud는 모듈식입니다: **휴대폰의 앱처럼 기능을 추가**할 수 있습니다. 가장 인기 있는 것들을 소개합니다:
+
+      • 📁 **Nextcloud Files**: 파일 업로드, 접근, 공유 — 자신만의 Google Drive
+      • 🗓️ **Calendar**: 이벤트 관리 및 휴대폰이나 노트북과 동기화
+      • 📇 **Contacts**: 모든 연락처를 비공개로 저장 및 동기화
+      • 🗣️ **Talk**: 팀이나 가족과 채팅 및 화상 통화 — 개인적인 WhatsApp이나 Zoom
+      • ✅ **Deck**: Trello나 Notion처럼 작업과 프로젝트 정리
+      • 📝 **Nextcloud Office**: 브라우저에서 Word, Excel, PowerPoint 파일 열기 및 편집 — Google Docs와 같음
+      • 📦 **더 많은 앱**: 작업공간을 맞춤화할 수 있는 100개 이상의 앱 사용 가능
+
+      **🚀 Nextcloud를 사용하는 이유는?**
+
+      • **Google이나 Microsoft 불필요** — 파일과 데이터를 비공개로 보관
+      • **완전히 맞춤 가능** — 필요한 도구만 추가
+      • **어디서나 접근 가능** — 공식 Nextcloud 모바일 앱이나 데스크톱 앱 사용
+      • **다른 사람과 공유** — 파일 전송, 공유 폴더 생성, 안전한 채팅
+      • **데이터 통제** — 당신의 파일, 당신의 서버, 당신의 규칙
+
+      **🛠️ 사용 사례 예시**
+
+      • **Nextcloud Files**를 Google Drive처럼 사용
+      • **Talk**을 WhatsApp이나 Zoom처럼 메시지 및 통화용으로 사용
+      • **Office + Calendar + Deck**으로 Microsoft Teams 대체
+      • 팀이나 가족을 초대하고 한 곳에서 모든 것을 관리
+  tips:
+    before_install:
+      en_us: |
+        **🚀 Quick Setup Guide**
+        
+        **1. Initial Setup:**
+        
+        ⚠️ **Setup can take time, even if it's not shown.** **If infinite loading occurs → Restart the app**
+        
+        • Sign up and complete the setup
+        • Select MySQL database (pre-configured)
+        
+        **2. After Restart:**
+        
+        • Access web interface again
+        • **Skip setup wizard** (already completed)  
+        • Login with your admin credentials
+        
+        **3. Add Team Apps (Profile → Apps):**
+        
+        **Enable Built-in Apps:**
+        ✅ Calendar, Contacts, Mail
+        
+        **Install from App Store:**
+        🔍 Search & install: Talk, Deck, Tasks, Nextcloud Office
+        
+        **4. Done!**
+        Complete Microsoft Teams alternative ready.
+        
+        **Files sync to:** /DATA/Documents & /DATA/Media
+      ko_kr: |
+        **🚀 빠른 설정 가이드**
+        
+        **1. 초기 설정:**
+        
+        ⚠️ **설정에 시간이 걸릴 수 있으며, 표시되지 않을 수도 있습니다.** **무한 로딩이 발생하면 → 앱 재시작**
+        
+        • 가입 및 설정 완료
+        • MySQL 데이터베이스 선택 (사전 구성됨)
+        
+        **2. 재시작 후:**
+        
+        • 웹 인터페이스에 다시 접속
+        • **설정 마법사 건너뛰기** (이미 완료됨)
+        • 관리자 자격 증명으로 로그인
+        
+        **3. 팀 앱 추가 (프로필 → 앱):**
+        
+        **내장 앱 활성화:**
+        ✅ Calendar, Contacts, Mail
+        
+        **앱 스토어에서 설치:**
+        🔍 검색 및 설치: Talk, Deck, Tasks, Nextcloud Office
+        
+        **4. 완료!**
+        완전한 Microsoft Teams 대안이 준비되었습니다.
+        
+        **파일 동기화 위치:** /DATA/Documents & /DATA/Media
+  index: /
