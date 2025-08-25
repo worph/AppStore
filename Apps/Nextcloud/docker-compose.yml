@@ -37,6 +37,7 @@ services:
       - /DATA/AppData/nextcloud/html:/var/www/html
       - /DATA/AppData/nextcloud/config:/var/www/html/config
       - /DATA/AppData/nextcloud/data:/var/www/html/data
+      - /DATA/AppData/nextcloud/php-conf:/usr/local/etc/php/conf.d
     restart: unless-stopped
     networks:
       - nextcloud-network
@@ -94,7 +95,7 @@ x-casaos:
   author: Yundera Team
   developer: Nextcloud GmbH
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/nextcloud/{config,data,html,db,redis} &&
+    mkdir -p /DATA/AppData/nextcloud/{config,data,html,db,redis,php-conf} &&
     chown -R $PUID:$PGID /DATA/AppData/nextcloud &&
     chmod -R 755 /DATA/AppData/nextcloud
   title:
