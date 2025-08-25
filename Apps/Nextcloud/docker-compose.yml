@@ -4,7 +4,7 @@ services:
   nextcloud:
     image: nextcloud:31.0.8
     container_name: nextcloud
-    user: $PUID:$PGID
+    user: 0:0
     depends_on:
       - db
       - redis
@@ -37,7 +37,6 @@ services:
       - /DATA/AppData/nextcloud/html:/var/www/html
       - /DATA/AppData/nextcloud/config:/var/www/html/config
       - /DATA/AppData/nextcloud/data:/var/www/html/data
-      - /DATA/AppData/nextcloud/php-conf:/usr/local/etc/php/conf.d
     restart: unless-stopped
     networks:
       - nextcloud-network
@@ -46,7 +45,7 @@ services:
     image: mariadb:11.2
     container_name: nextcloud_db
     hostname: nextcloud_db
-    user: $PUID:$PGID
+    user: 0:0
     cpu_shares: 70
     deploy:
       resources:
@@ -71,7 +70,7 @@ services:
     hostname: nextcloud_redis
     container_name: nextcloud_redis
     cpu_shares: 70
-    user: $PUID:$PGID
+    user: 0:0
     deploy:
       resources:
         limits:
