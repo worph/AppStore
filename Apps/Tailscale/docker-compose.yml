@@ -68,10 +68,18 @@ x-casaos:
         1. Go to [Tailscale Admin Console](https://login.tailscale.com/admin/settings/keys)
         2. Generate an auth key with desired settings
         3. Set the `TS_AUTHKEY` in the app settings
-        4 Your server will appear in your Tailscale network
+        4. Your server will appear in your Tailscale network
         
         **For Headscale (Self-hosted):**
         1. Generate an auth key from your Headscale server
         2. Set the `TS_AUTHKEY` in the app settings
         3. Set the `TS_EXTRA_ARGS` to `--login-server=https://your-headscale-domain`
-        4 Your server will appear in your Headscale network
+        4. Your server will appear in your Headscale network
+        
+        **🔗 Making Other Services Available:**
+        For other services to be accessible through Tailscale, you need to bind their ports to the Tailscale interface IP address:
+        ```
+          HOST_PORT= 100.x.x.x:8080     # Replace with your actual Tailscale IP
+          CONTAINER_PORT= 8080
+        ```
+        You can find your Tailscale IP by running `tailscale ip` on the terminal or checking the Tailscale admin console.
