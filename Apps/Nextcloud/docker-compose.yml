@@ -40,12 +40,6 @@ services:
     restart: unless-stopped
     networks:
       - nextcloud-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/status.php"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
 
   db:
     image: mariadb:11.2
@@ -57,30 +51,18 @@ services:
         limits:
           memory: 512M
     environment:
-      - TZ=$TZ                                        # Timezone setting / 시간대 설정
-      - MYSQL_ROOT_PASSWORD=$default_pwd              # MySQL root user password / MySQL root 사용자 비밀번호
-      - MYSQL_DATABASE=nextcloud                      # Database name to create / 생성할 데이터베이스명
-      - MYSQL_USER=nextcloud                          # Database user to create / 생성할 데이터베이스 사용자
-      - MYSQL_PASSWORD=$default_pwd                   # Password for database user / 데이터베이스 사용자 비밀번호
-      - MARIADB_AUTO_UPGRADE=1                        # Enable automatic database upgrades / 자동 데이터베이스 업그레이드 활성화
-      - MARIADB_DISABLE_UPGRADE_BACKUP=1              # Disable backup during upgrades / 업그레이드 시 백업 비활성화
+      - TZ=$TZ
+      - MYSQL_ROOT_PASSWORD=$default_pwd
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD=$default_pwd
+      - MARIADB_AUTO_UPGRADE=1
+      - MARIADB_DISABLE_UPGRADE_BACKUP=1
     volumes:
       - /DATA/AppData/nextcloud/db:/var/lib/mysql
     restart: unless-stopped
     networks:
       - nextcloud-network
-
-    command: >
-      --innodb-buffer-pool-size=256M
-      --transaction-isolation=READ-COMMITTED
-      --binlog-format=ROW
-      --innodb-file-per-table=1
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$default_pwd"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
 
   redis:
     image: redis:7.2-alpine
@@ -97,11 +79,6 @@ services:
     restart: unless-stopped
     networks:
       - nextcloud-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "$default_pwd", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
 networks:
   nextcloud-network:
