@@ -8,11 +8,11 @@ services:
     depends_on:
       - db
       - redis
+    cpu_shares: 70
     deploy:
       resources:
         limits:
           memory: 2048M
-          cpus: '2.0'
     expose:
       - 80
     environment:
@@ -46,7 +46,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 120s
-    cpu_shares: 70
 
   db:
     image: mariadb:11.2
