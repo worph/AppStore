@@ -34,9 +34,9 @@ services:
       - PHP_UPLOAD_LIMIT=1024M
       - TRUSTED_PROXIES=172.16.0.0/12 10.0.0.0/8 192.168.0.0/16
     volumes:
-      - /DATA/AppData/$AppID/html:/var/www/html
-      - /DATA/AppData/$AppID/config:/var/www/html/config
-      - /DATA/AppData/$AppID/data:/var/www/html/data
+      - /DATA/AppData/nextcloud/html:/var/www/html
+      - /DATA/AppData/nextcloud/config:/var/www/html/config
+      - /DATA/AppData/nextcloud/data:/var/www/html/data
     restart: unless-stopped
     networks:
       - nextcloud-network
@@ -51,11 +51,11 @@ services:
     image: mariadb:11.2
     container_name: nextcloud_db
     user: $PUID:$PGID
+    cpu_shares: 70
     deploy:
       resources:
         limits:
           memory: 512M
-          cpus: '0.5'
     environment:
       - TZ=$TZ                                        # Timezone setting / 시간대 설정
       - MYSQL_ROOT_PASSWORD=$default_pwd              # MySQL root user password / MySQL root 사용자 비밀번호
@@ -65,7 +65,7 @@ services:
       - MARIADB_AUTO_UPGRADE=1                        # Enable automatic database upgrades / 자동 데이터베이스 업그레이드 활성화
       - MARIADB_DISABLE_UPGRADE_BACKUP=1              # Disable backup during upgrades / 업그레이드 시 백업 비활성화
     volumes:
-      - /DATA/AppData/$AppID/db:/var/lib/mysql
+      - /DATA/AppData/nextcloud/db:/var/lib/mysql
     restart: unless-stopped
     networks:
       - nextcloud-network
@@ -80,20 +80,20 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    cpu_shares: 70
 
 
   redis:
     image: redis:7.2-alpine
     container_name: nextcloud_redis
+    cpu_shares: 70
+    user: $PUID:$PGID
     deploy:
       resources:
         limits:
           memory: 128M
-          cpus: '0.2'
     command: redis-server --requirepass $default_pwd --appendonly yes
     volumes:
-      - /DATA/AppData/$AppID/redis:/data
+      - /DATA/AppData/nextcloud/redis:/data
     restart: unless-stopped
     networks:
       - nextcloud-network
@@ -115,9 +115,9 @@ x-casaos:
   author: Yundera Team
   developer: Nextcloud GmbH
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/$AppID/{config,data,html,db,redis} &&
-    chown -R $PUID:$PGID /DATA/AppData/$AppID &&
-    chmod -R 755 /DATA/AppData/$AppID
+    mkdir -p /DATA/AppData/nextcloud/{config,data,html,db,redis} &&
+    chown -R $PUID:$PGID /DATA/AppData/nextcloud &&
+    chmod -R 755 /DATA/AppData/nextcloud
   title:
     en_us: Nextcloud
     ko_kr: Nextcloud
