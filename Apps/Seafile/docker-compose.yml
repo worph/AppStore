@@ -10,21 +10,24 @@ services:
       resources:
         limits:
           memory: 512M
+    restart: unless-stopped
     environment:
       - MYSQL_ROOT_PASSWORD=$default_pwd
-      - MYSQL_DATABASE=seahub_db
-      - MYSQL_USER=seafile
-      - MYSQL_PASSWORD=$default_pwd
       - MYSQL_LOG_CONSOLE=true
       - MARIADB_AUTO_UPGRADE=1
-      - MARIADB_DISABLE_UPGRADE_BACKUP=1
     volumes:
       - /DATA/AppData/seafile/db:/var/lib/mysql
-    restart: unless-stopped
     networks:
       - seafile-network
     healthcheck:
-      test: ["CMD", "/usr/local/bin/healthcheck.sh", "--connect", "--mariadbupgrade", "--innodb_initialized"]
+      test:
+        [
+          "CMD",
+          "/usr/local/bin/healthcheck.sh",
+          "--connect",
+          "--mariadbupgrade",
+          "--innodb_initialized",
+        ]
       interval: 20s
       start_period: 30s
       timeout: 5s
@@ -32,20 +35,20 @@ services:
 
   redis:
     image: redis:7.2-alpine
-    user: 0:0
     container_name: seafile-redis
+    user: 0:0
     cpu_shares: 70
     deploy:
       resources:
         limits:
           memory: 128M
+    restart: unless-stopped
     command:
       - /bin/sh
       - -c
       - redis-server --requirepass "$$REDIS_PASSWORD"
     environment:
       - REDIS_PASSWORD=$default_pwd
-    restart: unless-stopped
     networks:
       - seafile-network
 
@@ -54,18 +57,18 @@ services:
     container_name: seafile
     hostname: seafile
     user: 0:0
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
     cpu_shares: 70
     deploy:
       resources:
         limits:
           memory: 1024M
+    restart: unless-stopped
     expose:
       - 80
+    volumes:
+      - /DATA/AppData/seafile/data:/shared
+      - /DATA/Media:/shared/seafile-data/library-template:ro
+      - /DATA/Documents:/shared/seafile-data/documents
     environment:
       - PUID=$PUID
       - PGID=$PGID
@@ -94,18 +97,17 @@ services:
       - ENABLE_NOTIFICATION_SERVER=false
       - ENABLE_SEAFILE_AI=false
       - MD_FILE_COUNT_LIMIT=100000
-    volumes:
-      - /DATA/AppData/seafile/data:/shared
-      - /DATA/Media:/shared/seafile-data/library-template:ro
-      - /DATA/Documents:/shared/seafile-data/documents
-    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - seafile-network
 
-
 networks:
   seafile-network:
-    driver: bridge
+    name: seafile-network
 
 x-casaos:
   main: seafile
