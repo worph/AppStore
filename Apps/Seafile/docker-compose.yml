@@ -1,0 +1,166 @@
+name: seafile
+
+services:
+  seafile:
+    image: seafileltd/seafile-mc:11.0.8
+    container_name: seafile
+    user: $PUID:$PGID
+    depends_on:
+      - db
+      - memcached
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+          cpus: '1.0'
+    expose:
+      - 80
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - DB_HOST=seafile_db
+      - DB_ROOT_PASSWD=$default_pwd
+      - SEAFILE_ADMIN_EMAIL=admin@$domain
+      - SEAFILE_ADMIN_PASSWORD=$default_pwd
+      - SEAFILE_SERVER_HOSTNAME=seafile-$domain
+      - SEAFILE_SERVER_LETSENCRYPT=false
+    volumes:
+      - /DATA/AppData/seafile/data:/shared
+      - /DATA/Media:/shared/seafile-data/library-template:ro
+      - /DATA/Documents:/shared/seafile-data/documents
+    restart: unless-stopped
+    networks:
+      - seafile-network
+
+  db:
+    image: mariadb:10.11
+    container_name: seafile_db
+    hostname: seafile_db
+    user: 0:0
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    environment:
+      - TZ=$TZ
+      - MYSQL_ROOT_PASSWORD=$default_pwd
+      - MYSQL_LOG_CONSOLE=true
+      - MARIADB_AUTO_UPGRADE=1
+      - MARIADB_DISABLE_UPGRADE_BACKUP=1
+    volumes:
+      - /DATA/AppData/seafile/db:/var/lib/mysql
+    restart: unless-stopped
+    networks:
+      - seafile-network
+
+  memcached:
+    image: memcached:1.6-alpine
+    container_name: seafile_memcached
+    hostname: seafile_memcached
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.2'
+    entrypoint: memcached -m 256
+    restart: unless-stopped
+    networks:
+      - seafile-network
+
+networks:
+  seafile-network:
+    driver: bridge
+
+x-casaos:
+  main: seafile
+  webui_port: 80
+  category: Cloud
+  architectures: [amd64, arm64]
+  author: Yundera Team
+  developer: Seafile Ltd.
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/seafile/{data,db} &&
+    chown -R $PUID:$PGID /DATA/AppData/seafile &&
+    chmod -R 755 /DATA/AppData/seafile
+  title:
+    en_us: Seafile
+  tagline:
+    en_us: Open source file sync and share solution
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/screenshot-3.png
+  description:
+    en_us: |
+      **🌊 What is Seafile?**
+
+      **Seafile** is a professional open-source file sync and share platform. Think of it as **your own private Dropbox** that you fully control.
+
+      Unlike cloud storage services, Seafile gives you complete ownership of your data while providing enterprise-grade file synchronization, sharing, and collaboration features.
+
+      **🔧 What Can You Do with Seafile?**
+
+      • 📁 **File Synchronization**: Sync files across all your devices automatically
+      • 🔗 **Secure Sharing**: Share files and folders with password protection and expiration dates  
+      • 👥 **Team Collaboration**: Create shared libraries for team projects
+      • 📱 **Mobile Access**: Access your files from iOS and Android apps
+      • 🔒 **Client-Side Encryption**: Optional end-to-end encryption for sensitive data
+      • 📊 **Version Control**: Keep track of file changes with automatic versioning
+      • 💬 **Real-time Collaboration**: Comment and collaborate on files in real-time
+
+      **🚀 Why Choose Seafile?**
+
+      • **Privacy First** — Your files stay on your server, never on third-party clouds
+      • **High Performance** — Optimized for large files and many concurrent users
+      • **Cross-Platform** — Works on Windows, macOS, Linux, iOS, and Android
+      • **Enterprise Ready** — Active Directory integration, advanced permissions, audit logs
+      • **Reliable Sync** — Robust synchronization algorithm handles conflicts intelligently
+
+      **🛠️ Perfect For:**
+
+      • Personal file storage and sync across devices
+      • Small teams needing secure file sharing
+      • Organizations requiring data sovereignty
+      • Anyone wanting Dropbox functionality without vendor lock-in
+
+      **📱 Client Apps Available:**
+      
+      Download official Seafile clients for your devices to sync files automatically:
+      • Desktop: Windows, macOS, Linux
+      • Mobile: iOS App Store, Google Play Store
+  tips:
+    before_install:
+      en_us: |
+        **🚀 Quick Setup Guide**
+        
+        **1. First Launch:**
+        
+        • Initial setup may take a few minutes
+        • Admin account will be created automatically
+        
+        **Default Credentials:**
+        | Field    | Value           |
+        | -------- | --------------- |
+        | Email    | `admin@$domain` |
+        | Password | `$default_pwd`  |
+        
+        **2. After Login:**
+        
+        • Change default admin password in settings
+        • Create your first library (like a folder that syncs)
+        • Download Seafile client apps for your devices
+        
+        **3. File Storage:**
+        
+        • Files stored in: `/DATA/AppData/seafile/data`
+        • Media template: `/DATA/Media` (read-only access)
+        • Documents: `/DATA/Documents` (full access)
+        
+        **4. Download Client Apps:**
+        
+        • Visit seafile.com to download desktop and mobile clients
+        • Use your server URL to connect and sync files
+  index: /
