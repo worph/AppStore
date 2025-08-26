@@ -1,10 +1,11 @@
-name: smb
+name: samba
 services:
-  smb:
-    container_name: smb
+  samba:
+    container_name: samba
     image: dockurr/samba:4.21
     network_mode: bridge
     restart: unless-stopped
+    user: 0:0  # Run as root for full permissions
     environment:
       PUID: $PUID
       PGID: $PGID
@@ -31,9 +32,10 @@ x-casaos:
 
   #this is the link for the webui port
   scheme: https
-  hostname: github.com
+  hostname: raw.githack.com
   port_map: "443"
-  index: /worph/AppStore/blob/main/Apps/Samba/index.html
+  index: /worph/AppStore/main/Apps/Samba/doc/index.html
+
 
   architectures:
     - amd64
@@ -112,4 +114,4 @@ x-casaos:
         
         Note: SMB runs on standard network ports (445) for native OS integration. No web interface is provided as SMB integrates directly with your operating system's file manager.
   title:
-    en_us: Samba Server
+    en_us: Samba
