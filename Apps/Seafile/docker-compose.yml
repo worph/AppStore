@@ -1,47 +1,16 @@
 name: seafile
 
 services:
-  seafile:
-    image: seafileltd/seafile-mc:11.0.8
-    container_name: seafile
-    user: $PUID:$PGID
-    depends_on:
-      - db
-      - memcached
-    deploy:
-      resources:
-        limits:
-          memory: 1024M
-    expose:
-      - 80
-    environment:
-      - PUID=$PUID
-      - PGID=$PGID
-      - TZ=$TZ
-      - DB_HOST=seafile_db
-      - DB_ROOT_PASSWD=$default_pwd
-      - SEAFILE_ADMIN_EMAIL=admin@$domain
-      - SEAFILE_ADMIN_PASSWORD=$default_pwd
-      - SEAFILE_SERVER_HOSTNAME=seafile-$domain
-      - SEAFILE_SERVER_LETSENCRYPT=false
-    volumes:
-      - /DATA/AppData/seafile/data:/shared
-      - /DATA/Media:/shared/seafile-data/library-template:ro
-      - /DATA/Documents:/shared/seafile-data/documents
-    restart: unless-stopped
-    networks:
-      - seafile-network
-
   db:
     image: mariadb:10.11
-    container_name: seafile_db
-    hostname: seafile_db
+    container_name: seafile-mysql
+    hostname: seafile-mysql
     user: 0:0
+    cpu_shares: 70
     deploy:
       resources:
         limits:
           memory: 512M
-          cpus: '0.5'
     environment:
       - TZ=$TZ
       - MYSQL_ROOT_PASSWORD=$default_pwd
@@ -55,15 +24,48 @@ services:
       - seafile-network
 
   memcached:
-    image: memcached:1.6-alpine
-    container_name: seafile_memcached
-    hostname: seafile_memcached
+    image: memcached:1.6.18
+    user: 0:0
+    container_name: seafile-memcached
+    hostname: seafile-memcached
+    cpu_shares: 70
     deploy:
       resources:
         limits:
           memory: 128M
-          cpus: '0.2'
     entrypoint: memcached -m 256
+    restart: unless-stopped
+    networks:
+      - seafile-network
+
+  seafile:
+    image: seafileltd/seafile-mc:11.0.8
+    container_name: seafile
+    user: 0:0
+    depends_on:
+      - db
+      - memcached
+    cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+    expose:
+      - 80
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TIME_ZONE=$TZ
+      - DB_HOST=db
+      - DB_ROOT_PASSWD=$default_pwd
+      - SEAFILE_ADMIN_EMAIL=admin@$domain
+      - SEAFILE_ADMIN_PASSWORD=$default_pwd
+      - SEAFILE_SERVER_HOSTNAME=seafile-$domain
+      - SEAFILE_SERVER_LETSENCRYPT=false
+    volumes:
+      - /DATA/AppData/seafile/data:/shared
+      - /DATA/Media:/shared/seafile-data/library-template:ro
+      - /DATA/Documents:/shared/seafile-data/documents
     restart: unless-stopped
     networks:
       - seafile-network
