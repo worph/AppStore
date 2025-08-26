@@ -12,7 +12,6 @@ services:
       resources:
         limits:
           memory: 1024M
-          cpus: '1.0'
     expose:
       - 80
     environment:
