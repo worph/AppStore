@@ -41,6 +41,7 @@ services:
   seafile:
     image: seafileltd/seafile-mc:13.0-latest
     container_name: seafile
+    hostname: seafile
     user: 0:0
     depends_on:
       - db
