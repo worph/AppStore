@@ -86,15 +86,15 @@ x-casaos:
       
       非常适合家庭网络、小型办公室或任何需要可靠文件共享而无需云依赖的地方。基于成熟的 Samba 技术构建，资源使用最少，兼容性最大。
   developer: Dockur
-  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/SMB/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Samba/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/SMB/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/SMB/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/SMB/screenshot-3.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Samba/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Samba/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Samba/screenshot-3.png
   tagline:
     en_us: Universal Samba file server - native network file sharing for all devices
     zh_cn: 通用 Samba 文件服务器 - 所有设备的原生网络文件共享
-  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/SMB/thumbnail.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Samba/thumbnail.png
   tips:
     before_install:
       en_us: |
@@ -104,9 +104,9 @@ x-casaos:
         | `admin`    | `$default_pwd` | DATA  |
         
         Network Access Instructions:
-        • Windows: File Explorer → Network → \\${public_ip,"vpn_ip"}\DATA
-        • macOS: Finder → Go → Connect to Server → smb://${public_ip,"vpn_ip"}/DATA
-        • Linux: Files → Other Locations → smb://${public_ip,"vpn_ip"}/DATA
+        • Windows: File Explorer → Network → \\${public_ip:-ip_or_host}\DATA
+        • macOS: Finder → Go → Connect to Server → smb://${public_ip:-ip_or_host}/DATA
+        • Linux: Files → Other Locations → smb://${public_ip:-ip_or_host}/DATA
         
         Port Requirements:
         • SMB: 445 (primary)
