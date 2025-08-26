@@ -9,7 +9,7 @@ services:
       PUID: $PUID
       PGID: $PGID
       TZ: $TZ
-      NAME: "Shared Files"
+      NAME: "DATA"
       USER: "admin"
       PASS: $default_pwd
       UID: $PUID
@@ -21,7 +21,6 @@ services:
         target: /storage
     ports:
       - 445:445
-      - 139:139
     deploy:
       resources:
         limits:
@@ -29,11 +28,17 @@ services:
           cpus: '0.5'
 
 x-casaos:
+
+  #this is the link for the webui port
+  scheme: https
+  hostname: github.com
+  port_map: "443"
+  index: /worph/AppStore/blob/main/Apps/Samba/index.html
+
   architectures:
     - amd64
     - arm64
     - arm
-  main: smb
   author: Yundera Team
   category: Cloud
   description:
@@ -95,34 +100,16 @@ x-casaos:
         Default SMB Access
         | Username   | Password       | Share Name    |
         | --------   | ------------   | ----------    |
-        | `admin`    | `$default_pwd` | Shared Files  |
+        | `admin`    | `$default_pwd` | DATA  |
         
         Network Access Instructions:
-        • Windows: File Explorer → Network → \\$public_ip\ or \\smb-$domain\
-        • macOS: Finder → Go → Connect to Server → smb://$public_ip or smb://smb-$domain
-        • Linux: Files → Other Locations → smb://$public_ip or smb://smb-$domain
+        • Windows: File Explorer → Network → \\$public_ip\
+        • macOS: Finder → Go → Connect to Server → smb://$public_ip
+        • Linux: Files → Other Locations → smb://$public_ip
         
         Port Requirements:
         • SMB: 445 (primary)
-        • NetBIOS: 139 (legacy compatibility)
         
-        Note: SMB runs on standard network ports (445/139) for native OS integration. No web interface is provided as SMB integrates directly with your operating system's file manager.
-    zh_cn: |
-        默认 SMB 访问
-        | 用户名     | 密码           | 共享名称      |
-        | --------   | ------------   | ----------    |
-        | `admin`    | `$default_pwd` | Shared Files  |
-        
-        网络访问说明：
-        • Windows：文件资源管理器 → 网络 → \\$public_ip\ 或 \\smb-$domain\
-        • macOS：Finder → 前往 → 连接服务器 → smb://$public_ip 或 smb://smb-$domain
-        • Linux：文件 → 其他位置 → smb://$public_ip 或 smb://smb-$domain
-        
-        端口要求：
-        • SMB：445（主要）
-        • NetBIOS：139（旧版兼容性）
-        
-        注意：SMB 运行在标准网络端口（445/139）上，用于原生 OS 集成。不提供 Web 界面，因为 SMB 直接与操作系统的文件管理器集成。
+        Note: SMB runs on standard network ports (445) for native OS integration. No web interface is provided as SMB integrates directly with your operating system's file manager.
   title:
     en_us: Samba Server
-  port_map: "445"
