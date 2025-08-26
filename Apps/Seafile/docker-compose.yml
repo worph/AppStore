@@ -12,6 +12,9 @@ services:
           memory: 512M
     environment:
       - MYSQL_ROOT_PASSWORD=$default_pwd
+      - MYSQL_DATABASE=seahub_db
+      - MYSQL_USER=seafile
+      - MYSQL_PASSWORD=$default_pwd
       - MYSQL_LOG_CONSOLE=true
       - MARIADB_AUTO_UPGRADE=1
       - MARIADB_DISABLE_UPGRADE_BACKUP=1
@@ -83,8 +86,7 @@ services:
       - NON_ROOT=false
       - JWT_PRIVATE_KEY=e5Yrzk6Sibrle5Yrzk6Sibrl$default_pwd
       - SEAFILE_LOG_TO_STDOUT=false
-      - ENABLE_SEADOC=true
-      - SEADOC_SERVER_URL=https://seafile-$domain/sdoc-server
+      - ENABLE_SEADOC=false
       - CACHE_PROVIDER=redis
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -100,37 +102,6 @@ services:
     networks:
       - seafile-network
 
-  seadoc:
-    image: seafileltd/sdoc-server:2.0-latest
-    container_name: seadoc
-    user: 0:0
-    cpu_shares: 70
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-    expose:
-      - 80
-    environment:
-      - PUID=$PUID
-      - PGID=$PGID
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DB_USER=seafile
-      - DB_PASSWORD=$default_pwd
-      - DB_NAME=seahub_db
-      - TIME_ZONE=$TZ
-      - JWT_PRIVATE_KEY=e5Yrzk6Sibrle5Yrzk6Sibrl$default_pwd
-      - NON_ROOT=false
-      - SEAHUB_SERVICE_URL=http://seafile
-    volumes:
-      - /DATA/AppData/seafile/seadoc:/shared
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - seafile-network
 
 networks:
   seafile-network:
@@ -144,7 +115,7 @@ x-casaos:
   author: Yundera Team
   developer: Seafile Ltd.
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/seafile/{data,db,seadoc} &&
+    mkdir -p /DATA/AppData/seafile/{data,db} &&
     chown -R $PUID:$PGID /DATA/AppData/seafile &&
     chmod -R 755 /DATA/AppData/seafile
   title:
@@ -173,7 +144,6 @@ x-casaos:
       • 🔒 **Client-Side Encryption**: Optional end-to-end encryption for sensitive data
       • 📊 **Version Control**: Keep track of file changes with automatic versioning
       • 💬 **Real-time Collaboration**: Comment and collaborate on files in real-time
-      • 📝 **SeaDoc Integration**: Built-in document editing with collaborative features
 
       **🚀 Why Choose Seafile?**
 
