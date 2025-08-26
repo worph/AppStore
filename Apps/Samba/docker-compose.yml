@@ -26,7 +26,6 @@ services:
       resources:
         limits:
           memory: 256M
-          cpus: '0.5'
 
 x-casaos:
 
@@ -105,9 +104,9 @@ x-casaos:
         | `admin`    | `$default_pwd` | DATA  |
         
         Network Access Instructions:
-        • Windows: File Explorer → Network → \\$public_ip\
-        • macOS: Finder → Go → Connect to Server → smb://$public_ip
-        • Linux: Files → Other Locations → smb://$public_ip
+        • Windows: File Explorer → Network → \\${public_ip,"vpn_ip"}\DATA
+        • macOS: Finder → Go → Connect to Server → smb://${public_ip,"vpn_ip"}/DATA
+        • Linux: Files → Other Locations → smb://${public_ip,"vpn_ip"}/DATA
         
         Port Requirements:
         • SMB: 445 (primary)
