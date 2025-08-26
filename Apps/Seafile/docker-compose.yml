@@ -87,11 +87,11 @@ x-casaos:
     en_us: Seafile
   tagline:
     en_us: Open source file sync and share solution
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/screenshot-3.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-3.png
   description:
     en_us: |
       **🌊 What is Seafile?**
