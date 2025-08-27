@@ -4,6 +4,7 @@ services:
   db:
     image: mariadb:10.11
     container_name: seafile-mysql
+    user: 0:0
     cpu_shares: 70
     deploy:
       resources:
@@ -35,6 +36,7 @@ services:
   redis:
     image: redis:7.2-alpine
     container_name: seafile-redis
+    user: 0:0
     cpu_shares: 70
     deploy:
       resources:
@@ -55,6 +57,7 @@ services:
     container_name: seafile
     hostname: seafile
     cpu_shares: 70
+    user: 0:0
     deploy:
       resources:
         limits:
