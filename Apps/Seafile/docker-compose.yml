@@ -4,7 +4,6 @@ services:
   db:
     image: mariadb:10.11
     container_name: seafile-mysql
-    user: 0:0
     cpu_shares: 70
     deploy:
       resources:
@@ -36,7 +35,6 @@ services:
   redis:
     image: redis:7.2-alpine
     container_name: seafile-redis
-    user: 0:0
     cpu_shares: 70
     deploy:
       resources:
@@ -56,7 +54,6 @@ services:
     image: seafileltd/seafile-mc:13.0-latest
     container_name: seafile
     hostname: seafile
-    user: 0:0
     cpu_shares: 70
     deploy:
       resources:
@@ -84,7 +81,7 @@ services:
       - SEAFILE_SERVER_HOSTNAME=seafile-$domain
       - SEAFILE_SERVER_PROTOCOL=https
       - SITE_ROOT=/
-      - NON_ROOT=true  # Changed to true since we're not forcing root
+      - NON_ROOT=false  # Using root mode for simplicity
       - JWT_PRIVATE_KEY=e5Yrzk6Sibrle5Yrzk6Sibrl$default_pwd
       - SEAFILE_LOG_TO_STDOUT=false
       - ENABLE_SEADOC=false
@@ -116,7 +113,6 @@ x-casaos:
   developer: Seafile Ltd.
   pre-install-cmd: |
     mkdir -p /DATA/AppData/seafile/{data,db} &&
-    chown -R $PUID:$PGID /DATA/AppData/seafile &&
     chmod -R 755 /DATA/AppData/seafile
   title:
     en_us: Seafile
