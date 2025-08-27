@@ -13,8 +13,6 @@ services:
     restart: unless-stopped
     environment:
       - MYSQL_ROOT_PASSWORD=$default_pwd
-      - MYSQL_USER=seafile
-      - MYSQL_PASSWORD=$default_pwd
       - MYSQL_LOG_CONSOLE=true
       - MARIADB_AUTO_UPGRADE=1
     volumes:
@@ -121,13 +119,9 @@ x-casaos:
   developer: Seafile Ltd.
   pre-install-cmd: |
     mkdir -p /DATA/AppData/seafile/{data,db,init} &&
-    cat > /DATA/AppData/seafile/init/01-seafile-permissions.sql << 'EOF'
-    CREATE DATABASE IF NOT EXISTS ccnet_db;
-    CREATE DATABASE IF NOT EXISTS seafile_db;
-    CREATE DATABASE IF NOT EXISTS seahub_db;
-    GRANT ALL PRIVILEGES ON ccnet_db.* TO 'seafile'@'%';
-    GRANT ALL PRIVILEGES ON seafile_db.* TO 'seafile'@'%';
-    GRANT ALL PRIVILEGES ON seahub_db.* TO 'seafile'@'%';
+    cat > /DATA/AppData/seafile/init/01-seafile-setup.sql << 'EOF'
+    CREATE USER IF NOT EXISTS 'seafile'@'%' IDENTIFIED BY '$default_pwd';
+    GRANT ALL PRIVILEGES ON *.* TO 'seafile'@'%' WITH GRANT OPTION;
     FLUSH PRIVILEGES;
     EOF
     chown -R $PUID:$PGID /DATA/AppData/seafile &&
