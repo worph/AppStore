@@ -17,7 +17,6 @@ services:
       - MARIADB_AUTO_UPGRADE=1
     volumes:
       - /DATA/AppData/seafile/db:/var/lib/mysql
-      - /DATA/AppData/seafile/init:/docker-entrypoint-initdb.d
     networks:
       - seafile-network
     healthcheck:
@@ -71,8 +70,6 @@ services:
       - /DATA/Media:/shared/seafile-data/library-template:ro
       - /DATA/Documents:/shared/seafile-data/documents
     environment:
-      - PUID=$PUID
-      - PGID=$PGID
       - SEAFILE_MYSQL_DB_HOST=db
       - SEAFILE_MYSQL_DB_PORT=3306
       - SEAFILE_MYSQL_DB_USER=seafile
@@ -87,7 +84,7 @@ services:
       - SEAFILE_SERVER_HOSTNAME=seafile-$domain
       - SEAFILE_SERVER_PROTOCOL=https
       - SITE_ROOT=/
-      - NON_ROOT=false
+      - NON_ROOT=true  # Changed to true since we're not forcing root
       - JWT_PRIVATE_KEY=e5Yrzk6Sibrle5Yrzk6Sibrl$default_pwd
       - SEAFILE_LOG_TO_STDOUT=false
       - ENABLE_SEADOC=false
@@ -118,12 +115,7 @@ x-casaos:
   author: Yundera Team
   developer: Seafile Ltd.
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/seafile/{data,db,init} &&
-    cat > /DATA/AppData/seafile/init/01-seafile-setup.sql << 'EOF'
-    CREATE USER IF NOT EXISTS 'seafile'@'%' IDENTIFIED BY '$default_pwd';
-    GRANT ALL PRIVILEGES ON *.* TO 'seafile'@'%' WITH GRANT OPTION;
-    FLUSH PRIVILEGES;
-    EOF
+    mkdir -p /DATA/AppData/seafile/{data,db} &&
     chown -R $PUID:$PGID /DATA/AppData/seafile &&
     chmod -R 755 /DATA/AppData/seafile
   title:
@@ -149,17 +141,17 @@ x-casaos:
       • 🔗 **Secure Sharing**: Share files and folders with password protection and expiration dates  
       • 👥 **Team Collaboration**: Create shared libraries for team projects
       • 📱 **Mobile Access**: Access your files from iOS and Android apps
-      • 🔒 **Client-Side Encryption**: Optional end-to-end encryption for sensitive data
+      • 🔐 **Client-Side Encryption**: Optional end-to-end encryption for sensitive data
       • 📊 **Version Control**: Keep track of file changes with automatic versioning
       • 💬 **Real-time Collaboration**: Comment and collaborate on files in real-time
 
       **🚀 Why Choose Seafile?**
 
-      • **Privacy First** — Your files stay on your server, never on third-party clouds
-      • **High Performance** — Optimized for large files and many concurrent users
-      • **Cross-Platform** — Works on Windows, macOS, Linux, iOS, and Android
-      • **Enterprise Ready** — Active Directory integration, advanced permissions, audit logs
-      • **Reliable Sync** — Robust synchronization algorithm handles conflicts intelligently
+      • **Privacy First** – Your files stay on your server, never on third-party clouds
+      • **High Performance** – Optimized for large files and many concurrent users
+      • **Cross-Platform** – Works on Windows, macOS, Linux, iOS, and Android
+      • **Enterprise Ready** – Active Directory integration, advanced permissions, audit logs
+      • **Reliable Sync** – Robust synchronization algorithm handles conflicts intelligently
 
       **🛠️ Perfect For:**
 
