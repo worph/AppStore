@@ -85,7 +85,7 @@ x-casaos:
     - arm64
   main: seafile
   webui_port: 80
-  author: CasaOS Team
+  author: Yundera Team
   category: Cloud
   developer: Seafile Ltd
   description:
@@ -93,10 +93,10 @@ x-casaos:
   tagline:
     en_us: Open source file sync and share platform
   title:
-    en_us: Seafile CE
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/icon.png
-  screenshot: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/screenshot-1.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/thumbnail.png
+    en_us: Seafile
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/icon.png
+  screenshot: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-1.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/thumbnail.png
   tips:
     before_install:
       en_us: |
