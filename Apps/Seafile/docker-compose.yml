@@ -50,8 +50,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      memcached:
-        condition: service_started
     networks:
       - seafile-net
     restart: unless-stopped
