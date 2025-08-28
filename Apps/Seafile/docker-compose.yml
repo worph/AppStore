@@ -43,7 +43,7 @@ services:
       - /DATA/AppData/seafile/redis:/data
 
   seafile:
-    image: seafileltd/seafile-mc:13.0.16
+    image: seafileltd/seafile-mc:13.0.9
     container_name: seafile
     hostname: seafile
     restart: unless-stopped
@@ -101,8 +101,12 @@ x-casaos:
     es_es: Seafile es una plataforma de alojamiento y colaboración de archivos con protección de privacidad y características de trabajo en equipo. Te permite crear nubes privadas para compartir archivos y colaborar, con sincronización automática entre dispositivos, control de versiones y cifrado seguro de archivos.
     ko_kr: Seafile은 개인정보 보호와 팀워크 기능을 갖춘 파일 호스팅 및 협업 플랫폼입니다. 파일 공유와 협업을 위한 프라이빗 클라우드를 생성할 수 있으며, 기기 간 자동 동기화, 버전 제어, 보안 파일 암호화를 지원합니다.
   developer: Seafile Ltd.
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/icon.png
-  screenshot: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/screenshot-1.png
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-3.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-4.png
   tagline:
     en_us: Professional file sync and collaboration platform
     fr_fr: Plateforme professionnelle de synchronisation et collaboration de fichiers
