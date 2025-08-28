@@ -20,29 +20,10 @@ services:
       retries: 10
     restart: unless-stopped
 
-  memcached:
-    image: memcached:1.6.29
-    container_name: seafile-memcached
-    user: 0:0
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-          cpus: '0.25'
-    entrypoint: memcached -m 256
-    networks:
-      - seafile-net
-    restart: unless-stopped
-
   seafile:
     image: seafileltd/seafile-mc:12.0-latest
     container_name: seafile
     user: 0:0
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: '1.0'
     expose:
       - 80
     volumes:
@@ -59,7 +40,7 @@ services:
       TIME_ZONE: $TZ
       INIT_SEAFILE_ADMIN_EMAIL: admin@$domain
       INIT_SEAFILE_ADMIN_PASSWORD: $default_pwd
-      SEAFILE_SERVER_HOSTNAME: $domain
+      SEAFILE_SERVER_HOSTNAME: seafile-$domain
       SEAFILE_SERVER_PROTOCOL: https
       SITE_ROOT: /
       NON_ROOT: false
