@@ -62,7 +62,7 @@ services:
       - INIT_SEAFILE_ADMIN_EMAIL=admin@$domain
       - INIT_SEAFILE_ADMIN_PASSWORD=$default_pwd
 
-      - SEAFILE_SERVER_HOSTNAME=$domain
+      - SEAFILE_SERVER_HOSTNAME=seafile-$domain
       - SEAFILE_SERVER_PROTOCOL=https
 
       - SITE_ROOT=/
@@ -87,7 +87,7 @@ services:
       - REDIS_PASSWORD=$default_pwd
 
       - ENABLE_SEADOC=false
-      - SEADOC_SERVER_URL=https://$domain/sdoc-server
+      - SEADOC_SERVER_URL=https://seafile-$domain/sdoc-server
 
       - ENABLE_NOTIFICATION_SERVER=false
       - INNER_NOTIFICATION_SERVER_URL=http://notification-server:8083
@@ -117,7 +117,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     labels:
-      caddy: http://$domain
+      caddy: http://seafile-$domain
       caddy.reverse_proxy: "seafile-app:80"
     depends_on:
       - seafile
@@ -139,7 +139,7 @@ x-casaos:
   pre-install-cmd: |
     mkdir -p /DATA/AppData/seafile/shared/seafile/conf &&
     if [ ! -f /DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py ] || ! grep -q "CSRF_TRUSTED_ORIGINS" /DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py; then
-      echo "CSRF_TRUSTED_ORIGINS = ['https://$domain']" > /DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py
+      echo "CSRF_TRUSTED_ORIGINS = ['https://seafile-$domain']" > /DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py
     fi &&
     chown -R $PUID:$PGID /DATA/AppData/seafile/ 2>/dev/null || true
   webui_port: 80
