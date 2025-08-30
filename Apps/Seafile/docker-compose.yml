@@ -106,11 +106,10 @@ services:
     networks:
       - seafile-net
 
-  caddy:
+  seafile: # this service name is used by nsl.sh to route the seafile-$domain to this container
     image: lucaslorentz/caddy-docker-proxy:2.9-alpine
     user: 0:0
     container_name: seafile-caddy
-    hostname: seafile # this hostname is used by nsl.sh to route the seafile-$domain to this container
     restart: unless-stopped
     expose:
       - 80
@@ -142,7 +141,7 @@ x-casaos:
     fi &&
     chown $PUID:$PGID /DATA/AppData/seafile/ 2>/dev/null || true
   webui_port: 80
-  main: caddy
+  main: seafile
 
   icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/icon.png
   thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/thumbnail.png
