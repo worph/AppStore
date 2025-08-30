@@ -50,7 +50,8 @@ services:
 
   seafile-app:
     image: seafileltd/seafile-mc:13.0.9
-    container_name: seafile-app
+    container_name: seafile
+    hostname: seafile-app
     restart: unless-stopped
     user: 0:0
     expose:
