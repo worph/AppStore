@@ -48,7 +48,7 @@ services:
     networks:
       - seafile-net
 
-  seafile:
+  seafile-app:
     image: seafileltd/seafile-mc:13.0.9
     container_name: seafile
     hostname: seafile-app
