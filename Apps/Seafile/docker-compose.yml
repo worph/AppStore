@@ -96,7 +96,9 @@ services:
       - ENABLE_SEAFILE_AI=false
       - SEAFILE_AI_SERVER_URL=http://seafile-ai:8888
       - SEAFILE_AI_SECRET_KEY=$default_pwd$default_pwd$default_pwd$default_pwd
-
+    labels:
+      caddy: http://seafile-$domain
+      caddy.reverse_proxy: "seafile-app:80"
     depends_on:
       db:
         condition: service_healthy
@@ -117,9 +119,6 @@ services:
       - CADDY_INGRESS_NETWORKS=seafile-net
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    labels:
-      caddy: http://seafile-$domain
-      caddy.reverse_proxy: "seafile-app:80"
     depends_on:
       - seafile
     networks:
