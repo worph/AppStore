@@ -107,6 +107,7 @@ services:
 
   caddy:
     image: lucaslorentz/caddy-docker-proxy:2.9-alpine
+    user: 0:0
     container_name: seafile-caddy
     hostname: seafile # this hostname is used by nsl.sh to route the seafile-$domain to this container
     restart: unless-stopped
