@@ -5,7 +5,6 @@ services:
     image: mariadb:10.11
     user: 0:0
     container_name: seafile-mysql
-    hostname: seafile_db
     restart: unless-stopped
     environment:
       - MYSQL_ROOT_PASSWORD=$default_pwd
@@ -13,14 +12,9 @@ services:
       - MARIADB_AUTO_UPGRADE=1
       - TZ=$TZ
     volumes:
-      - /DATA/AppData/seafile/db:/var/lib/mysql
+      - /DATA/AppData/seafile/mysql:/var/lib/mysql
     networks:
       - seafile-net
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: '0.5'
     healthcheck:
       test:
         [
@@ -39,109 +33,82 @@ services:
     image: redis:7-alpine
     user: 0:0
     container_name: seafile-redis
-    hostname: seafile_redis
     restart: unless-stopped
-    command:
-      - /bin/sh
-      - -c
-      - redis-server --requirepass "$$REDIS_PASSWORD"
-    environment:
-      - REDIS_PASSWORD=$default_pwd
-      - TZ=$TZ
-    volumes:
-      - /DATA/AppData/seafile/redis:/data
-    networks:
-      - seafile-net
     deploy:
       resources:
         limits:
           memory: 256M
           cpus: '0.25'
+    command:
+      - /bin/sh
+      - -c
+      - redis-server --requirepass "$default_pwd"
+    environment:
+      - REDIS_PASSWORD=$default_pwd
+    networks:
+      - seafile-net
 
   seafile:
     image: seafileltd/seafile-mc:13.0.9
     container_name: seafile
-    hostname: seafile
+    hostname: seafile-app
     restart: unless-stopped
     user: 0:0
-    ports:
-      - "8000:80"
+    expose:
+      - 80
     volumes:
       - /DATA/AppData/seafile/shared:/shared
     environment:
-      - TZ=$TZ
-      - SEAFILE_MYSQL_DB_HOST=seafile_db
+      - INIT_SEAFILE_ADMIN_EMAIL=admin@$domain
+      - INIT_SEAFILE_ADMIN_PASSWORD=$default_pwd
+
+      - SEAFILE_SERVER_HOSTNAME=$domain
+      - SEAFILE_SERVER_PROTOCOL=https
+
+      - SITE_ROOT=/
+      - NON_ROOT=false
+      - JWT_PRIVATE_KEY=$default_pwd$default_pwd$default_pwd$default_pwd
+      - SEAFILE_LOG_TO_STDOUT=true
+      - MD_FILE_COUNT_LIMIT=100000
+      - TIME_ZONE=/Etc/UTC
+
+      - SEAFILE_MYSQL_DB_HOST=db
       - SEAFILE_MYSQL_DB_PORT=3306
       - SEAFILE_MYSQL_DB_USER=seafile
-      - SEAFILE_MYSQL_DB_PASSWORD=${default_pwd}_seafile
+      - SEAFILE_MYSQL_DB_PASSWORD=$default_pwd
       - INIT_SEAFILE_MYSQL_ROOT_PASSWORD=$default_pwd
       - SEAFILE_MYSQL_DB_CCNET_DB_NAME=ccnet_db
       - SEAFILE_MYSQL_DB_SEAFILE_DB_NAME=seafile_db
       - SEAFILE_MYSQL_DB_SEAHUB_DB_NAME=seahub_db
-      - TIME_ZONE=$TZ
-      - INIT_SEAFILE_ADMIN_EMAIL=admin@$domain
-      - INIT_SEAFILE_ADMIN_PASSWORD=$default_pwd
-      - SEAFILE_SERVER_HOSTNAME=seafile-$domain
-      - SEAFILE_SERVER_PROTOCOL=https
-      - SITE_ROOT=/
-      - NON_ROOT=false
-      - JWT_PRIVATE_KEY=$default_pwd$default_pwd$default_pwd
-      - SEAFILE_LOG_TO_STDOUT=true
-      - ENABLE_SEADOC=true
-      - SEADOC_SERVER_URL=https://seafile-$domain/sdoc-server
+
       - CACHE_PROVIDER=redis
-      - REDIS_HOST=seafile_redis
+      - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=$default_pwd
+
+      - ENABLE_SEADOC=false
+      - SEADOC_SERVER_URL=https://$domain/sdoc-server
+
       - ENABLE_NOTIFICATION_SERVER=false
+      - INNER_NOTIFICATION_SERVER_URL=http://notification-server:8083
+      - NOTIFICATION_SERVER_URL=http://127.0.0.1/notification
+
       - ENABLE_SEAFILE_AI=false
-      - MD_FILE_COUNT_LIMIT=100000
+      - SEAFILE_AI_SERVER_URL=http://seafile-ai:8888
+      - SEAFILE_AI_SECRET_KEY=$default_pwd$default_pwd$default_pwd$default_pwd
+
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_started
-      seadoc:
-        condition: service_started
     networks:
       - seafile-net
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: '1.0'
-
-  seadoc:
-    image: seafileltd/sdoc-server:2.0-latest
-    container_name: seadoc
-    restart: unless-stopped
-    user: 0:0
-    volumes:
-      - /DATA/AppData/seafile/seadoc:/shared
-    environment:
-      - DB_HOST=seafile_db
-      - DB_PORT=3306
-      - DB_USER=seafile
-      - DB_PASSWORD=${default_pwd}_seafile
-      - DB_NAME=seahub_db
-      - TIME_ZONE=$TZ
-      - JWT_PRIVATE_KEY=$default_pwd$default_pwd$default_pwd
-      - NON_ROOT=false
-      - SEAHUB_SERVICE_URL=http://seafile
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - seafile-net
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: '0.5'
 
   caddy:
     image: lucaslorentz/caddy-docker-proxy:2.9-alpine
     container_name: seafile-caddy
+    hostname: seafile # this hostname is used by nsl.sh to route the seafile-$domain to this container
     restart: unless-stopped
     expose:
       - 80
@@ -149,25 +116,13 @@ services:
       - CADDY_INGRESS_NETWORKS=seafile-net
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /DATA/AppData/seafile/caddy:/data/caddy
     labels:
-      caddy: seafile-$domain
-      caddy.reverse_proxy: "seafile:80"
-      caddy.reverse_proxy.header_up: "X-Real-IP {remote_host}"
-      caddy.reverse_proxy.header_up.host: "{upstream_hostport}"
-      caddy.reverse_proxy.health_uri: "/"
-      caddy.handle_path: "/sdoc-server/*"
-      caddy.handle_path.reverse_proxy: "seadoc:80"
+      caddy: http://$domain
+      caddy.reverse_proxy: "seafile-app:80"
     depends_on:
       - seafile
-      - seadoc
     networks:
-      - seafile-net
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-          cpus: '0.25'
+      - seafile-net  # Routes traffic to internal services
     healthcheck:
       test: ["CMD-SHELL", "curl --fail http://localhost:2019/metrics || exit 1"]
       start_period: 20s
@@ -180,8 +135,24 @@ networks:
     name: seafile-net
 
 x-casaos:
-  main: caddy
+  store_app_id: seafile
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/seafile/shared/seafile/conf &&
+    if [ ! -f /DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py ] || ! grep -q "CSRF_TRUSTED_ORIGINS" /DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py; then
+      echo "CSRF_TRUSTED_ORIGINS = ['https://$domain']" > /DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py
+    fi &&
+    chown -R $PUID:$PGID /DATA/AppData/seafile/ 2>/dev/null || true
   webui_port: 80
+  main: seafile
+
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/thumbnail.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-3.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-4.png
+    -
   architectures:
     - amd64
     - arm64
@@ -189,25 +160,17 @@ x-casaos:
   category: Cloud
   description:
     en_us: Seafile is a file hosting and collaboration platform with privacy protection and teamwork features. It allows you to create private clouds for file sharing and collaboration, supporting automatic sync across devices, version control, and secure file encryption. Perfect for teams and individuals who need reliable cloud storage with advanced sharing capabilities.
-    fr_fr: Seafile est une plateforme d'hébergement et de collaboration de fichiers avec protection de la confidentialité et fonctionnalités de travail d'équipe. Elle vous permet de créer des nuages privés pour le partage et la collaboration de fichiers, prenant en charge la synchronisation automatique entre appareils, le contrôle de version et le chiffrement sécurisé des fichiers.
-    zh_cn: Seafile 是一个文件托管和协作平台，具有隐私保护和团队协作功能。它允许您创建私有云进行文件共享和协作，支持设备间自动同步、版本控制和安全文件加密。
     es_es: Seafile es una plataforma de alojamiento y colaboración de archivos con protección de privacidad y características de trabajo en equipo. Te permite crear nubes privadas para compartir archivos y colaborar, con sincronización automática entre dispositivos, control de versiones y cifrado seguro de archivos.
+    fr_fr: Seafile est une plateforme d'hébergement et de collaboration de fichiers avec protection de la confidentialité et fonctionnalités de travail d'équipe. Elle vous permet de créer des nuages privés pour le partage et la collaboration de fichiers, prenant en charge la synchronisation automatique entre appareils, le contrôle de version et le chiffrement sécurisé des fichiers.
     ko_kr: Seafile은 개인정보 보호와 팀워크 기능을 갖춘 파일 호스팅 및 협업 플랫폼입니다. 파일 공유와 협업을 위한 프라이빗 클라우드를 생성할 수 있으며, 기기 간 자동 동기화, 버전 제어, 보안 파일 암호화를 지원합니다.
+    zh_cn: Seafile 是一个文件托管和协作平台，具有隐私保护和团队协作功能。它允许您创建私有云进行文件共享和协作，支持设备间自动同步、版本控制和安全文件加密。
   developer: Seafile Ltd.
-  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/icon.png
-  screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-3.png
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-4.png
   tagline:
     en_us: Professional file sync and collaboration platform
-    fr_fr: Plateforme professionnelle de synchronisation et collaboration de fichiers
-    zh_cn: 专业文件同步和协作平台
     es_es: Plataforma profesional de sincronización y colaboración de archivos
+    fr_fr: Plateforme professionnelle de synchronisation et collaboration de fichiers
     ko_kr: 전문 파일 동기화 및 협업 플랫폼
-  title:
-    en_us: Seafile
+    zh_cn: 专业文件同步和协作平台
   tips:
     before_install:
       en_us: |
@@ -231,5 +194,5 @@ x-casaos:
         - Download desktop/mobile apps for automatic sync
         - Configure team libraries for collaborative work
         - Set up two-factor authentication for enhanced security
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/thumbnail.png
-  index: /
+  title:
+    en_us: Seafile
