@@ -50,8 +50,7 @@ services:
 
   seafile-app:
     image: seafileltd/seafile-mc:13.0.9
-    container_name: seafile
-    hostname: seafile-app
+    container_name: seafile-app
     restart: unless-stopped
     user: 0:0
     expose:
@@ -141,7 +140,7 @@ x-casaos:
     if [ ! -f /DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py ] || ! grep -q "CSRF_TRUSTED_ORIGINS" /DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py; then
       echo "CSRF_TRUSTED_ORIGINS = ['https://seafile-$domain']" > /DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py
     fi &&
-    chown -R $PUID:$PGID /DATA/AppData/seafile/ 2>/dev/null || true
+    chown $PUID:$PGID /DATA/AppData/seafile/ 2>/dev/null || true
   webui_port: 80
   main: caddy
 
