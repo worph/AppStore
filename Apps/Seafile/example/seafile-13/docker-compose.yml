@@ -1,6 +1,6 @@
 services:
   db:
-    image: ${SEAFILE_DB_IMAGE:-mariadb:10.11}
+    image: mariadb:10.11
     container_name: seafile-mysql
     restart: unless-stopped
     environment:
@@ -26,7 +26,7 @@ services:
       retries: 10
 
   redis:
-    image: ${SEAFILE_REDIS_IMAGE:-redis}
+    image: redis:7-alpine
     container_name: seafile-redis
     restart: unless-stopped
     command:
@@ -38,9 +38,10 @@ services:
     networks:
       - seafile-net
 
-  seafile:
-    image: ${SEAFILE_IMAGE:-seafileltd/seafile-mc:13.0-latest}
+  seafile-app:
+    image: seafileltd/seafile-mc:13.0.9
     container_name: seafile
+    hostname: seafile-app
     restart: unless-stopped
     ports:
        - "80:80"

@@ -1,0 +1,167 @@
+services:
+  db:
+    image: mariadb:10.11
+    user: 0:0
+    container_name: seafile-mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=e5Yrzk6Sibrl_root
+      - MYSQL_LOG_CONSOLE=true
+      - MARIADB_AUTO_UPGRADE=1
+      - TZ=/UTC
+    #volumes:
+    #  - "${SEAFILE_MYSQL_VOLUME:-/opt/seafile-mysql/db}:/var/lib/mysql"
+    networks:
+      - seafile-net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/usr/local/bin/healthcheck.sh",
+          "--connect",
+          "--mariadbupgrade",
+          "--innodb_initialized",
+        ]
+      interval: 20s
+      start_period: 30s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    user: 0:0
+    container_name: seafile-redis
+    restart: unless-stopped
+    command:
+      - /bin/sh
+      - -c
+      - redis-server --requirepass "e5Yrzk6Sibrl_redis"
+    environment:
+      - REDIS_PASSWORD=e5Yrzk6Sibrl_redis
+    networks:
+      - seafile-net
+
+  seafile:
+    image: seafileltd/seafile-mc:13.0.9
+    user: 0:0
+    container_name: seafile
+    hostname: seafile
+    restart: unless-stopped
+    #ports:
+    #   - "80:80"
+    expose:
+        - "80"
+    #volumes:
+    #  - ${SEAFILE_VOLUME:-/opt/seafile-data}:/shared
+    environment:
+      - INIT_SEAFILE_ADMIN_EMAIL=me@example.com
+      - INIT_SEAFILE_ADMIN_PASSWORD=e5Yrzk6Sibrl
+      - SEAFILE_SERVER_HOSTNAME=holyhorse.nsl.sh
+      - SEAFILE_SERVER_PROTOCOL=https
+      - SITE_ROOT=/
+      - NON_ROOT=false
+      - JWT_PRIVATE_KEY=e5Yrzk6Sibrle5Yrzk6Sibrle5Yrzk6Sibrle5Yrzk6Sibrl
+      - SEAFILE_LOG_TO_STDOUT=false
+      - MD_FILE_COUNT_LIMIT=100000
+      - TIME_ZONE=/UTC
+      
+      - SEAFILE_MYSQL_DB_HOST=db
+      - SEAFILE_MYSQL_DB_PORT=3306
+      - SEAFILE_MYSQL_DB_USER=seafile
+      - SEAFILE_MYSQL_DB_PASSWORD=e5Yrzk6Sibrl_db
+      - INIT_SEAFILE_MYSQL_ROOT_PASSWORD=e5Yrzk6Sibrl_root
+      - SEAFILE_MYSQL_DB_CCNET_DB_NAME=ccnet_db
+      - SEAFILE_MYSQL_DB_SEAFILE_DB_NAME=seafile_db
+      - SEAFILE_MYSQL_DB_SEAHUB_DB_NAME=seahub_db
+      
+      - CACHE_PROVIDER=redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=e5Yrzk6Sibrl_redis
+      
+      - ENABLE_SEADOC=false
+      - SEADOC_SERVER_URL=https://holyhorse.nsl.sh/sdoc-server
+      
+      - ENABLE_NOTIFICATION_SERVER=false
+      - INNER_NOTIFICATION_SERVER_URL=http://notification-server:8083
+      - NOTIFICATION_SERVER_URL=http://127.0.0.1/notification}
+      
+      - ENABLE_SEAFILE_AI=false
+      - SEAFILE_AI_SERVER_URL=http://seafile-ai:8888
+      - SEAFILE_AI_SECRET_KEY=e5Yrzk6Sibrle5Yrzk6Sibrle5Yrzk6Sibrle5Yrzk6Sibrl
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      #- pcs
+      - seafile-net
+
+networks:
+    seafile-net:
+        name: seafile-net
+    pcs:
+        name: pcs
+        external: true
+
+x-casaos:
+    architectures:
+        - amd64
+        - arm64
+    author: Yundera Team
+    category: Cloud
+    description:
+        en_us: Seafile is a file hosting and collaboration platform with privacy protection and teamwork features. It allows you to create private clouds for file sharing and collaboration, supporting automatic sync across devices, version control, and secure file encryption. Perfect for teams and individuals who need reliable cloud storage with advanced sharing capabilities.
+        es_es: Seafile es una plataforma de alojamiento y colaboración de archivos con protección de privacidad y características de trabajo en equipo. Te permite crear nubes privadas para compartir archivos y colaborar, con sincronización automática entre dispositivos, control de versiones y cifrado seguro de archivos.
+        fr_fr: Seafile est une plateforme d'hébergement et de collaboration de fichiers avec protection de la confidentialité et fonctionnalités de travail d'équipe. Elle vous permet de créer des nuages privés pour le partage et la collaboration de fichiers, prenant en charge la synchronisation automatique entre appareils, le contrôle de version et le chiffrement sécurisé des fichiers.
+        ko_kr: Seafile은 개인정보 보호와 팀워크 기능을 갖춘 파일 호스팅 및 협업 플랫폼입니다. 파일 공유와 협업을 위한 프라이빗 클라우드를 생성할 수 있으며, 기기 간 자동 동기화, 버전 제어, 보안 파일 암호화를 지원합니다.
+        zh_cn: Seafile 是一个文件托管和协作平台，具有隐私保护和团队协作功能。它允许您创建私有云进行文件共享和协作，支持设备间自动同步、版本控制和安全文件加密。
+    developer: Seafile Ltd.
+    hostname: seafile-holyhorse.nsl.sh
+    icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/icon.png
+    index: /
+    is_uncontrolled: false
+    main: seafile
+    port_map: "443"
+    scheme: https
+    screenshot_link:
+        - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-1.png
+        - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-2.png
+        - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-3.png
+        - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-4.png
+    store_app_id: seafile
+    tagline:
+        en_us: Professional file sync and collaboration platform
+        es_es: Plataforma profesional de sincronización y colaboración de archivos
+        fr_fr: Plateforme professionnelle de synchronisation et collaboration de fichiers
+        ko_kr: 전문 파일 동기화 및 협업 플랫폼
+        zh_cn: 专业文件同步和协作平台
+    thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/thumbnail.png
+    tips:
+        before_install:
+            en_us: |
+                **Default Admin Account**
+
+                | Field    | Value          |
+                |----------|----------------|
+                | Email    | admin@holyhorse.nsl.sh  |
+                | Password | `e5Yrzk6Sibrl` |
+
+                **Features:**
+                - File sync across devices with desktop and mobile apps
+                - Team libraries with granular permissions
+                - Version control and file history
+                - Online document editing with Seadoc
+                - Secure file sharing with password protection
+                - WebDAV support for third-party app integration
+
+                **Post-Installation:**
+                - Access via your domain to set up additional users
+                - Download desktop/mobile apps for automatic sync
+                - Configure team libraries for collaborative work
+                - Set up two-factor authentication for enhanced security
+    title:
+        custom: ""
+        en_us: Seafile
+    webui_port: 80
