@@ -156,12 +156,6 @@ services:
     labels:
       caddy: http://seafile-$domain/notification/*
       caddy.reverse_proxy: "notification-server:8083"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8083/ping || exit 1"]
-      interval: 30s
-      start_period: 30s
-      timeout: 10s
-      retries: 5
 
   seafile: # this service name is used by nsl.sh to route the seafile-$domain to this container
     image: lucaslorentz/caddy-docker-proxy:2.9-alpine
