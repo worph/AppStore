@@ -183,7 +183,9 @@ services:
       - TIME_ZONE=UTC
       - JWT_PRIVATE_KEY=$default_pwd$default_pwd$default_pwd$default_pwd
       - NON_ROOT=false
-      - SEAHUB_SERVICE_URL=http://seafile-app:80
+      - SEAHUB_SERVICE_URL=https://seafile-$domain
+      - SEAFILE_SERVER_HOSTNAME=seafile-$domain
+      - SEAFILE_SERVER_PROTOCOL=https
     depends_on:
       db:
         condition: service_healthy
@@ -192,12 +194,16 @@ services:
     networks:
       - seafile-net
     labels:
-      caddy: http://seafile-$domain/sdoc-server/*
-      caddy.reverse_proxy: "seadoc:80"
-      caddy.reverse_proxy.header_up: "Host {http.request.host}"
-      caddy.reverse_proxy.header_up.1: "X-Real-IP {http.request.remote.host}"
-      caddy.reverse_proxy.header_up.2: "X-Forwarded-For {http.request.remote.host}"
-      caddy.reverse_proxy.header_up.3: "X-Forwarded-Proto https"
+      caddy: http://seafile-$domain
+      caddy.@ws.0_header: "Connection *Upgrade*"
+      caddy.@ws.1_header: "Upgrade websocket"
+      caddy.0_reverse_proxy: "@ws seadoc:80"
+      caddy.1_handle_path: "/socket.io/*"
+      caddy.1_handle_path.0_rewrite: "* /socket.io{uri}"
+      caddy.1_handle_path.1_reverse_proxy: "seadoc:80"
+      caddy.2_handle_path: "/sdoc-server/*"
+      caddy.2_handle_path.0_rewrite: "* {uri}"
+      caddy.2_handle_path.1_reverse_proxy: "seadoc:80"
 
   seafile: # this service name is used by nsl.sh to route the seafile-$domain to this container
     image: lucaslorentz/caddy-docker-proxy:2.9-alpine
