@@ -47,6 +47,12 @@ services:
       - REDIS_PASSWORD=$default_pwd
     networks:
       - seafile-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "--pass", "$default_pwd", "ping"]
+      interval: 20s
+      start_period: 30s
+      timeout: 5s
+      retries: 5
 
   seafile-app:
     image: seafileltd/seafile-mc:13.0.9
@@ -103,9 +109,15 @@ services:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     networks:
       - seafile-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -s -o /dev/null -w '%{http_code}' http://localhost/ | grep -q '^200$' || exit 1"]
+      interval: 30s
+      start_period: 60s
+      timeout: 10s
+      retries: 5
 
   seafile: # this service name is used by nsl.sh to route the seafile-$domain to this container
     image: lucaslorentz/caddy-docker-proxy:2.9-alpine
@@ -119,7 +131,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
-      - seafile-app
+      seafile-app:
+        condition: service_healthy
     networks:
       - seafile-net  # Routes traffic to internal services
     healthcheck:
