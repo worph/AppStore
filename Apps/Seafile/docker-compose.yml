@@ -239,6 +239,16 @@ x-casaos:
   pre-install-cmd: |
     mkdir -p /DATA/AppData/seafile/ &&
     mkdir -p /DATA/AppData/seafile/seadoc-data &&
+    mkdir -p /DATA/AppData/seafile/shared/seafile/conf &&
+    cat > /DATA/AppData/seafile/shared/seafile/conf/seafdav.conf << 'EOF'
+    [WEBDAV]
+    enabled = true
+    port = 8080
+    debug = true
+    share_name = /seafdav
+    workers = 5
+    timeout = 1200
+    EOF
     chown $PUID:$PGID /DATA/AppData/seafile/ 2>/dev/null || true
   webui_port: 80
   main: seafile
