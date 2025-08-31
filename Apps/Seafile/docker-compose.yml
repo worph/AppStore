@@ -189,10 +189,10 @@ x-casaos:
   store_app_id: seafile
   pre-install-cmd: |
     mkdir -p /DATA/AppData/seafile/shared/seafile/conf &&
-    if [ ! -f /DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py ] then
+    if [ ! -f /DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py ]; then
       echo "# -*- coding: utf-8 -*-" > /DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py
-      echo "CSRF_TRUSTED_ORIGINS = ['https://seafile-$domain']" > /DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py
-      echo "TIME_ZONE = 'UTC' > /DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py
+      echo "CSRF_TRUSTED_ORIGINS = ['https://seafile-$domain']" >> /DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py
+      echo "TIME_ZONE = 'UTC'" >> /DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py
     fi &&
     chown $PUID:$PGID /DATA/AppData/seafile/ 2>/dev/null || true
   webui_port: 80
