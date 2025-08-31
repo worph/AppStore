@@ -92,7 +92,7 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=$default_pwd
 
-      - ENABLE_SEADOC=false
+      - ENABLE_SEADOC=true
       - SEADOC_SERVER_URL=https://seafile-$domain/sdoc-server
 
       - ENABLE_NOTIFICATION_SERVER=true
@@ -164,6 +164,41 @@ services:
       caddy: http://seafile-$domain/notification/*
       caddy.reverse_proxy: "notification-server:8083"
 
+  seadoc:
+    image: seafileltd/sdoc-server:2.0.6
+    container_name: seafile-seadoc
+    hostname: seadoc
+    restart: unless-stopped
+    user: 0:0
+    expose:
+      - 80
+    volumes:
+      - /DATA/AppData/seafile/seadoc-data:/shared
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=seafile
+      - DB_PASSWORD=$default_pwd
+      - DB_NAME=seahub_db
+      - TIME_ZONE=UTC
+      - JWT_PRIVATE_KEY=$default_pwd$default_pwd$default_pwd$default_pwd
+      - NON_ROOT=false
+      - SEAHUB_SERVICE_URL=http://seafile-app:80
+    depends_on:
+      db:
+        condition: service_healthy
+      seafile-app:
+        condition: service_healthy
+    networks:
+      - seafile-net
+    labels:
+      caddy: http://seafile-$domain/sdoc-server/*
+      caddy.reverse_proxy: "seadoc:80"
+      caddy.reverse_proxy.header_up: "Host {http.request.host}"
+      caddy.reverse_proxy.header_up.1: "X-Real-IP {http.request.remote.host}"
+      caddy.reverse_proxy.header_up.2: "X-Forwarded-For {http.request.remote.host}"
+      caddy.reverse_proxy.header_up.3: "X-Forwarded-Proto https"
+
   seafile: # this service name is used by nsl.sh to route the seafile-$domain to this container
     image: lucaslorentz/caddy-docker-proxy:2.9-alpine
     user: 0:0
@@ -178,6 +213,8 @@ services:
     depends_on:
       seafile-app:
         condition: service_healthy
+      seadoc:
+        condition: service_started
     networks:
       - seafile-net  # Routes traffic to internal services
     healthcheck:
@@ -195,6 +232,7 @@ x-casaos:
   store_app_id: seafile
   pre-install-cmd: |
     mkdir -p /DATA/AppData/seafile/ &&
+    mkdir -p /DATA/AppData/seafile/seadoc-data &&
     chown $PUID:$PGID /DATA/AppData/seafile/ 2>/dev/null || true
   webui_port: 80
   main: seafile
