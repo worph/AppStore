@@ -76,7 +76,7 @@ services:
       - JWT_PRIVATE_KEY=$default_pwd$default_pwd$default_pwd$default_pwd
       - SEAFILE_LOG_TO_STDOUT=true
       - MD_FILE_COUNT_LIMIT=100000
-      - TIME_ZONE=/Etc/UTC
+      - TIME_ZONE=UTC # seafile is very sensitive to timezone
 
       - SEAFILE_MYSQL_DB_HOST=db
       - SEAFILE_MYSQL_DB_PORT=3306
@@ -113,7 +113,7 @@ services:
     networks:
       - seafile-net
     healthcheck:
-      test: ["CMD-SHELL", "curl -f -s -o /dev/null -w '%{http_code}' http://localhost/ | grep -q '^200$' || exit 1"]
+      test: ["CMD-SHELL", "curl -f -s -L -o /dev/null -w '%{http_code}' http://localhost/ | grep -q '^200$' || exit 1"]
       interval: 30s
       start_period: 60s
       timeout: 10s
