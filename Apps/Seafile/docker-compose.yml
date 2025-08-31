@@ -105,7 +105,13 @@ services:
     labels:
       caddy: http://seafile-$domain
       caddy.reverse_proxy: "seafile-app:80"
-      caddy.reverse_proxy.header_up: "Host localhost"
+      #this is required to make seafile work behind a reverse proxy and avoid CRSF issues
+      caddy.reverse_proxy.0_header_up: "Host localhost"
+      caddy.reverse_proxy.1_header_up: "Origin http://localhost"
+      caddy.reverse_proxy.2_header_up: "Referer http://localhost/"
+      caddy.reverse_proxy.3_header_up: "X-Real-IP {http.request.remote.host}"
+      caddy.reverse_proxy.4_header_up: "X-Forwarded-For {http.request.remote.host}"
+      caddy.reverse_proxy.5_header_up: "X-Forwarded-Proto http"
     depends_on:
       db:
         condition: service_healthy
