@@ -64,7 +64,7 @@ services:
       - 80
     volumes:
       - /DATA/AppData/seafile/shared:/shared
-      - /DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py:/seafile/conf/seahub_settings.py:ro # HACK to prevent the file from being overwritten
+      - /DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py:/shared/seafile/conf/seahub_settings.py:ro # HACK to prevent the file from being overwritten
     environment:
       - INIT_SEAFILE_ADMIN_EMAIL=admin@$domain
       - INIT_SEAFILE_ADMIN_PASSWORD=$default_pwd
