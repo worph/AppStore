@@ -95,9 +95,9 @@ services:
       - ENABLE_SEADOC=false
       - SEADOC_SERVER_URL=https://seafile-$domain/sdoc-server
 
-      - ENABLE_NOTIFICATION_SERVER=false
+      - ENABLE_NOTIFICATION_SERVER=true
       - INNER_NOTIFICATION_SERVER_URL=http://notification-server:8083
-      - NOTIFICATION_SERVER_URL=http://127.0.0.1/notification
+      - NOTIFICATION_SERVER_URL=https://seafile-$domain/notification
 
       - ENABLE_SEAFILE_AI=false
       - SEAFILE_AI_SERVER_URL=http://seafile-ai:8888
@@ -110,12 +110,56 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      notification-server:
+        condition: service_started
     networks:
       - seafile-net
     healthcheck:
       test: ["CMD-SHELL", "curl -f -s -L -o /dev/null -w '%{http_code}' http://localhost/ | grep -q '^200$' || exit 1"]
       interval: 30s
       start_period: 60s
+      timeout: 10s
+      retries: 5
+
+  notification-server:
+    image: seafileltd/notification-server:13.0-latest
+    container_name: notification-server
+    restart: unless-stopped
+    user: 0:0
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.1'
+    expose:
+      - 8083
+    volumes:
+      - /DATA/AppData/seafile/shared/seafile/logs:/shared/seafile/logs
+    environment:
+      - SEAFILE_SERVER_HOSTNAME=seafile-$domain
+      - SEAFILE_SERVER_PROTOCOL=https
+      - SEAFILE_MYSQL_DB_HOST=db
+      - SEAFILE_MYSQL_DB_PORT=3306
+      - SEAFILE_MYSQL_DB_USER=seafile
+      - SEAFILE_MYSQL_DB_PASSWORD=$default_pwd
+      - SEAFILE_MYSQL_DB_CCNET_DB_NAME=ccnet_db
+      - SEAFILE_MYSQL_DB_SEAFILE_DB_NAME=seafile_db
+      - TIME_ZONE=UTC # seafile is very sensitive to timezone
+      - JWT_PRIVATE_KEY=$default_pwd$default_pwd$default_pwd$default_pwd
+      - SEAFILE_LOG_TO_STDOUT=true
+      - NOTIFICATION_SERVER_LOG_LEVEL=info
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - seafile-net
+    labels:
+      caddy: http://seafile-$domain/notification/*
+      caddy.reverse_proxy: "notification-server:8083"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8083/ping || exit 1"]
+      interval: 30s
+      start_period: 30s
       timeout: 10s
       retries: 5
 
