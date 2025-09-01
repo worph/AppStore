@@ -263,11 +263,11 @@ services:
     networks:
       - seafile-net  # Routes traffic to internal services
     healthcheck:
-      test: ["CMD-SHELL", "curl --fail http://localhost:2019/metrics || exit 1"]
-      start_period: 20s
-      interval: 20s
-      timeout: 5s
-      retries: 3
+      test: ["CMD-SHELL", "curl -f -s -L -o /dev/null -w '%{http_code}' https://seafile-$domain/ | grep -q '^200$' || exit 1"]
+      interval: 30s
+      start_period: 60s
+      timeout: 10s
+      retries: 5
 
 networks:
   seafile-net:
@@ -280,7 +280,6 @@ x-casaos:
     mkdir -p /DATA/AppData/seafile/seadoc-data &&
     mkdir -p /DATA/AppData/seafile/shared/seafile/conf &&
     mkdir -p /DATA/AppData/seafile/rclone &&
-    mkdir -p /DATA/AppData/seafile/rclone-cache &&
     mkdir -p /DATA/Seafile &&
     cat > /DATA/AppData/seafile/shared/seafile/conf/seafdav.conf << 'EOF'
     [WEBDAV]
@@ -309,8 +308,8 @@ x-casaos:
     create_library = false
     encoding = Slash,DoubleQuote,BackSlash,Ctl,InvalidUtf8
     EOF
-    chown -R $PUID:$PGID /DATA/AppData/seafile/ 2>/dev/null || true &&
-    chown -R $PUID:$PGID /DATA/Seafile/ 2>/dev/null || true
+    chown $PUID:$PGID /DATA/AppData/seafile/ 2>/dev/null || true &&
+    chown $PUID:$PGID /DATA/Seafile/ 2>/dev/null || true
   webui_port: 80
   main: seafile
 
