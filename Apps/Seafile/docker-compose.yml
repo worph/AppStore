@@ -205,6 +205,41 @@ services:
       caddy.2_handle_path.0_rewrite: "* {uri}"
       caddy.2_handle_path.1_reverse_proxy: "seadoc:80"
 
+  rclone:
+    image: rclone/rclone:1.71
+    container_name: seafile-rclone
+    restart: unless-stopped
+    user: $PUID:$PGID
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+    devices:
+      - /dev/fuse:/dev/fuse
+    security_opt:
+      - apparmor:unconfined
+    command: >
+      mount seafile-remote:
+      /data/seafile
+      --config /config/rclone.conf
+      --allow-other
+      --allow-non-empty
+      --vfs-cache-mode writes
+      --vfs-cache-max-size 1G
+      --vfs-cache-max-age 168h
+      --log-level INFO
+      --stats 30s
+    volumes:
+      - /DATA/Seafile:/data/seafile:rshared
+      - /DATA/AppData/seafile/rclone:/config
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+    depends_on:
+      seafile-app:
+        condition: service_healthy
+    networks:
+      - seafile-net
+
   seafile: # this service name is used by nsl.sh to route the seafile-$domain to this container
     image: lucaslorentz/caddy-docker-proxy:2.9-alpine
     user: 0:0
@@ -240,6 +275,8 @@ x-casaos:
     mkdir -p /DATA/AppData/seafile/ &&
     mkdir -p /DATA/AppData/seafile/seadoc-data &&
     mkdir -p /DATA/AppData/seafile/shared/seafile/conf &&
+    mkdir -p /DATA/AppData/seafile/rclone &&
+    mkdir -p /DATA/Seafile &&
     cat > /DATA/AppData/seafile/shared/seafile/conf/seafdav.conf << 'EOF'
     [WEBDAV]
     enabled = true
@@ -249,7 +286,21 @@ x-casaos:
     workers = 5
     timeout = 1200
     EOF
-    chown $PUID:$PGID /DATA/AppData/seafile/ 2>/dev/null || true
+    cat > /DATA/AppData/seafile/rclone/rclone.conf << 'EOF'
+    [seafile-remote]
+    type = seafile
+    url = https://seafile-$domain
+    user = admin@$domain
+    pass = $(default_pwd)
+    2fa = false
+    library = 
+    auth_token = 
+    library_key = 
+    create_library = false
+    encoding = Slash,DoubleQuote,BackSlash,Ctl,InvalidUtf8
+    EOF
+    chown -R $PUID:$PGID /DATA/AppData/seafile/ 2>/dev/null || true &&
+    chown -R $PUID:$PGID /DATA/Seafile/ 2>/dev/null || true
   webui_port: 80
   main: seafile
 
@@ -296,11 +347,13 @@ x-casaos:
         - Online document editing with Seadoc
         - Secure file sharing with password protection
         - WebDAV support for third-party app integration
+        - Virtual drive mounted at `/DATA/Seafile` for direct host access
         
         **Post-Installation:**
         - Access via your domain to set up additional users
         - Download desktop/mobile apps for automatic sync
         - Configure team libraries for collaborative work
         - Set up two-factor authentication for enhanced security
+        - Virtual Seafile drive available at `/DATA/Seafile` on the host system
   title:
     en_us: Seafile
