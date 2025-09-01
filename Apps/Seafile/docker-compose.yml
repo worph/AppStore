@@ -209,7 +209,7 @@ services:
     image: rclone/rclone:1.71
     container_name: seafile-rclone
     restart: unless-stopped
-    user: $PUID:$PGID
+    user: 0:0
     privileged: true
     cap_add:
       - SYS_ADMIN
@@ -218,7 +218,9 @@ services:
     security_opt:
       - apparmor:unconfined
     command: >
-      mount seafile-remote:
+      sh -c "mkdir -p /cache && chown $PUID:$PGID /cache && 
+      chown $PUID:$PGID /data/seafile &&
+      exec rclone mount seafile-remote:
       /data/seafile
       --config /config/rclone.conf
       --allow-other
@@ -226,11 +228,15 @@ services:
       --vfs-cache-mode writes
       --vfs-cache-max-size 1G
       --vfs-cache-max-age 168h
+      --cache-dir /cache
       --log-level INFO
       --stats 30s
+      --uid $PUID
+      --gid $PGID"
     volumes:
       - /DATA/Seafile:/data/seafile:rshared
       - /DATA/AppData/seafile/rclone:/config
+      - /DATA/AppData/seafile/rclone-cache:/cache
     environment:
       - PUID=$PUID
       - PGID=$PGID
@@ -276,6 +282,7 @@ x-casaos:
     mkdir -p /DATA/AppData/seafile/seadoc-data &&
     mkdir -p /DATA/AppData/seafile/shared/seafile/conf &&
     mkdir -p /DATA/AppData/seafile/rclone &&
+    mkdir -p /DATA/AppData/seafile/rclone-cache &&
     mkdir -p /DATA/Seafile &&
     cat > /DATA/AppData/seafile/shared/seafile/conf/seafdav.conf << 'EOF'
     [WEBDAV]
