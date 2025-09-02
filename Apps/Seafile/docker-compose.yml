@@ -205,9 +205,9 @@ services:
       caddy.2_handle_path.0_rewrite: "* {uri}"
       caddy.2_handle_path.1_reverse_proxy: "seadoc:80"
 
-  rclone:
-    image: rclone/rclone:1.71
-    container_name: seafile-rclone
+  seadrive:
+    image: ghcr.io/worph/seadrive-docker:latest
+    container_name: seafile-seadrive
     restart: unless-stopped
     user: 0:0
     privileged: true
@@ -217,27 +217,19 @@ services:
       - /dev/fuse:/dev/fuse
     security_opt:
       - apparmor:unconfined
-    command: >
-      mount seafile-remote:
-      /data/seafile
-      --config /config/rclone.conf
-      --allow-other
-      --allow-non-empty
-      --vfs-cache-mode writes
-      --vfs-cache-max-size 1G
-      --vfs-cache-max-age 168h
-      --cache-dir /cache
-      --log-level INFO
-      --stats 30s
-      --uid $PUID
-      --gid $PGID
     volumes:
-      - /DATA/Seafile:/data/seafile:shared
-      - /DATA/AppData/seafile/rclone:/config
-      - /DATA/AppData/seafile/rclone-cache:/cache
+      - type: bind
+        source: /DATA/Seafile
+        target: /seadrive/mount
+        bind:
+          propagation: shared
     environment:
-      - PUID=$PUID
-      - PGID=$PGID
+      - SEAFILE_SERVER=https://seafile-$domain
+      - SEAFILE_USERNAME=admin@$domain
+      - SEAFILE_PASSWORD=$default_pwd
+      - CLIENT_NAME=seafile-$domain-seadrive
+      - CACHE_SIZE_LIMIT=1GB
+      - LOG_LEVEL=info
     depends_on:
       seafile-app:
         condition: service_healthy
@@ -279,7 +271,6 @@ x-casaos:
     mkdir -p /DATA/AppData/seafile/ &&
     mkdir -p /DATA/AppData/seafile/seadoc-data &&
     mkdir -p /DATA/AppData/seafile/shared/seafile/conf &&
-    mkdir -p /DATA/AppData/seafile/rclone &&
     mkdir -p /DATA/Seafile &&
     cat > /DATA/AppData/seafile/shared/seafile/conf/seafdav.conf << 'EOF'
     [WEBDAV]
@@ -289,24 +280,6 @@ x-casaos:
     share_name = /seafdav
     workers = 5
     timeout = 1200
-    EOF
-    # Create rclone config with obscured password
-    docker run --rm -v /DATA/AppData/seafile/rclone:/config rclone/rclone:1.71 \
-      obscure "$default_pwd" > /tmp/obscured_pass &&
-    OBSCURED_PASS=$(cat /tmp/obscured_pass) &&
-    rm -f /tmp/obscured_pass &&
-    cat > /DATA/AppData/seafile/rclone/rclone.conf << EOF
-    [seafile-remote]
-    type = seafile
-    url = http://seafile-app:80
-    user = admin@$domain
-    pass = $OBSCURED_PASS
-    2fa = false
-    library = 
-    auth_token = 
-    library_key = 
-    create_library = false
-    encoding = Slash,DoubleQuote,BackSlash,Ctl,InvalidUtf8
     EOF
     chown $PUID:$PGID /DATA/AppData/seafile/ 2>/dev/null || true &&
     chown $PUID:$PGID /DATA/Seafile/ 2>/dev/null || true
