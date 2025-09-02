@@ -298,7 +298,7 @@ x-casaos:
     cat > /DATA/AppData/seafile/rclone/rclone.conf << EOF
     [seafile-remote]
     type = seafile
-    url = https://seafile-$domain
+    url = http://seafile-app:80
     user = admin@$domain
     pass = $OBSCURED_PASS
     2fa = false
