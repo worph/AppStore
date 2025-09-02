@@ -232,7 +232,7 @@ services:
       --uid $PUID
       --gid $PGID
     volumes:
-      - /DATA/Seafile:/data/seafile:rshared
+      - /DATA/Seafile:/data/seafile:shared
       - /DATA/AppData/seafile/rclone:/config
       - /DATA/AppData/seafile/rclone-cache:/cache
     environment:
