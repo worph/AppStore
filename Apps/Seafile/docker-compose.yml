@@ -62,6 +62,7 @@ services:
     user: 0:0
     expose:
       - 80
+      - 8080
     volumes:
       - /DATA/AppData/seafile/shared:/shared
     environment:
