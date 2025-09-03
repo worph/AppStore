@@ -224,9 +224,11 @@ services:
       --config /config/rclone.conf
       --allow-other
       --allow-non-empty
-      --vfs-cache-mode writes
-      --vfs-cache-max-size 1G
-      --vfs-cache-max-age 168h
+      --vfs-cache-mode off
+      --vfs-cache-poll-interval 5s
+      --dir-cache-time 5s
+      --vfs-read-ahead 0
+      --buffer-size 0
       --cache-dir /cache
       --log-level INFO
       --stats 30s
@@ -306,6 +308,23 @@ x-casaos:
     EOF
     chown $PUID:$PGID /DATA/AppData/seafile/ 2>/dev/null || true &&
     chown $PUID:$PGID /DATA/Seafile/ 2>/dev/null || true
+  post-install-cmd: |
+    echo "Waiting for Seafile to initialize and create configuration files..."
+    sleep 30
+    echo "Enabling WebDAV in seafdav.conf..."
+    if [ -f /DATA/AppData/seafile/shared/seafile/conf/seafdav.conf ]; then
+      if grep -q "enabled = false" /DATA/AppData/seafile/shared/seafile/conf/seafdav.conf; then
+        sed -i 's/enabled = false/enabled = true/' /DATA/AppData/seafile/shared/seafile/conf/seafdav.conf
+        echo "WebDAV enabled successfully"
+        echo "Restarting Seafile container to apply WebDAV configuration..."
+        docker restart seafile
+        echo "WebDAV configuration complete"
+      else
+        echo "WebDAV already enabled or configuration not found"
+      fi
+    else
+      echo "seafdav.conf not found, WebDAV may not be available"
+    fi
   webui_port: 80
   main: seafile
 
