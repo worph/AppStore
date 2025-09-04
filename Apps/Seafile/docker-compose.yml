@@ -225,7 +225,6 @@ services:
       --dir-cache-time 5s
       --vfs-read-ahead 0
       --buffer-size 0
-      --cache-dir /cache
       --log-level INFO
       --stats 30s
       --uid $PUID
@@ -233,7 +232,6 @@ services:
     volumes:
       - /DATA/Seafile:/data/seafile:shared
       - /DATA/AppData/seafile/rclone:/config
-      - /DATA/AppData/seafile/rclone-cache:/cache
     environment:
       - PUID=$PUID
       - PGID=$PGID
@@ -281,7 +279,7 @@ x-casaos:
     mkdir -p /DATA/AppData/seafile/shared/seafile/conf &&
     mkdir -p /DATA/AppData/seafile/rclone &&
     mkdir -p /DATA/Seafile &&
-    # Create rclone config with obscured password for WebDAV (only if not exists or password changed)
+    # Create rclone config with obscured password for WebDAV (only if not exists)
     if [ ! -f /DATA/AppData/seafile/rclone/rclone.conf ]; then
       echo "Creating rclone configuration..."
       OBSCURED_PASS=$(docker run --rm rclone/rclone:1.71 obscure "$default_pwd") &&
@@ -298,6 +296,8 @@ x-casaos:
       echo "rclone configuration already exists, skipping"
     fi &&
     chown $PUID:$PGID /DATA/AppData/seafile/ 2>/dev/null || true &&
+    chown $PUID:$PGID /DATA/AppData/seafile/rclone/ 2>/dev/null || true &&
+    chown $PUID:$PGID /DATA/AppData/seafile/rclone/rclone.conf 2>/dev/null || true &&
     chown $PUID:$PGID /DATA/Seafile/ 2>/dev/null || true
   post-install-cmd: |
     echo "Waiting for Seafile to initialize and create configuration files..."
