@@ -284,18 +284,15 @@ x-casaos:
     # Create rclone config with obscured password for WebDAV (only if not exists or password changed)
     if [ ! -f /DATA/AppData/seafile/rclone/rclone.conf ]; then
       echo "Creating rclone configuration..."
-      docker run --rm -v /DATA/AppData/seafile/rclone:/config rclone/rclone:1.71 \
-        obscure "$default_pwd" > /tmp/obscured_pass &&
-      OBSCURED_PASS=$(cat /tmp/obscured_pass) &&
-      rm -f /tmp/obscured_pass &&
+      OBSCURED_PASS=$(docker run --rm rclone/rclone:1.71 obscure "$default_pwd") &&
       cat > /DATA/AppData/seafile/rclone/rclone.conf << EOF
-      [seafile-webdav]
-      type = webdav
-      url = http://seafile-app:8080/seafdav
-      vendor = other
-      user = admin@$domain
-      pass = $OBSCURED_PASS
-      EOF
+    [seafile-webdav]
+    type = webdav
+    url = http://seafile-app:8080/seafdav
+    vendor = other
+    user = admin@$domain
+    pass = $OBSCURED_PASS
+    EOF
       echo "rclone configuration created"
     else
       echo "rclone configuration already exists, skipping"
