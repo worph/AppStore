@@ -6,6 +6,7 @@ services:
     user: 0:0
     container_name: seafile-mysql
     restart: unless-stopped
+    cpu_shares: 70
     environment:
       - MYSQL_ROOT_PASSWORD=$default_pwd
       - MYSQL_LOG_CONSOLE=true
@@ -34,11 +35,7 @@ services:
     user: 0:0
     container_name: seafile-redis
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-          cpus: '0.25'
+    cpu_shares: 30
     command:
       - /bin/sh
       - -c
@@ -60,6 +57,7 @@ services:
     hostname: seafile-app
     restart: unless-stopped
     user: 0:0
+    cpu_shares: 80
     expose:
       - 80
       - 8080
@@ -134,11 +132,7 @@ services:
     container_name: notification-server
     restart: unless-stopped
     user: 0:0
-    deploy:
-      resources:
-        limits:
-          memory: 128M
-          cpus: '0.1'
+    cpu_shares: 30
     expose:
       - 8083
     volumes:
@@ -171,6 +165,7 @@ services:
     hostname: seadoc
     restart: unless-stopped
     user: 0:0
+    cpu_shares: 70
     expose:
       - 80
     volumes:
@@ -212,6 +207,7 @@ services:
     restart: unless-stopped
     user: 0:0
     privileged: true
+    cpu_shares: 30
     cap_add:
       - SYS_ADMIN
     devices:
@@ -252,6 +248,7 @@ services:
     user: 0:0
     container_name: seafile-caddy
     restart: unless-stopped
+    cpu_shares: 30
     expose:
       - 80
     environment:
@@ -284,28 +281,25 @@ x-casaos:
     mkdir -p /DATA/AppData/seafile/shared/seafile/conf &&
     mkdir -p /DATA/AppData/seafile/rclone &&
     mkdir -p /DATA/Seafile &&
-    cat > /DATA/AppData/seafile/shared/seafile/conf/seafdav.conf << 'EOF'
-    [WEBDAV]
-    enabled = true
-    port = 8080
-    debug = true
-    share_name = /seafdav
-    workers = 5
-    timeout = 1200
-    EOF
-    # Create rclone config with obscured password for WebDAV
-    docker run --rm -v /DATA/AppData/seafile/rclone:/config rclone/rclone:1.71 \
-      obscure "$default_pwd" > /tmp/obscured_pass &&
-    OBSCURED_PASS=$(cat /tmp/obscured_pass) &&
-    rm -f /tmp/obscured_pass &&
-    cat > /DATA/AppData/seafile/rclone/rclone.conf << EOF
-    [seafile-webdav]
-    type = webdav
-    url = http://seafile-app:8080/seafdav
-    vendor = other
-    user = admin@$domain
-    pass = $OBSCURED_PASS
-    EOF
+    # Create rclone config with obscured password for WebDAV (only if not exists or password changed)
+    if [ ! -f /DATA/AppData/seafile/rclone/rclone.conf ]; then
+      echo "Creating rclone configuration..."
+      docker run --rm -v /DATA/AppData/seafile/rclone:/config rclone/rclone:1.71 \
+        obscure "$default_pwd" > /tmp/obscured_pass &&
+      OBSCURED_PASS=$(cat /tmp/obscured_pass) &&
+      rm -f /tmp/obscured_pass &&
+      cat > /DATA/AppData/seafile/rclone/rclone.conf << EOF
+      [seafile-webdav]
+      type = webdav
+      url = http://seafile-app:8080/seafdav
+      vendor = other
+      user = admin@$domain
+      pass = $OBSCURED_PASS
+      EOF
+      echo "rclone configuration created"
+    else
+      echo "rclone configuration already exists, skipping"
+    fi &&
     chown $PUID:$PGID /DATA/AppData/seafile/ 2>/dev/null || true &&
     chown $PUID:$PGID /DATA/Seafile/ 2>/dev/null || true
   post-install-cmd: |
@@ -319,11 +313,14 @@ x-casaos:
         echo "Restarting Seafile container to apply WebDAV configuration..."
         docker restart seafile
         echo "WebDAV configuration complete"
+      elif grep -q "enabled = true" /DATA/AppData/seafile/shared/seafile/conf/seafdav.conf; then
+        echo "WebDAV already enabled, no changes needed"
       else
-        echo "WebDAV already enabled or configuration not found"
+        echo "WebDAV configuration not found in seafdav.conf, may need manual configuration"
       fi
     else
-      echo "seafdav.conf not found, WebDAV may not be available"
+      echo "seafdav.conf not found after timeout, WebDAV may not be available"
+      echo "This is normal on first install - WebDAV will be configured on next restart"
     fi
   webui_port: 80
   main: seafile
