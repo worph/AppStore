@@ -41,10 +41,10 @@ services:
 
 x-casaos:
   main: mealie
-  webui_port: 9000
+  webui_port: 80
   index: /
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/mealie
+    mkdir -p /DATA/AppData/mealie/data &&
     chown -R $PUID:$PGID /DATA/AppData/mealie
     
 
