@@ -4,6 +4,7 @@ services:
   mealie:
     image: ghcr.io/mealie-recipes/mealie:v3.0.2
     container_name: mealie
+    restart: unless-stopped
     user: $PUID:$PGID
     expose:
       - 80                    # Default port for Mealie v3
@@ -31,7 +32,6 @@ services:
       DEFAULT_PASSWORD: $default_pwd
     volumes:
       - /DATA/AppData/mealie/data:/app/data
-    restart: unless-stopped
     healthcheck:
       test: ["CMD", "timeout", "5", "bash", "-c", "cat < /dev/null > /dev/tcp/localhost/80"]
       interval: 30s
@@ -40,12 +40,24 @@ services:
       start_period: 40s
 
 x-casaos:
+  main: mealie
+  webui_port: 9000
+  index: /
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/mealie
+    chown -R $PUID:$PGID /DATA/AppData/mealie
+    
+
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Mealie/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Mealie/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Mealie/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Mealie/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Mealie/screenshot-1.png
+
   architectures:
     - amd64
     - arm64
-  main: mealie
-  pre-install-cmd: |
-    chown -R $PUID:$PGID /DATA/AppData/mealie
   author: Yundera Team
   category: Utilities
   description:
@@ -119,13 +131,7 @@ x-casaos:
       **Piénsalo como:** Una caja de recetas inteligente que automáticamente recorta recetas de revistas y sitios web, luego te ayuda a planificar comidas y hacer listas de compras.
       
       **Perfecto si:** Cocinas en casa, quieres probar nuevas recetas, o estás cansado de perder excelentes recetas cuando los sitios cambian o desaparecen.
-  developer: Mealie Recipes Team    
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/icon.png
-  screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/screenshot-1.png
+  developer: Mealie Recipes Team
   tagline:
     en_us: Your family recipes, organized and accessible forever
     fr_fr: Vos recettes familiales, organisées et accessibles pour toujours
@@ -236,5 +242,3 @@ x-casaos:
         AllRecipes, Food Network, BBC Good Food, y miles de blogs de cocina y sitios web.
         
         **Consejo:** ¡Intenta copiar URLs de recetas de las descripciones de tus videos de cocina favoritos de YouTube!
-  webui_port: 9000
-  index: /
