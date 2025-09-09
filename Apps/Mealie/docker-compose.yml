@@ -2,7 +2,7 @@ name: mealie
 
 services:
   mealie:
-    image: ghcr.io/mealie-recipes/mealie:v3.0.2
+    image: ghcr.io/mealie-recipes/mealie:v3.1.2
     container_name: mealie
     restart: unless-stopped
     user: $PUID:$PGID
