@@ -3,15 +3,13 @@ name: immich
 services:
   immich:
     container_name: immich
-    hostname: immich
+    image: ghcr.io/immich-app/immich-server:v1.141.1
+    user: $PUID:$PGID
     cpu_shares: 10
     deploy:
       resources:
         limits:
           memory: 2048M
-          cpus: '1.0'
-    image: ghcr.io/immich-app/immich-server:v1.141.1
-    user: $PUID:$PGID
     volumes:
       - /DATA/AppData/immich/upload:/data
       # Read-only access to the gallery directory used to import media files from the host directly (Immich external library)
@@ -129,6 +127,17 @@ networks:
     name: immich
 
 x-casaos:
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/immich/upload &&
+    mkdir -p /DATA/AppData/immich/model-cache &&
+    mkdir -p /DATA/AppData/immich/redis &&
+    mkdir -p /DATA/AppData/immich/pgdata &&
+    chown $PUID:$PGID /DATA/AppData/immich &&
+    chown $PUID:$PGID /DATA/AppData/immich/upload &&
+    chown $PUID:$PGID /DATA/AppData/immich/model-cache &&
+    chown $PUID:$PGID /DATA/AppData/immich/redis &&
+    chown $PUID:$PGID /DATA/AppData/immich/pgdata
+
   main: immich
   webui_port: 80
   index: /
