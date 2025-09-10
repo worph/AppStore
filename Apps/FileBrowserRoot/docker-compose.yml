@@ -1,4 +1,4 @@
-name: filebrowser-root
+name: filebrowserroot
 services:
   filebrowserroot:
     image: filebrowser/filebrowser:v2.32.0
