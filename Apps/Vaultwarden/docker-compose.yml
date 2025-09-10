@@ -2,19 +2,19 @@ name: vaultwarden
 
 services:
   vaultwarden:
-    image: vaultwarden/server:1.33.0
+    image: vaultwarden/server:1.34.3
     user: $PUID:$PGID
-    healthcheck:
-      test: ["CMD", "sh", "-c", "exit 0"]  # Always return success
-      interval: 30s
-      timeout: 10s
-      retries: 1
     deploy:
       resources:
         limits:
           memory: 1024M
-          cpus: '1.0'
     cpu_shares: 70
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -f -o /dev/null -s -w '%{http_code}' https://vaultwarden-$domain/ | grep -q '200'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     expose:
       - 80
     environment:
@@ -25,9 +25,9 @@ services:
       ROCKET_ADDRESS: 0.0.0.0        # Bind to all interfaces for NSL router access
       SIGNUPS_ALLOWED: "true"        # Enable user registration for initial setup
       ADMIN_TOKEN: $default_pwd      # Admin panel access token
-      # DOMAIN: https://$domain      # Temporarily disable domain setting
+      DOMAIN: https://vaultwarden-$domain
       SMTP_HOST: mailhog             # Internal SMTP server via MailHog
-      SMTP_FROM: vaultwarden@localhost # Simple from address
+      SMTP_FROM: vaultwarden@$domain # Simple from address
       SMTP_PORT: 1025                # MailHog SMTP port
       SMTP_SECURITY: off             # No TLS for internal communication
       SMTP_FROM_NAME: Vaultwarden    # Display name for emails
@@ -43,7 +43,7 @@ services:
     image: mailhog/mailhog:v1.0.1
     expose:
       - 1025  # SMTP server
-      - 8025  # Web UI for viewing emails
+    #  - 8025  # Web UI for viewing emails
     deploy:
       resources:
         limits:
