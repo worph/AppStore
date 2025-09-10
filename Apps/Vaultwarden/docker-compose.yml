@@ -32,7 +32,7 @@ services:
       SMTP_SECURITY: off             # No TLS for internal communication
       SMTP_FROM_NAME: Vaultwarden    # Display name for emails
     volumes:
-      - /DATA/AppData/$AppID/data:/data
+      - /DATA/AppData/vaultwarden/data/:/data/
     restart: unless-stopped
     depends_on:
       - mailhog
