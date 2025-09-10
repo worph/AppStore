@@ -97,13 +97,6 @@ volumes:
   model-cache:
 
 x-casaos:
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/immich/upload &&
-    mkdir -p /DATA/AppData/immich/pgdata &&
-    chown $PUID:$PGID /DATA/AppData/immich &&
-    chown $PUID:$PGID /DATA/AppData/immich/upload &&
-    chown $PUID:$PGID /DATA/AppData/immich/pgdata
-
   main: immich
   webui_port: 80
   index: /
