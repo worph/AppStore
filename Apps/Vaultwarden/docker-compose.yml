@@ -41,19 +41,10 @@ services:
 
   postfix:
     image: boky/postfix:latest
-    deploy:
-      resources:
-        limits:
-          memory: 128M
-          cpus: '0.2'
+    user: 0:0
     cpu_shares: 30
     environment:
       ALLOWED_SENDER_DOMAINS: $domain
-      HOSTNAME: vaultwarden-$domain
-      POSTFIX_myhostname: vaultwarden-$domain
-      POSTFIX_mydestination: $domain,localhost.localdomain,localhost
-      POSTFIX_mynetworks: 127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
-      POSTFIX_message_size_limit: 26214400
     networks:
       - vaultwarden
     restart: unless-stopped
