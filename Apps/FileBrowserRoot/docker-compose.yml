@@ -1,16 +1,18 @@
 name: filebrowser-root
 services:
-  filebrowser:
-    container_name: filebrowser-root
+  filebrowserroot:
+    image: filebrowser/filebrowser:v2.32.0
+    container_name: filebrowserroot
+    restart: unless-stopped
     user: 0:0
+    expose:
+      - 80
+    cpu_shares: 80
     environment:
       PGID: $PGID
       PUID: $PUID
       TZ: $TZ
       FB_DATABASE: /db/database.db
-    image: filebrowser/filebrowser:v2.32.0
-    network_mode: bridge
-    restart: unless-stopped
     volumes:
       - type: bind
         source: /DATA/AppData/filebrowser-root/db/
@@ -18,23 +20,17 @@ services:
       - type: bind
         source: /
         target: /srv
-    expose:
-      - 80
-    cpu_shares: 10
-    deploy:
-      resources:
-        limits:
-          memory: 256M
+
 x-casaos:
   pre-install-cmd: |
     docker run --rm -v /DATA/AppData/filebrowser-root/db/:/db filebrowser/filebrowser:v2.32.0 config init --database /db/database.db &&
-    docker run --rm -v /DATA/AppData/filebrowser-root/:/data ubuntu:22.04 chown -R 0:0 /data &&
+    chown -R 0:0 /DATA/AppData/filebrowser-root/ &&
     docker run --rm -v /DATA/AppData/filebrowser-root/db/:/db filebrowser/filebrowser:v2.32.0 users add admin $default_pwd --perm.admin --database /db/database.db
   architectures:
     - amd64
     - arm64
     - arm
-  main: filebrowser
+  main: filebrowserroot
   author: Yundera Team
   category: Cloud
   description:
