@@ -2,56 +2,57 @@ name: suwayomi
 
 services:
   suwayomi:
-    image: ghcr.io/suwayomi/tachidesk:v2.1.1922
+    image: ghcr.io/suwayomi/tachidesk:v2.1.1867
     user: $PUID:$PGID
     container_name: suwayomi
-    restart: unless-stopped
     expose:
       - 80
     environment:
       PUID: $PUID
       PGID: $PGID
       TZ: $TZ
-      
+
       # Port settings
       BIND_IP: 0.0.0.0
       BIND_PORT: 80
-      
+
       # Authentication settings - Simple Login method
-      AUTH_MODE: ui_login
+      AUTH_MODE: simple_login
       AUTH_USERNAME: admin
       AUTH_PASSWORD: $default_pwd
-      
+
       # Download settings
       DOWNLOAD_AS_CBZ: true
+      AUTO_DOWNLOAD_CHAPTERS: false
+
+      # WebUI settings - Preview version (per-device settings support)
+      WEB_UI_CHANNEL: bundled
+      WEB_UI_UPDATE_INTERVAL: 0.0
 
       # Extension repository (Keiyoushi only)
-      EXTENSION_REPOS: '["https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"]'
+      EXTENSION_REPOS: >-
+        ["https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"]
 
       # FlareSolverr integration
       FLARESOLVERR_ENABLED: true
       FLARESOLVERR_URL: http://suwayomi-flaresolverr:8191
 
-      WEB_UI_UPDATE_INTERVAL: 0 # Disable automatic update checks - updates are managed via Docker
-
-      AUTO_DOWNLOAD_CHAPTERS : true # Enable auto-download of new chapters for followed manga
-
-    volumes: # The order matters! Make sure the downloads is first in the volume list or it will not work!
-      - /DATA/Media/Mangas/:/home/suwayomi/.local/share/Tachidesk/downloads
-      - /DATA/AppData/suwayomi/data/:/home/suwayomi/.local/share/Tachidesk
+    volumes:
+      - /DATA/Media/Mangas:/home/suwayomi/.local/share/Tachidesk/downloads
+      - /DATA/AppData/$AppID/data:/home/suwayomi/.local/share/Tachidesk
+    restart: unless-stopped
     depends_on:
       - flaresolverr
 
   flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:latest
+    image: ghcr.io/flaresolverr/flaresolverr:v3.4.0
     container_name: suwayomi-flaresolverr
-    restart: unless-stopped
     user: 0:0
     environment:
       TZ: $TZ
+    restart: unless-stopped
 
 x-casaos:
-
   main: suwayomi
   index: /
   webui_port: 80
@@ -162,7 +163,11 @@ x-casaos:
         3. Click "Browse" to find manga sources
         4. Search for your favorite manga titles
         5. Start reading! Your progress saves automatically
-
+        
+        **Popular manga you can find:**
+        One Piece, Naruto, Attack on Titan, Demon Slayer, and thousands more from sites worldwide.
+        
+        **Tip:** Download chapters when on WiFi, then read offline during commutes!
       ko_kr: |
         **시작하기**
         | 사용자명 | 비밀번호       |
