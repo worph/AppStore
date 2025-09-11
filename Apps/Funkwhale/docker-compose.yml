@@ -4,7 +4,6 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: funkwhale-postgres
-    user: $PUID:$PGID
     cpu_shares: 20
     deploy:
       resources:
@@ -15,9 +14,7 @@ services:
       POSTGRES_DB: funkwhale
       POSTGRES_USER: funkwhale
       POSTGRES_PASSWORD: funkwhale
-      PGID: $PGID
-      PUID: $PUID
-      TZ: $TZ
+      TZ: ${TZ:-UTC}
     volumes:
       - /DATA/AppData/funkwhale/postgres:/var/lib/postgresql/data
     restart: unless-stopped
@@ -27,7 +24,6 @@ services:
   redis:
     image: redis:7-alpine
     container_name: funkwhale-redis
-    user: $PUID:$PGID
     cpu_shares: 10
     deploy:
       resources:
@@ -35,9 +31,7 @@ services:
           memory: 256M
           cpus: '0.1'
     environment:
-      PGID: $PGID
-      PUID: $PUID
-      TZ: $TZ
+      TZ: ${TZ:-UTC}
     restart: unless-stopped
     networks:
       - funkwhale
@@ -45,7 +39,6 @@ services:
   api:
     image: funkwhale/api:1.4.0
     container_name: funkwhale-api
-    user: $PUID:$PGID
     cpu_shares: 40
     deploy:
       resources:
@@ -56,16 +49,14 @@ services:
       - postgres
       - redis
     environment:
-      FUNKWHALE_HOSTNAME: $domain
+      FUNKWHALE_HOSTNAME: ${domain:-localhost}
       FUNKWHALE_PROTOCOL: https
       DATABASE_URL: postgresql://funkwhale:funkwhale@postgres:5432/funkwhale
       CACHE_URL: redis://redis:6379/0
-      DJANGO_SECRET_KEY: $default_pwd
-      MEDIA_URL: https://$domain/media/
-      STATIC_URL: https://$domain/staticfiles/
-      PGID: $PGID
-      PUID: $PUID
-      TZ: $TZ
+      DJANGO_SECRET_KEY: ${default_pwd:-funkwhale-secret-key-change-me-please}
+      MEDIA_URL: https://${domain:-localhost}/media/
+      STATIC_URL: https://${domain:-localhost}/staticfiles/
+      TZ: ${TZ:-UTC}
       NESTED_PROXY: 1
     volumes:
       - /DATA/AppData/funkwhale/data:/data
@@ -79,7 +70,6 @@ services:
   front:
     image: funkwhale/front:1.4.0
     container_name: funkwhale-front
-    user: $PUID:$PGID
     cpu_shares: 30
     deploy:
       resources:
@@ -89,11 +79,8 @@ services:
     depends_on:
       - api
     environment:
-      PGID: $PGID
-      PUID: $PUID
-      TZ: $TZ
+      TZ: ${TZ:-UTC}
     volumes:
-      - /DATA/AppData/funkwhale/front:/usr/share/nginx/html:ro
       - /etc/localtime:/etc/localtime:ro
     expose:
       - 80
