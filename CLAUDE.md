@@ -10,7 +10,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is the **Yundera CasaOS 3rd-Party AppStore** - a curated collection of Docker Compose applications configured for CasaOS with NSL.SH mesh router integration. The repository contains containerized applications that run on CasaIMG (dockerized CasaOS) with HTTPS-enabled URLs.
 
-**Note**: This repository is currently a fork maintained at https://github.com/worph/AppStore. When referencing repository URLs for downloading configuration files, use this fork's URL structure.
+**Note**: This repository is currently a fork maintained at https://github.com/worph/AppStore. When referencing repository URLs for downloading configuration files, use this fork's URL structure:
+- Fork assets: `https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/AppName/`
+- Main repo assets: `https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AppName/`
 
 ## Architecture
 
@@ -166,4 +168,29 @@ icon: https://cdn.jsdelivr.net/gh/username/AppStore@main/Apps/AppName/icon.png
 
 # To (main repo):
 icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AppName/icon.png
+```
+
+### JSON Configuration Validation
+The repository uses several JSON configuration files:
+```bash
+# Validate JSON syntax
+python3 -m json.tool category-list.json > /dev/null
+python3 -m json.tool featured-apps.json > /dev/null  
+python3 -m json.tool recommend-list.json > /dev/null
+```
+
+### Repository Structure
+```
+/workspace/yundera/Worph-AppStore/
+├── Apps/                     # Individual app directories
+│   ├── [AppName]/
+│   │   ├── docker-compose.yml
+│   │   ├── icon.png         # 192x192px
+│   │   ├── screenshot-*.png # 1280x720px  
+│   │   ├── thumbnail.png    # 784x442px (optional)
+│   │   └── rationale.md     # Security exception explanations
+├── category-list.json       # App categories with icons
+├── featured-apps.json       # Featured app metadata
+├── recommend-list.json      # Recommended apps list
+└── CONTRIBUTING.md         # Fork-specific contribution guidelines
 ```

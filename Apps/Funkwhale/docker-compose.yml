@@ -1,0 +1,88 @@
+name: funkwhale
+
+services:
+  funkwhale:
+    image: funkwhale/all-in-one:1.4.0
+    container_name: funkwhale
+    user: $PUID:$PGID
+    cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+          cpus: '1.0'
+    environment:
+      FUNKWHALE_HOSTNAME: $domain
+      FUNKWHALE_PROTOCOL: https
+      DJANGO_SECRET_KEY: $default_pwd
+      PGID: $PGID
+      PUID: $PUID
+      TZ: $TZ
+      NESTED_PROXY: 1
+    volumes:
+      - /DATA/AppData/funkwhale/data:/data
+      - /DATA/AppData/funkwhale/music:/music:ro
+      - /DATA/Media/:/import:ro
+      - /etc/localtime:/etc/localtime:ro
+    expose:
+      - 80
+    restart: unless-stopped
+
+x-casaos:
+  main: funkwhale
+  webui_port: 80
+  index: /
+
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Funkwhale/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Funkwhale/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Funkwhale/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Funkwhale/screenshot-3.png
+
+  architectures:
+    - amd64
+    - arm64
+  store_app_id: funkwhale
+  category: Media
+  author: Worph
+  developer: funkwhale-audio
+  description:
+    en_us: |
+      Funkwhale is a modern, self-hosted, free and open-source music server that lets you stream your personal audio collection anywhere.
+
+      **Key Features:**
+      * **Self-hosted music streaming** - Host your own music library with complete control
+      * **Web-based player** - Beautiful interface for browsing and playing your music
+      * **User management** - Create multiple users with separate libraries and permissions
+      * **Playlist support** - Create and manage custom playlists
+      * **Federation support** - Connect with other Funkwhale instances via ActivityPub
+      * **Import flexibility** - Upload music files or import from existing collections
+      * **Mobile friendly** - Responsive design works great on phones and tablets
+
+      **Perfect for:**
+      * Music enthusiasts who want to own their collection
+      * Families sharing a music library
+      * Anyone seeking privacy from streaming services
+      * Users wanting to discover music through federation
+
+      Funkwhale runs beautifully on your Yundera server with HTTPS access via `https://funkwhale-username.nsl.sh`. Your music stays **yours forever** while being accessible from anywhere.
+
+      After installation, upload your music files to `/DATA/AppData/funkwhale/music/` or import from `/DATA/Media/` to build your library.
+  tagline:
+    en_us: Your Personal Music Streaming Server
+  title:
+    en_us: Funkwhale
+  tips:
+    before_install:
+      en_us: |
+        **Setup Information:**
+
+        🎵 **Music Import**: After installation, place your music files in `/DATA/AppData/funkwhale/music/` or use the import feature to scan `/DATA/Media/`.
+
+        ⏰ **Startup Time**: Funkwhale takes about 3-5 minutes to fully initialize and run database migrations on first startup.
+
+        👤 **Admin Account**: Create your admin account through the web interface on first visit.
+
+        📱 **Mobile Access**: Funkwhale works great on mobile browsers and has companion apps available.
+
+        🔧 **Configuration**: The service includes PostgreSQL database, Redis cache, and Nginx proxy for optimal performance.
