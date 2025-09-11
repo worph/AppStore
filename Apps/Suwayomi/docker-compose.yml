@@ -18,7 +18,7 @@ services:
       BIND_PORT: 80
       
       # Authentication settings - Simple Login method
-      AUTH_MODE: simple_login
+      AUTH_MODE: ui_login
       AUTH_USERNAME: admin
       AUTH_PASSWORD: $default_pwd
       
@@ -26,8 +26,7 @@ services:
       DOWNLOAD_AS_CBZ: true
 
       # Extension repository (Keiyoushi only)
-      EXTENSION_REPOS: >-
-        ["https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"]  # Extension repository URLs
+      EXTENSION_REPOS: '["https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"]'
 
       # FlareSolverr integration
       FLARESOLVERR_ENABLED: true
