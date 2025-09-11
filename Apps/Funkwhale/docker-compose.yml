@@ -1,20 +1,68 @@
 name: funkwhale
 
 services:
-  funkwhale:
-    image: funkwhale/all-in-one:1.4.0
-    container_name: funkwhale
+  postgres:
+    image: postgres:15-alpine
+    container_name: funkwhale-postgres
     user: $PUID:$PGID
-    cpu_shares: 70
+    cpu_shares: 20
     deploy:
       resources:
         limits:
-          memory: 2048M
-          cpus: '1.0'
+          memory: 512M
+          cpus: '0.25'
+    environment:
+      POSTGRES_DB: funkwhale
+      POSTGRES_USER: funkwhale
+      POSTGRES_PASSWORD: funkwhale
+      PGID: $PGID
+      PUID: $PUID
+      TZ: $TZ
+    volumes:
+      - /DATA/AppData/funkwhale/postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - funkwhale
+
+  redis:
+    image: redis:7-alpine
+    container_name: funkwhale-redis
+    user: $PUID:$PGID
+    cpu_shares: 10
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.1'
+    environment:
+      PGID: $PGID
+      PUID: $PUID
+      TZ: $TZ
+    restart: unless-stopped
+    networks:
+      - funkwhale
+
+  api:
+    image: funkwhale/api:1.4.0
+    container_name: funkwhale-api
+    user: $PUID:$PGID
+    cpu_shares: 40
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+          cpus: '0.5'
+    depends_on:
+      - postgres
+      - redis
     environment:
       FUNKWHALE_HOSTNAME: $domain
       FUNKWHALE_PROTOCOL: https
+      DATABASE_URL: postgresql://funkwhale:funkwhale@postgres:5432/funkwhale
+      CACHE_URL: redis://redis:6379/0
       DJANGO_SECRET_KEY: $default_pwd
+      MEDIA_URL: https://$domain/media/
+      STATIC_URL: https://$domain/staticfiles/
       PGID: $PGID
       PUID: $PUID
       TZ: $TZ
@@ -24,12 +72,41 @@ services:
       - /DATA/AppData/funkwhale/music:/music:ro
       - /DATA/Media/:/import:ro
       - /etc/localtime:/etc/localtime:ro
+    restart: unless-stopped
+    networks:
+      - funkwhale
+
+  front:
+    image: funkwhale/front:1.4.0
+    container_name: funkwhale-front
+    user: $PUID:$PGID
+    cpu_shares: 30
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+    depends_on:
+      - api
+    environment:
+      PGID: $PGID
+      PUID: $PUID
+      TZ: $TZ
+    volumes:
+      - /DATA/AppData/funkwhale/front:/usr/share/nginx/html:ro
+      - /etc/localtime:/etc/localtime:ro
     expose:
       - 80
     restart: unless-stopped
+    networks:
+      - funkwhale
+
+networks:
+  funkwhale:
+    name: funkwhale
 
 x-casaos:
-  main: funkwhale
+  main: front
   webui_port: 80
   index: /
 
