@@ -2,7 +2,7 @@ name: suwayomi
 
 services:
   suwayomi:
-    image: ghcr.io/suwayomi/suwayomi-server:v2.1.1922
+    image: ghcr.io/suwayomi/tachidesk:v2.1.1922
     user: $PUID:$PGID
     container_name: suwayomi
     restart: unless-stopped
