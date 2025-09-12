@@ -37,6 +37,7 @@ services:
       MOLECULER_DISABLED: "true"
       DISABLE_MICROSERVICES: "true"
       MICRO_SERVICES_ENABLED: "false"
+      TRANSPORTER: "null"
 
       # Privacy and telemetry settings
       ROCKETCHAT_STATISTICS_OPT_OUT: "true"
