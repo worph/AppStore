@@ -17,7 +17,7 @@ services:
       start_interval: 1s
       retries: 30
     volumes:
-      - /DATA/AppData/$AppID/mongodb:/data/db
+      - /DATA/AppData/rocketchat/mongodb/:/data/db/
 
   rocketchat:
     image: registry.rocket.chat/rocketchat/rocket.chat:7.10.0
@@ -33,17 +33,22 @@ services:
       # For future use
       INSTANCE_IP:
 
+      # Microservices settings (needed to start the service)
+      MOLECULER_DISABLED: "true"
+      DISABLE_MICROSERVICES: "true"
+      MICRO_SERVICES_ENABLED: "false"
+
     expose:
       - 80
     depends_on:
       mongodb:
         condition: service_healthy
     healthcheck:
-       test: ["CMD", "nc", "-zv", "-w", "10", "rocketchat", "80"]
-       interval: 30s
-       timeout: 10s
-       retries: 10
-       start_period: 30s
+      test: ["CMD", "nc", "-zv", "-w", "10", "rocketchat", "80"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
 x-casaos:
   index: /
