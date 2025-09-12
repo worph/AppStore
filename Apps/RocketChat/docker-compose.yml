@@ -63,23 +63,23 @@ x-casaos:
   author: Yundera Team
   category: Communication
   description:
-    en_us: Rocket.Chat 7.8.3 with marketplace enabled for team collaboration. Uses latest MongoDB 7.0 with verified replica set configuration.
-    ko_kr: 마켓플레이스가 활성화된 팀 협업용 Rocket.Chat 7.8.3. 최신 MongoDB 7.0과 검증된 replica set 구성 사용.
+    en_us: Complete team communication platform with secure messaging, file sharing, voice/video calls, and customizable integrations through marketplace apps.
+    fr: Plateforme de communication d'équipe complète avec messagerie sécurisée, partage de fichiers, appels vocaux/vidéo et intégrations personnalisables via les applications marketplace.
+    ko: 보안 메시징, 파일 공유, 음성/영상 통화, 마켓플레이스 앱을 통한 맞춤형 통합 기능을 제공하는 완전한 팀 커뮤니케이션 플랫폼.
+    zh_cn: 完整的团队沟通平台，提供安全消息、文件共享、语音/视频通话以及通过市场应用程序进行可定制集成。
+    es: Plataforma completa de comunicación en equipo con mensajería segura, compartir archivos, llamadas de voz/video e integraciones personalizables a través de aplicaciones del marketplace.
   developer: Rocket.Chat Technologies Corp.
   tagline:
-    en_us: Latest team communication with marketplace & MongoDB 7.0
-    ko_kr: 마켓플레이스와 MongoDB 7.0을 지원하는 최신 팀 커뮤니케이션
+    en_us: Private team communication with apps & integrations
+    fr: Communication d'équipe privée avec apps et intégrations
+    ko: 앱과 통합 기능을 지원하는 프라이빗 팀 커뮤니케이션
+    zh_cn: 支持应用和集成的私密团队沟通
+    es: Comunicación privada de equipo con apps e integraciones
   title:
     en_us: Rocket.Chat
   tips:
     before_install:
-      en_us: |               
-        **Privacy Settings:**
-        - ❌ Statistics reporting disabled
-        - ❌ Automatic updates disabled  
-        - ❌ Federation disabled
-        - ✅ Your data stays on your server
-        
+      en_us: |
         **Setup Process:**
         1. Initial setup wizard will appear
         2. Complete email verification for marketplace access
@@ -93,28 +93,21 @@ x-casaos:
         4. Custom room: `/jitsi @MeetingRoom`
         5. Share the generated link with participants
 
-      ko_kr: |
-        **앱 마켓플레이스가 활성화된 Rocket.Chat 7.8.3**
+      fr: |
+        **Processus d'installation :**
+        1. L'assistant de configuration initial apparaîtra
+        2. Complétez la vérification par e-mail pour accéder au marketplace
+        3. Le marketplace d'applications sera disponible dans le panneau d'administration
+        4. Installez des applications comme GitHub, Jira, intégrations Google Drive
         
-        **기본 계정**
-        | 사용자명     | 비밀번호        |
-        | ----------- | -------------- |
-        | `admin`     | `$default_pwd` |
-        
-        **최신 기능 (7.8.3):**
-        - ✅ 앱 마켓플레이스 (통합 앱 설치)
-        - ✅ MongoDB 7.0 지원 (최신 데이터베이스)
-        - ✅ Node.js 20.x 및 Meteor 3.0 성능 향상
-        - ✅ 강화된 보안성과 안정성
-        - ✅ Replica set 실시간 메시징
-        - ✅ 팀 협업용 VoIP (베타)
-        
-        **프라이버시 설정:**
-        - ❌ 통계 리포팅 비활성화
-        - ❌ 자동 업데이트 비활성화
-        - ❌ 연합 기능 비활성화
-        - ✅ 데이터는 사용자 서버에만 보관
-        
+        **Configuration de la vidéoconférence Jitsi :**
+        1. Allez dans **Administration → Apps → Marketplace**
+        2. Recherchez "Jitsi" et cliquez sur **Installer**
+        3. Utilisez la commande `/jitsi` dans n'importe quel chat pour démarrer des appels vidéo
+        4. Salle personnalisée : `/jitsi @SalleDeMeeting`
+        5. Partagez le lien généré avec les participants
+
+      ko: |
         **설정 과정:**
         1. 초기 설정 마법사가 나타남
         2. 마켓플레이스 접근을 위한 이메일 인증 완료
@@ -127,8 +120,31 @@ x-casaos:
         3. 채팅에서 `/jitsi` 명령어로 화상통화 시작
         4. 커스텀 룸: `/jitsi @회의실`
         5. 생성된 링크를 참가자들과 공유
+
+      zh_cn: |
+        **设置流程：**
+        1. 将出现初始设置向导
+        2. 完成邮箱验证以访问市场
+        3. 应用市场将在管理面板中可用
+        4. 安装GitHub、Jira、Google Drive等集成应用
         
-        **MongoDB 7.0 장점:**
-        - 향상된 성능과 확장성
-        - 강화된 보안 기능
-        - 미래 지향적 데이터베이스 버전
+        **Jitsi视频会议设置：**
+        1. 前往**管理 → 应用 → 市场**
+        2. 搜索"Jitsi"并点击**安装**
+        3. 在任何聊天中使用`/jitsi`命令开始视频通话
+        4. 自定义房间：`/jitsi @会议室`
+        5. 与参与者分享生成的链接
+
+      es: |
+        **Proceso de configuración:**
+        1. Aparecerá el asistente de configuración inicial
+        2. Complete la verificación por correo electrónico para acceder al marketplace
+        3. El marketplace de aplicaciones estará disponible en el panel de administración
+        4. Instale aplicaciones como integraciones de GitHub, Jira, Google Drive
+        
+        **Configuración de videoconferencia Jitsi:**
+        1. Vaya a **Administración → Apps → Marketplace**
+        2. Busque "Jitsi" y haga clic en **Instalar**
+        3. Use el comando `/jitsi` en cualquier chat para iniciar videollamadas
+        4. Sala personalizada: `/jitsi @SalaDeReunión`
+        5. Comparta el enlace generado con los participantes
