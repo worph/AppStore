@@ -9,11 +9,6 @@ services:
       POSTGRESQL_DATABASE: guacamole_db
       POSTGRESQL_USER: guacamole_user
       POSTGRESQL_PASSWORD: '$default_pwd'
-    x-casaos:
-      ports:
-        - container: '8080'
-          description:
-            en_us: Guacamole web interface port
     depends_on:
       - guacd
       - postgres
@@ -33,11 +28,11 @@ services:
       POSTGRES_DB: 'guacamole_db'
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/postgresql
-        target: /var/lib/postgresql/data
+        source: /DATA/AppData/guacamole/postgresql/
+        target: /var/lib/postgresql/data/
     container_name: guacamole-postgres
     entrypoint: ["/bin/bash", "-c"]
-    command: apk update && apk add --no-cache curl && curl -o /tmp/init.sh https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Guacamole/init.sh && chmod +x /tmp/init.sh && /tmp/init.sh
+    command: apk update && apk add --no-cache curl && curl -o /tmp/init.sh https://cdn.jsdelivr.net/gh/Yundera/AppStoreLab@main/Apps/Guacamole/init.sh && chmod +x /tmp/init.sh && /tmp/init.sh
 
 x-casaos:
   architectures:
@@ -66,12 +61,12 @@ x-casaos:
   developer: Apache Software Foundation
   author: Apache Software Foundation
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Guacamole/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Guacamole/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Guacamole/screenshot-3.png
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Guacamole/screenshot-4.png
-  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Guacamole/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Guacamole/icon.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStoreLab@main/Apps/Guacamole/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStoreLab@main/Apps/Guacamole/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStoreLab@main/Apps/Guacamole/screenshot-3.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStoreLab@main/Apps/Guacamole/screenshot-4.png
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStoreLab@main/Apps/Guacamole/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStoreLab@main/Apps/Guacamole/icon.png
   category: Productivity
   tips:
     before_install:
