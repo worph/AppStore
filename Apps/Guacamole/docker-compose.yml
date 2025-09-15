@@ -87,11 +87,10 @@ x-casaos:
       echo "Downloading Guacamole initialization script..."
       
       # Download the initialization script from the repository
-      wget -O /DATA/AppData/guacamole/init/init-db.sh "https://raw.githubusercontent.com/Worph/AppStore/main/Apps/Guacamole/init.sh"
+      wget -O /DATA/AppData/guacamole/init/init-db.sh "https://raw.githubusercontent.com/Worph/AppStore/main/Apps/Guacamole/pre-install/init.sh"
       
-      # Download the required database schema scripts
+      # Download the required database schema script (admin user is created by the init script)
       wget -O /DATA/AppData/guacamole/init/001-create-schema.sql "https://raw.githubusercontent.com/apache/guacamole-client/main/extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-postgresql/schema/001-create-schema.sql"
-      wget -O /DATA/AppData/guacamole/init/002-create-admin-user.sql "https://raw.githubusercontent.com/apache/guacamole-client/main/extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-postgresql/schema/002-create-admin-user.sql"
       
       chmod +x /DATA/AppData/guacamole/init/init-db.sh
       touch /DATA/AppData/guacamole/init/.initialized
@@ -106,10 +105,14 @@ x-casaos:
 
         | Username | Password |
         | -------- | -------- |
-        | `guacadmin`    | `guacadmin`    |
+        | `admin`    | Your CasaOS default password    |
+        
+        The admin user is automatically created with your CasaOS default password for easier access.
       zh_cn: |
         默认账号
 
         | 用户名 | 密码 |
         | -------- | -------- |
-        | `guacadmin`    | `guacadmin`    |
+        | `admin`    | 您的CasaOS默认密码    |
+        
+        管理员用户将使用您的CasaOS默认密码自动创建，方便访问。
