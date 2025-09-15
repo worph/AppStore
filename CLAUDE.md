@@ -2,195 +2,100 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Session Startup
-
-**IMPORTANT**: At the start of every session, read the `CONTRIBUTING.md` file to understand the current contribution guidelines, security requirements, and app submission process.
-
 ## Repository Overview
 
-This is the **Yundera CasaOS 3rd-Party AppStore** - a curated collection of Docker Compose applications configured for CasaOS with NSL.SH mesh router integration. The repository contains containerized applications that run on CasaIMG (dockerized CasaOS) with HTTPS-enabled URLs.
+This is the Worph-AppStore, a fork of the Yundera CasaOS 3rd-Party AppStore that provides a curated collection of Docker Compose applications compatible with CasaOS. The key difference from the main Yundera AppStore is that this fork uses the CDN URL `https://cdn.jsdelivr.net/gh/Worph/AppStore@main/` for assets instead of the standard Yundera URLs.
 
-**Note**: This repository is currently a fork maintained at https://github.com/worph/AppStore. When referencing repository URLs for downloading configuration files, use this fork's URL structure:
-- Fork assets: `https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/AppName/`
-- Main repo assets: `https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AppName/`
+## Architecture & Structure
 
-## Architecture
+### Core Components
 
-### Core Structure
-- `Apps/[AppName]/` - Individual application directories containing:
-  - `docker-compose.yml` - CasaOS-compatible Docker Compose configuration
-  - `icon.png` - Application icon (192x192px)
-  - `screenshot-*.png` - Application screenshots (1280x720px)
-  - `thumbnail.png` - Featured app thumbnail (784x442px)
-  - `rationale.md` - Optional explanations for security exceptions
+- **Apps Directory**: Each application lives in `Apps/{AppName}/` containing:
+  - `docker-compose.yml` - Docker Compose configuration with CasaOS metadata
+  - `icon.png` - Application icon (PNG format)
+  - `screenshot-{1,2,3}.png` - Application screenshots
+  - `thumbnail.png` - Optional thumbnail image
+  - Optional: `rationale.md`, `pre-install/` directory with scripts
 
-### Configuration Files
-- `category-list.json` - App category definitions with icons and descriptions
-- `recommend-list.json` - List of recommended apps by app ID
-- `featured-apps.json` - Featured applications with editor and date metadata
+- **Configuration Files**:
+  - `category-list.json` - Defines app categories with Material Design icons
+  - `recommend-list.json` - List of recommended applications
+  - `featured-apps.json` - Featured applications list
 
-### Key Technologies
-- **Docker Compose** - All apps are containerized using Docker Compose format
-- **CasaOS Extensions** - Apps use `x-casaos` metadata for store integration
-- **NSL Router** - Mesh router system providing HTTPS URLs (e.g., `https://appname-username.nsl.sh`)
-- **Yundera Infrastructure** - Cloud server platform optimized for container apps
+### Docker Compose Structure
 
-## Docker Compose Requirements
+All apps follow a consistent pattern:
+- **Services**: Main application containers with dependencies (databases, etc.)
+- **Environment Variables**: Uses CasaOS variables like `$PUID`, `$PGID`, `$TZ`, `$default_pwd`, `$domain`
+- **Volumes**: Maps to `/DATA/AppData/{appname}/` for persistent storage
+- **Networking**: Uses `expose` instead of `ports` for internal communication
+- **x-casaos metadata**: Contains app metadata for the CasaOS interface
 
-### Mandatory Fields
-```yaml
-name: appname                    # Unique store app ID (lowercase, alphanumeric, _, -)
-services:
-  main-service:
-    image: app:specific-tag      # Never use :latest
-    user: $PUID:$PGID           # File permissions
-    deploy:
-      resources:
-        limits:
-          memory: 512M          # Resource limits required
-          cpus: '0.5'
-    expose:                     # For web UI (not ports)
-      - 80
-    environment:
-      PUID: $PUID              # System variables
-      PGID: $PGID
-      TZ: $TZ
-      PASSWORD: $default_pwd    # Secure default password
-      DOMAIN: $domain          # NSL router domain
-    volumes:
-      - /DATA/AppData/$AppID/config:/app/config
-    restart: unless-stopped
+### Key Conventions
 
-x-casaos:
-  main: main-service            # Service providing web UI
-  webui_port: 80               # Must match exposed port
-  category: Media              # From category-list.json
-  architectures: [amd64, arm64]
-  description:
-    en_us: App description
-  title:
-    en_us: App Name
-  tagline:
-    en_us: Short description
-```
-
-### Volume Mapping Patterns
-- **App Data**: `/DATA/AppData/[AppName]/` - Primary app storage
-- **Shared Media**: `/DATA/Media/`, `/DATA/Gallery/` - Cross-app content
-- **User Files**: `/DATA/Documents/`, `/DATA/Downloads/`
-
-### NSL Router Integration
-- Use `expose` instead of `ports` for web UI
-- Port 80 creates clean URLs: `https://appname-username.nsl.sh/`
-- Other ports include port in URL: `https://3000-appname-username.nsl.sh/`
-
-### Security Requirements
-- No hardcoded credentials - use `$default_pwd`
-- Specific version tags (never `:latest`)
-- PUID/PGID for file permissions
-- Resource limits on all services
-- Default authentication enabled
+- **Asset URLs**: All use `https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/{AppName}/`
+- **Storage**: Applications store data in `/DATA/AppData/{appname}/`
+- **Media**: Common media paths: `/DATA/Media/Movies`, `/DATA/Media/TV Shows`, `/DATA/Downloads`
+- **Networking**: Apps expose internal ports and rely on external proxy for HTTPS
+- **Multi-language Support**: Descriptions and taglines support multiple locales (en_us, fr_fr, es_es, zh_cn, ko_kr, de_de)
 
 ## Development Workflow
 
-### Testing New Apps
-1. Create Docker Compose locally and test with `docker compose up -d`
-2. Add CasaOS metadata (`x-casaos` section)
-3. Test in CasaOS instance via SSH
-4. Create app directory in `Apps/[AppName]/`
-5. Test via forked GitHub repository as AppStore URL
-6. Submit PR with proper asset links to main repository
+### Adding New Applications
 
-### Asset Requirements
-- **Icons**: PNG, 192x192px, transparent background
-- **Screenshots**: PNG/JPG, 1280x720px, demonstrate functionality
-- **Thumbnails**: PNG, 784x442px, rounded corners (for featured apps)
-- **Asset URLs**: Must point to main repository via jsdelivr CDN
+1. Create directory structure: `Apps/{AppName}/`
+2. Add `docker-compose.yml` with proper CasaOS metadata
+3. Include required assets (icon.png, screenshots)
+4. Test on actual CasaOS environment before submission
+5. Update category lists if introducing new categories
 
-### Pre-install Commands
-Use `pre-install-cmd` in `x-casaos` for setup automation:
-```yaml
-x-casaos:
-  pre-install-cmd: docker run --rm -v /DATA/AppData/$AppID/:/data/ toolbox-image setup-script.sh
-```
+### Testing Applications
 
-## Common Variables
+Applications must be tested on:
+- CasaIMG (dockerized CasaOS)
+- Yundera servers with nsl.sh routing
+- Both amd64 and arm64 architectures when supported
 
-### System Variables
-- `$PUID/$PGID` - User/Group IDs (usually 1000:1000)
-- `$TZ` - System timezone
-- `$AppID` - Application name from compose `name` field
-- `$default_pwd` - Secure password generated by CasaOS
-- `$domain` - NSL router domain for the app
-- `$public_ip` - Public IP for port announcements
+### Asset Management
 
-### Environment Integration
-- Environment variables stored in `/etc/casaos/env`
-- Variables like `OPENAI_API_KEY` can be shared across apps
-- Variable changes trigger container restarts
+- Icons: PNG format, square aspect ratio
+- Screenshots: PNG format, application interface captures
+- Thumbnails: Optional, used for featured display
+- All assets served via jsdelivr CDN
 
-## File Validation
+## Common Commands
 
-When working with this repository:
-- Verify Docker Compose syntax and CasaOS compatibility
-- Check asset file sizes and dimensions
-- Validate security requirements (no root unless justified)
-- Test URL accessibility via NSL router
-- Ensure proper localization (English required, multi-language preferred)
+Since this is a configuration repository without build processes:
 
-## Validation Commands
-
-### Docker Compose Validation
 ```bash
-# Basic syntax validation
-docker compose -f Apps/[AppName]/docker-compose.yml config
+# Validate docker-compose files
+docker-compose -f Apps/{AppName}/docker-compose.yml config
 
-# Test container startup locally
-cd Apps/[AppName] && docker compose up -d
+# Test app locally (requires CasaOS environment variables)
+docker-compose -f Apps/{AppName}/docker-compose.yml up -d
 
-# Clean up test containers
-cd Apps/[AppName] && docker compose down --volumes
+# Lint YAML files
+yamllint Apps/*/docker-compose.yml
+
+# Check JSON configuration files
+jq . category-list.json
+jq . recommend-list.json
+jq . featured-apps.json
 ```
 
-### Common Validation Tasks
-- Verify all required `x-casaos` fields are present and correctly formatted
-- Check that asset URLs point to main repository via jsdelivr CDN
-- Validate icon dimensions (192x192px) and screenshot dimensions (1280x720px)
-- Ensure specific version tags are used (no `:latest`)
-- Test that applications start without errors using `docker compose up -d`
-- Verify resource limits and security requirements from CONTRIBUTING.md checklist
+## Contributing Guidelines
 
-### Quick Asset URL Fix
-When creating PRs, remember to update asset URLs from your fork to the main repository:
-```yaml
-# Change from (fork):
-icon: https://cdn.jsdelivr.net/gh/username/AppStore@main/Apps/AppName/icon.png
+Reference the main Yundera AppStore contributing guidelines at:
+`https://raw.githubusercontent.com/Yundera/AppStore/refs/heads/main/CONTRIBUTING.md`
 
-# To (main repo):
-icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AppName/icon.png
-```
+Key differences for this fork:
+- Use `https://cdn.jsdelivr.net/gh/Worph/AppStore@main/` for asset URLs
+- Maintain compatibility with CasaOS and mesh router architecture
+- Ensure HTTPS accessibility through nsl.sh domain routing
 
-### JSON Configuration Validation
-The repository uses several JSON configuration files:
-```bash
-# Validate JSON syntax
-python3 -m json.tool category-list.json > /dev/null
-python3 -m json.tool featured-apps.json > /dev/null  
-python3 -m json.tool recommend-list.json > /dev/null
-```
+## Related Projects
 
-### Repository Structure
-```
-/workspace/yundera/Worph-AppStore/
-├── Apps/                     # Individual app directories
-│   ├── [AppName]/
-│   │   ├── docker-compose.yml
-│   │   ├── icon.png         # 192x192px
-│   │   ├── screenshot-*.png # 1280x720px  
-│   │   ├── thumbnail.png    # 784x442px (optional)
-│   │   └── rationale.md     # Security exception explanations
-├── category-list.json       # App categories with icons
-├── featured-apps.json       # Featured app metadata
-├── recommend-list.json      # Recommended apps list
-└── CONTRIBUTING.md         # Fork-specific contribution guidelines
-```
+- **CasaIMG**: Docker-based CasaOS image manager
+- **Mesh-Router**: Domain management for containerized applications
+- **Yundera**: Cloud server platform for open source containers
+- **NSL.SH**: Free domain provider for open source projects

@@ -1,8 +1,10 @@
 name: guacamole
 services:
   guacamole:
-    image: guacamole/guacamole:latest
+    image: guacamole/guacamole:1.5.5
     restart: unless-stopped
+    user: 0:0
+    cpu_shares: 70
     environment:
       GUACD_HOSTNAME: guacd
       POSTGRESQL_HOSTNAME: postgres
@@ -12,32 +14,36 @@ services:
     depends_on:
       - guacd
       - postgres
-    container_name: guacamole
+    expose:
+      - 8080
 
   guacd:
-    image: guacamole/guacd:latest
+    image: guacamole/guacd:1.5.5
     restart: unless-stopped
-    container_name: guacd
+    user: 0:0
+    cpu_shares: 70
 
   postgres:
     image: postgres:13-alpine
     restart: unless-stopped
+    cpu_shares: 70
     environment:
       POSTGRES_PASSWORD: '$default_pwd'
       POSTGRES_USER: 'guacamole_user'
       POSTGRES_DB: 'guacamole_db'
     volumes:
-      - type: bind
-        source: /DATA/AppData/guacamole/postgresql/
-        target: /var/lib/postgresql/data/
-    container_name: guacamole-postgres
-    entrypoint: ["/bin/bash", "-c"]
-    command: apk update && apk add --no-cache curl && curl -o /tmp/init.sh https://cdn.jsdelivr.net/gh/Yundera/AppStoreLab@main/Apps/Guacamole/init.sh && chmod +x /tmp/init.sh && /tmp/init.sh
+      - /DATA/AppData/guacamole/postgresql:/var/lib/postgresql/data
+      - /DATA/AppData/guacamole/init:/init
+    command: /init/init-db.sh
 
 x-casaos:
   architectures:
     - amd64
     - arm64
+  main: guacamole
+  webui_port: 8080
+  index: /guacamole
+  category: Productivity
   tagline:
     en_us: Open-source remote desktop gateway.
     zh_cn: 开源远程桌面网关。
@@ -58,16 +64,41 @@ x-casaos:
     ru_ru: Apache Guacamole — это шлюз удаленного рабочего стола без клиента. Он поддерживает стандартные протоколы, такие как VNC, RDP и SSH. Плагины или клиентское программное обеспечение не требуются, так как он использует HTML5 для предоставления доступа к вашим рабочим столам через веб-браузер.
     pl_pl: Apache Guacamole to brama pulpitu zdalnego bez klienta. Obsługuje standardowe protokoły, takie jak VNC, RDP i SSH. Nie są wymagane żadne wtyczki ani oprogramowanie klienckie, ponieważ wykorzystuje HTML5 do zapewnienia dostępu do pulpitów przez przeglądarkę internetową.
     pt_br: Apache Guacamole é um gateway de desktop remoto sem cliente. Suporta protocolos padrão como VNC, RDP e SSH. Nenhum plugin ou software cliente é necessário, pois utiliza HTML5 para fornecer acesso aos seus desktops através de um navegador web.
+  title:
+    en_us: Guacamole
   developer: Apache Software Foundation
   author: Apache Software Foundation
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Guacamole/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Guacamole/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStoreLab@main/Apps/Guacamole/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStoreLab@main/Apps/Guacamole/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStoreLab@main/Apps/Guacamole/screenshot-3.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStoreLab@main/Apps/Guacamole/screenshot-4.png
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStoreLab@main/Apps/Guacamole/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStoreLab@main/Apps/Guacamole/icon.png
-  category: Productivity
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Guacamole/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Guacamole/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Guacamole/screenshot-3.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Guacamole/screenshot-4.png
+  pre-install-cmd: |
+    echo "Preparing Guacamole database initialization..."
+    
+    # Create AppData directory structure
+    mkdir -p /DATA/AppData/guacamole/postgresql
+    mkdir -p /DATA/AppData/guacamole/init
+    
+    # Check if database is already initialized by looking for schema files
+    if [ ! -f "/DATA/AppData/guacamole/init/.initialized" ]; then
+      echo "Downloading Guacamole initialization script..."
+      
+      # Download the initialization script from the repository
+      wget -O /DATA/AppData/guacamole/init/init-db.sh "https://raw.githubusercontent.com/Worph/AppStore/main/Apps/Guacamole/init.sh"
+      
+      # Download the required database schema scripts
+      wget -O /DATA/AppData/guacamole/init/001-create-schema.sql "https://raw.githubusercontent.com/apache/guacamole-client/main/extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-postgresql/schema/001-create-schema.sql"
+      wget -O /DATA/AppData/guacamole/init/002-create-admin-user.sql "https://raw.githubusercontent.com/apache/guacamole-client/main/extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-postgresql/schema/002-create-admin-user.sql"
+      
+      chmod +x /DATA/AppData/guacamole/init/init-db.sh
+      touch /DATA/AppData/guacamole/init/.initialized
+      echo "Guacamole initialization scripts downloaded successfully!"
+    else
+      echo "Guacamole initialization scripts already prepared."
+    fi
   tips:
     before_install:
       en_us: |
@@ -82,8 +113,3 @@ x-casaos:
         | 用户名 | 密码 |
         | -------- | -------- |
         | `guacadmin`    | `guacadmin`    |
-  title:
-    en_us: Guacamole
-  main: guacamole
-  webui_port: 8080
-  index: /guacamole
