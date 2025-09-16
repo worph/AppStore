@@ -18,7 +18,7 @@ services:
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
       - MYSQL_PASSWORD=$default_pwd
-      - NEXTCLOUD_TRUSTED_DOMAINS=localhost,$domain,nextcloud-$domain
+      - NEXTCLOUD_TRUSTED_DOMAINS=localhost $domain nextcloud-$domain
       - OVERWRITEPROTOCOL=https
       - OVERWRITEHOST=nextcloud-$domain
       - TRUSTED_PROXIES=172.16.0.0/12 10.0.0.0/8 192.168.0.0/16
