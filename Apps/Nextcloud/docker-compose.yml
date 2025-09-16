@@ -23,10 +23,12 @@ services:
       - OVERWRITEHOST=nextcloud-$domain
       - TRUSTED_PROXIES=172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
     volumes:
-      - /DATA/AppData/nextcloud/html/:/var/www/html
-      - /DATA/AppData/nextcloud/apps/:/var/www/html/custom_apps
-      - /DATA/AppData/nextcloud/config/:/var/www/html/config
-      - /DATA/AppData/nextcloud/data/:/var/www/html/data
+      # Stores all user files, uploads, and app data
+      - /DATA/AppData/nextcloud/data/:/var/www/html/data/
+      # Essential for maintaining settings between container updates
+      - /DATA/AppData/nextcloud/config/:/var/www/html/config/
+      # Stores manually installed apps that aren't part of the base image, Preserves custom apps during updates
+      - /DATA/AppData/nextcloud/apps/:/var/www/html/apps/
     restart: unless-stopped
     networks:
       - nextcloud-network
