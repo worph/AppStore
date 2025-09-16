@@ -21,7 +21,7 @@ services:
       - NEXTCLOUD_TRUSTED_DOMAINS=localhost,$domain,nextcloud-$domain
       - OVERWRITEPROTOCOL=https
       - OVERWRITEHOST=nextcloud-$domain
-      - TRUSTED_PROXIES=172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
+      - TRUSTED_PROXIES=172.16.0.0/12 10.0.0.0/8 192.168.0.0/16
     volumes:
       # Stores all user files, uploads, and app data
       - /DATA/AppData/nextcloud/data/:/var/www/html/data/
