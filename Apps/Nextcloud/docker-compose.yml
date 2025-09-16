@@ -24,7 +24,7 @@ services:
       - MYSQL_PASSWORD=$default_pwd
       - NEXTCLOUD_TRUSTED_DOMAINS=localhost,$domain
       - OVERWRITEPROTOCOL=https
-      - OVERWRITEHOST=$domain
+      - OVERWRITEHOST=nextcloud-$domain
       - TRUSTED_PROXIES=172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
     volumes:
       - /DATA/AppData/$AppID/html/:/var/www/html
