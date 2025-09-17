@@ -385,7 +385,7 @@ x-casaos:
       sleep 2
       timeout=$((timeout-2))
     done &&
-
+    sleep 60 &&
     docker exec nextcloud bash -c '
       # Enable headers module if available (ignore if not supported)
       a2enmod headers 2>/dev/null || true
