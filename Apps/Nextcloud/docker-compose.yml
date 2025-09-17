@@ -22,7 +22,10 @@ services:
       - OVERWRITEPROTOCOL=https
       - OVERWRITEHOST=nextcloud-$domain
       - TRUSTED_PROXIES=172.16.0.0/12 10.0.0.0/8 192.168.0.0/16
+      # Security & setup warnings fixes "Server has no maintenance window start time configured ..." - set to 4am
       - NC_maintenance_window_start=4
+      # Security & setup warnings fixes "Some headers are not set correctly on your instance - The `Strict-Transport-Security` HTTP header is not set..."
+      - APACHE_DISABLE_REWRITE_IP=1
     volumes:
       # Stores all user files, uploads, and app data
       - /DATA/AppData/nextcloud/data/:/var/www/html/data/
@@ -30,6 +33,10 @@ services:
       - /DATA/AppData/nextcloud/config/:/var/www/html/config/
       # Stores manually installed apps that aren't part of the base image, Preserves custom apps during updates
       - /DATA/AppData/nextcloud/apps/:/var/www/html/apps/
+      # Custom Apache configuration for HSTS headers
+      - /DATA/AppData/nextcloud/apache/security.conf:/etc/apache2/conf-available/security.conf
+      # Initialization script to enable security configuration
+      - /DATA/AppData/nextcloud/apache/init-security.sh:/docker-entrypoint-hooks.d/before-starting/init-security.sh
     restart: unless-stopped
     networks:
       - nextcloud-network
@@ -341,6 +348,26 @@ x-casaos:
     fr_fr: Construisez votre alternative Teams avec l'installation guidée d'applications
     de_de: Erstellen Sie Ihre Teams-Alternative mit geführter App-Installation
     es_es: Construya su alternativa a Teams con instalación guiada de aplicaciones
+  pre_install_cmd:
+    - mkdir -p /DATA/AppData/nextcloud/apache
+    - |
+      if [ ! -f /DATA/AppData/nextcloud/apache/security.conf ]; then
+        cat > /DATA/AppData/nextcloud/apache/security.conf << 'EOF'
+      Header always set Strict-Transport-Security "max-age=15552000; includeSubDomains"
+      Header always set X-Content-Type-Options nosniff
+      Header always set X-Frame-Options SAMEORIGIN
+      Header always set Referrer-Policy strict-origin
+      EOF
+      fi
+    - |
+      if [ ! -f /DATA/AppData/nextcloud/apache/init-security.sh ]; then
+        cat > /DATA/AppData/nextcloud/apache/init-security.sh << 'EOF'
+      #!/bin/bash
+      a2enconf security
+      a2enmod headers
+      EOF
+        chmod +x /DATA/AppData/nextcloud/apache/init-security.sh
+      fi
   tips:
     before_install:
       en_us: |
