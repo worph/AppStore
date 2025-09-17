@@ -25,10 +25,6 @@ services:
       - TRUSTED_PROXIES=172.16.0.0/12 10.0.0.0/8 192.168.0.0/16
       # Security & setup warnings fixes "Server has no maintenance window start time configured ..." - set to 4am
       - NC_maintenance_window_start=4
-      # Redis configuration for memcache
-      - REDIS_HOST=redis
-      - REDIS_HOST_PORT=6379
-      - REDIS_HOST_PASSWORD=$default_pwd
     volumes:
       # Stores all user files, uploads, and app data
       - /DATA/AppData/nextcloud/data/:/var/www/html/data/
