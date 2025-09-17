@@ -6,35 +6,43 @@ services:
     container_name: hubs-db
     restart: unless-stopped
     user: postgres
+    cpu_shares: 1024
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
       POSTGRES_DB: ret_dev
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
-    ports:
-      - "5432:5432"
+    expose:
+      - 5432
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - /DATA/AppData/hubs/pgdata:/var/lib/postgresql/data
 
   hubs-admin:
     image: mashad6/hubs-compose-hubs-admin:v2
     container_name: hubs-admin
     restart: unless-stopped
+    cpu_shares: 1024
     environment:
       INTERNAL_HOSTNAME: hubs-admin
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
     healthcheck:
       test: ["CMD", "curl", "-fk", "https://localhost:8989/admin.html"]
       interval: 30s
       timeout: 15s
       retries: 5
       start_period: 120s
-    ports:
-      - "8989:8989"
+    expose:
+      - 8989
     depends_on:
       - db
       - reticulum
@@ -43,8 +51,12 @@ services:
     image: mashad6/hubs-compose-hubs-client:v2
     container_name: hubs
     restart: unless-stopped
+    cpu_shares: 1024
     environment:
       INTERNAL_HOSTNAME: hubs
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
     healthcheck:
       test: ["CMD", "sh", "-c", "nc -z localhost 8080 || exit 1"]
       interval: 30s
@@ -63,6 +75,7 @@ services:
     image: mashad6/hubs-compose-dialog
     container_name: hubs-dialog
     restart: unless-stopped
+    cpu_shares: 1024
     environment:
       AUTH_KEY: /etc/perms.pub.pem
       HTTPS_CERT_FULLCHAIN: /etc/ssl/fullchain.pem
@@ -71,8 +84,12 @@ services:
       MEDIASOUP_MIN_PORT: 40000
       MEDIASOUP_MAX_PORT: 40050
       MEDIASOUP_ANNOUNCED_IP: ${PRIVATE_NETWORK_IP:-127.0.0.1}
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+    expose:
+      - 4443
     ports:
-      - "4443:4443"
       - "40000-40050:40000-40050"
       - "40000-40050:40000-40050/udp"
 
@@ -80,6 +97,11 @@ services:
     image: mashad6/hubs-compose-postgrest
     container_name: hubs-postgrest
     restart: unless-stopped
+    cpu_shares: 1024
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 30s
@@ -88,13 +110,14 @@ services:
       start_period: 30s
     depends_on:
       - db
-    ports:
-      - "3000:3000"
+    expose:
+      - 3000
 
   reticulum:
     image: mashad6/hubs-compose-reticulum
     container_name: hubs-reticulum
     restart: unless-stopped
+    cpu_shares: 1024
     environment:
       DB_CREDENTIALS: postgres
       DB_HOST: db
@@ -105,41 +128,44 @@ services:
       HUBS_CLIENT_INTERNAL_HOSTNAME: hubs-client
       POSTGREST_INTERNAL_HOSTNAME: postgrest
       SPOKE_INTERNAL_HOSTNAME: spoke
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
     healthcheck:
       test: ["CMD", "sh", "-c", "pgrep beam.smp > /dev/null && echo 'Elixir process running'"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 120s
-    ports:
-      - "4000:4000"
+    expose:
+      - 4000
     depends_on:
       db:
         condition: service_healthy
     volumes:
-      - retstorage:/code/storage/dev
+      - /DATA/AppData/hubs/retstorage:/code/storage/dev
 
   spoke:
     image: mashad6/hubs-compose-spoke
     container_name: hubs-spoke
     restart: unless-stopped
+    cpu_shares: 1024
     environment:
       CORS_PROXY_SERVER: "reticulum:4000"
       INTERNAL_HOSTNAME: spoke
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9090"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
-    ports:
-      - "9090:9090"
+    expose:
+      - 9090
     depends_on:
       - reticulum
-
-volumes:
-  pgdata:
-  retstorage:
 
 networks:
   default:
@@ -152,11 +178,15 @@ x-casaos:
   webui_port: 8080
   index: "/"
 
-  # 3. Port mapping from host to container
-  port_map: "8080"
+  architectures: [amd64, arm64]
 
-  # 2. Location of directory/file to be mounted (volumes)
-  # Volumes are defined in the main volumes section below
+  # Asset URLs
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Hubs/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Hubs/thumbnail.png
+  screenshots:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Hubs/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Hubs/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Hubs/screenshot-3.png
 
   # 4. Other optional configurations
   title:
@@ -169,17 +199,6 @@ x-casaos:
   developer: mashad6
   category: Communication
 
-  # Additional port mappings for all services
-  additional_ports:
-    - "8989:8989"  # hubs-admin
-    - "4000:4000"  # reticulum backend
-    - "4443:4443"  # dialog voice/video
-    - "9090:9090"  # spoke
-    - "5432:5432"  # database
-    - "3000:3000"  # postgrest
-    - "40000-40050:40000-40050"     # mediasoup RTP
-    - "40000-40050:40000-40050/udp" # mediasoup RTCP
-
   # Environment variables that may need configuration
   environment:
     PRIVATE_NETWORK_IP: "${PRIVATE_NETWORK_IP:-127.0.0.1}"
@@ -190,10 +209,10 @@ x-casaos:
       en_us: |
         Configuration Details:
         1. WebUI: Main app accessible at port 8080, path "/"
-        2. Volumes: pgdata (PostgreSQL) and retstorage (Reticulum) - managed by Docker
-        3. Ports: 8080 (main), 8989 (admin), 4000 (API), 4443 (voice/video)
+        2. Volumes: /DATA/AppData/hubs/pgdata (PostgreSQL) and /DATA/AppData/hubs/retstorage (Reticulum)
+        3. Main port: 8080, Dialog voice/video uses ports 40000-40050
         4. Set PRIVATE_NETWORK_IP environment variable for voice/video functionality
-        
+
         Access points:
         - Main app: https://yourdomain:8080
         - Admin panel: https://yourdomain:8989/admin.html
