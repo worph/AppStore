@@ -8,6 +8,7 @@ services:
     cpu_shares: 70
     depends_on:
       - db
+      - redis
     expose:
       - 80
     environment:
@@ -24,6 +25,10 @@ services:
       - TRUSTED_PROXIES=172.16.0.0/12 10.0.0.0/8 192.168.0.0/16
       # Security & setup warnings fixes "Server has no maintenance window start time configured ..." - set to 4am
       - NC_maintenance_window_start=4
+      # Redis configuration for memcache
+      - REDIS_HOST=redis
+      - REDIS_HOST_PORT=6379
+      - REDIS_HOST_PASSWORD=$default_pwd
     volumes:
       # Stores all user files, uploads, and app data
       - /DATA/AppData/nextcloud/data/:/var/www/html/data/
@@ -49,6 +54,19 @@ services:
       - MARIADB_AUTO_UPGRADE=1
     volumes:
       - /DATA/AppData/nextcloud/db/:/var/lib/mysql
+    restart: unless-stopped
+    networks:
+      - nextcloud-network
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: nextcloud_redis
+    cpu_shares: 10
+    command: redis-server --requirepass $default_pwd
+    environment:
+      - TZ=$TZ
+    volumes:
+      - /DATA/AppData/nextcloud/redis/:/data
     restart: unless-stopped
     networks:
       - nextcloud-network
@@ -343,8 +361,28 @@ x-casaos:
     de_de: Erstellen Sie Ihre Teams-Alternative mit geführter App-Installation
     es_es: Construya su alternativa a Teams con instalación guiada de aplicaciones
 
+  # Creates Redis memcache configuration before installation
+  # IMPORTANT: Keep this command idempotent - safe to run multiple times
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/nextcloud/config &&
+    if [ ! -f /DATA/AppData/nextcloud/config/redis.config.php ] || ! grep -q "memcache.locking.*Redis" /DATA/AppData/nextcloud/config/redis.config.php; then
+      cat > /DATA/AppData/nextcloud/config/redis.config.php << 'EOF'
+    <?php
+    $CONFIG = array (
+      'memcache.local' => '\\OC\\Memcache\\APCu',
+      'memcache.distributed' => '\\OC\\Memcache\\Redis',
+      'memcache.locking' => '\\OC\\Memcache\\Redis',
+      'redis' => array (
+        'host' => 'redis',
+        'port' => 6379,
+        'password' => getenv('REDIS_HOST_PASSWORD') ?: '',
+      ),
+    );
+    EOF
+    fi
+
   # Security & setup warnings fixes : "Some headers are not set correctly on your instance - The `Strict-Transport-Security` HTTP header is not set (should be at least `15552000` seconds). For enhanced security, it is recommended to enable HSTS"
-  post_install_cmd: |
+  post-install-cmd: |
     docker exec nextcloud a2enmod headers &&
     docker exec nextcloud bash -c 'if ! grep -q "Strict-Transport-Security" /var/www/html/.htaccess; then echo "Header always set Strict-Transport-Security \"max-age=15552000; includeSubDomains\"" >> /var/www/html/.htaccess; fi'
   tips:
