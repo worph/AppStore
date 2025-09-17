@@ -2,7 +2,7 @@ name: nextcloud
 
 services:
   nextcloud:
-    image: nextcloud:31.0.8
+    image: nextcloud:31.0.9
     container_name: nextcloud
     user: $PUID:$PGID
     cpu_shares: 70
@@ -22,6 +22,7 @@ services:
       - OVERWRITEPROTOCOL=https
       - OVERWRITEHOST=nextcloud-$domain
       - TRUSTED_PROXIES=172.16.0.0/12 10.0.0.0/8 192.168.0.0/16
+      - NC_maintenance_window_start=4
     volumes:
       # Stores all user files, uploads, and app data
       - /DATA/AppData/nextcloud/data/:/var/www/html/data/
@@ -346,3 +347,12 @@ x-casaos:
         **Quick Setup Guide**
         - Create your account and complete the setup
         - When asked about storage options, choose the **recommended setting** (already configured for you)
+        
+        
+        ** Security and setup tips:**
+        If you got this warning after setup:
+        One or more mimetype migrations are available. Occasionally new mimetypes are added to better handle certain file types. Migrating the mimetypes take a long time on larger instances so this is not done automatically during upgrades. 
+        Please run the following command from the command line to update the mimetypes:
+        `docker exec nextcloud php occ maintenance:repair --include-expensive`
+        or
+        `php occ maintenance:repair --include-expensive` in the settings terminal of Nextcloud web interface.
