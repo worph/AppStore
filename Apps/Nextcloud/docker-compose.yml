@@ -33,10 +33,8 @@ services:
       - /DATA/AppData/nextcloud/config/:/var/www/html/config/
       # Stores manually installed apps that aren't part of the base image, Preserves custom apps during updates
       - /DATA/AppData/nextcloud/apps/:/var/www/html/apps/
-      # Custom Apache configuration for HSTS headers
-      - /DATA/AppData/nextcloud/apache/security.conf:/etc/apache2/conf-available/security.conf
-      # Initialization script to enable security configuration
-      - /DATA/AppData/nextcloud/apache/init-security.sh:/docker-entrypoint-hooks.d/before-starting/init-security.sh
+      # Custom Apache configuration directory for HSTS headers
+      - /DATA/AppData/nextcloud/apache:/docker-entrypoint-hooks.d/before-starting
     restart: unless-stopped
     networks:
       - nextcloud-network
@@ -360,13 +358,16 @@ x-casaos:
       EOF
       fi
     - |
-      if [ ! -f /DATA/AppData/nextcloud/apache/init-security.sh ]; then
-        cat > /DATA/AppData/nextcloud/apache/init-security.sh << 'EOF'
+      if [ ! -f /DATA/AppData/nextcloud/apache/setup-security.sh ]; then
+        cat > /DATA/AppData/nextcloud/apache/setup-security.sh << 'EOF'
       #!/bin/bash
+      # Copy security configuration to Apache
+      cp /docker-entrypoint-hooks.d/before-starting/security.conf /etc/apache2/conf-available/security.conf
+      # Enable security configuration and headers module
       a2enconf security
       a2enmod headers
       EOF
-        chmod +x /DATA/AppData/nextcloud/apache/init-security.sh
+        chmod +x /DATA/AppData/nextcloud/apache/setup-security.sh
       fi
   tips:
     before_install:
@@ -376,7 +377,7 @@ x-casaos:
         - When asked about storage options, choose the **recommended setting** (already configured for you)
         
         
-        ** Security and setup tips:**
+        **Security and setup tips:**
         If you got this warning after setup:
         One or more mimetype migrations are available. Occasionally new mimetypes are added to better handle certain file types. Migrating the mimetypes take a long time on larger instances so this is not done automatically during upgrades. 
         Please run the following command from the command line to update the mimetypes:
