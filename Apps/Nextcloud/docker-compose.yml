@@ -357,30 +357,49 @@ x-casaos:
     de_de: Erstellen Sie Ihre Teams-Alternative mit geführter App-Installation
     es_es: Construya su alternativa a Teams con instalación guiada de aplicaciones
 
-  # Creates Redis memcache configuration before installation
-  # IMPORTANT: Keep this command idempotent - safe to run multiple times
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/nextcloud/config &&
-    if [ ! -f /DATA/AppData/nextcloud/config/redis.config.php ] || ! grep -q "memcache.locking.*Redis" /DATA/AppData/nextcloud/config/redis.config.php; then
-      cat > /DATA/AppData/nextcloud/config/redis.config.php << 'EOF'
-    <?php
-    $CONFIG = array (
-      'memcache.local' => '\\OC\\Memcache\\APCu',
-      'memcache.distributed' => '\\OC\\Memcache\\Redis',
-      'memcache.locking' => '\\OC\\Memcache\\Redis',
-      'redis' => array (
-        'host' => 'redis',
-        'port' => 6379,
-        'password' => getenv('REDIS_HOST_PASSWORD') ?: '',
-      ),
-    );
-    EOF
-    fi
-
   # Security & setup warnings fixes : "Some headers are not set correctly on your instance - The `Strict-Transport-Security` HTTP header is not set (should be at least `15552000` seconds). For enhanced security, it is recommended to enable HSTS"
   post-install-cmd: |
-    docker exec nextcloud a2enmod headers &&
-    docker exec nextcloud bash -c 'if ! grep -q "Strict-Transport-Security" /var/www/html/.htaccess; then echo "Header always set Strict-Transport-Security \"max-age=15552000; includeSubDomains\"" >> /var/www/html/.htaccess; fi'
+    # Wait for NextCloud to be ready by checking HTTP status
+    timeout=60
+    while [ $timeout -gt 0 ]; do
+      echo "Waiting for NextCloud to respond..."
+      if curl -s -o /dev/null -w "%{http_code}" http://localhost:80 | grep -q "200\|302\|301"; then
+        echo "NextCloud is ready!"
+        break
+      fi
+      sleep 2
+      timeout=$((timeout-2))
+    done &&
+
+    docker exec nextcloud bash -c '
+      # Enable headers module if available (ignore if not supported)
+      a2enmod headers 2>/dev/null || true
+
+      # Add HSTS header if not present
+      if [ -f /var/www/html/.htaccess ] && ! grep -q "Strict-Transport-Security" /var/www/html/.htaccess; then
+        echo "Header always set Strict-Transport-Security \"max-age=15552000; includeSubDomains\"" >> /var/www/html/.htaccess
+        echo "HSTS header added to .htaccess"
+      else
+        echo "HSTS header already present or .htaccess not found"
+      fi
+
+      # Configure Redis memcache via occ commands
+      # IMPORTANT: Keep these commands idempotent - safe to run multiple times
+      echo "Configuring Redis memcache..."
+
+      # Only configure memcache if not already set to Redis
+      if ! php occ config:system:get memcache.locking | grep -q "Redis" 2>/dev/null; then
+        php occ config:system:set memcache.local --value="\\OC\\Memcache\\APCu"
+        php occ config:system:set memcache.distributed --value="\\OC\\Memcache\\Redis"
+        php occ config:system:set memcache.locking --value="\\OC\\Memcache\\Redis"
+        php occ config:system:set redis host --value="redis"
+        php occ config:system:set redis port --value=6379 --type=integer
+        php occ config:system:set redis password --value="$default_pwd"
+        echo "Redis memcache configuration completed"
+      else
+        echo "Redis memcache already configured, skipping"
+      fi
+    '
   tips:
     before_install:
       en_us: |
