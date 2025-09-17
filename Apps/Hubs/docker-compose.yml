@@ -1,0 +1,199 @@
+name: hubs
+
+services:
+  db:
+    image: postgres:14-alpine
+    container_name: hubs-db
+    restart: unless-stopped
+    user: postgres
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: ret_dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  hubs-admin:
+    image: mashad6/hubs-compose-hubs-admin:v2
+    container_name: hubs-admin
+    restart: unless-stopped
+    environment:
+      INTERNAL_HOSTNAME: hubs-admin
+    healthcheck:
+      test: ["CMD", "curl", "-fk", "https://localhost:8989/admin.html"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 120s
+    ports:
+      - "8989:8989"
+    depends_on:
+      - db
+      - reticulum
+
+  hubs:
+    image: mashad6/hubs-compose-hubs-client:v2
+    container_name: hubs
+    restart: unless-stopped
+    environment:
+      INTERNAL_HOSTNAME: hubs
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nc -z localhost 8080 || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 300s
+    expose:
+      - 8080
+    depends_on:
+      db:
+        condition: service_healthy
+      reticulum:
+        condition: service_healthy
+
+  dialog:
+    image: mashad6/hubs-compose-dialog
+    container_name: hubs-dialog
+    restart: unless-stopped
+    environment:
+      AUTH_KEY: /etc/perms.pub.pem
+      HTTPS_CERT_FULLCHAIN: /etc/ssl/fullchain.pem
+      HTTPS_CERT_PRIVKEY: /etc/ssl/privkey.pem
+      INTERACTIVE: "false"
+      MEDIASOUP_MIN_PORT: 40000
+      MEDIASOUP_MAX_PORT: 40050
+      MEDIASOUP_ANNOUNCED_IP: ${PRIVATE_NETWORK_IP:-127.0.0.1}
+    ports:
+      - "4443:4443"
+      - "40000-40050:40000-40050"
+      - "40000-40050:40000-40050/udp"
+
+  postgrest:
+    image: mashad6/hubs-compose-postgrest
+    container_name: hubs-postgrest
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
+
+  reticulum:
+    image: mashad6/hubs-compose-reticulum
+    container_name: hubs-reticulum
+    restart: unless-stopped
+    environment:
+      DB_CREDENTIALS: postgres
+      DB_HOST: db
+      DB_NAME: ret_dev
+      DIALOG_HOSTNAME: "dialog"
+      DIALOG_PORT: 4443
+      HUBS_ADMIN_INTERNAL_HOSTNAME: hubs-admin
+      HUBS_CLIENT_INTERNAL_HOSTNAME: hubs-client
+      POSTGREST_INTERNAL_HOSTNAME: postgrest
+      SPOKE_INTERNAL_HOSTNAME: spoke
+    healthcheck:
+      test: ["CMD", "sh", "-c", "pgrep beam.smp > /dev/null && echo 'Elixir process running'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    ports:
+      - "4000:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - retstorage:/code/storage/dev
+
+  spoke:
+    image: mashad6/hubs-compose-spoke
+    container_name: hubs-spoke
+    restart: unless-stopped
+    environment:
+      CORS_PROXY_SERVER: "reticulum:4000"
+      INTERNAL_HOSTNAME: spoke
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    ports:
+      - "9090:9090"
+    depends_on:
+      - reticulum
+
+volumes:
+  pgdata:
+  retstorage:
+
+networks:
+  default:
+    name: mozilla-hubs
+
+x-casaos:
+  # 1. Port and path to the app WebUI
+  #8080-hubs-<user>.nsl.sh
+  main: hubs
+  webui_port: 8080
+  index: "/"
+
+  # 3. Port mapping from host to container
+  port_map: "8080"
+
+  # 2. Location of directory/file to be mounted (volumes)
+  # Volumes are defined in the main volumes section below
+
+  # 4. Other optional configurations
+  title:
+    en_us: Mozilla Hubs
+  tagline:
+    en_us: Virtual collaboration spaces for everyone
+  description:
+    en_us: |
+      Mozilla Hubs is a social VR platform that runs in your browser. Create virtual rooms where you can hang out with friends, hold meetings, or attend events. This deployment includes the complete Hubs stack: client, admin panel, backend services, and voice/video infrastructure.
+  developer: mashad6
+  category: Communication
+
+  # Additional port mappings for all services
+  additional_ports:
+    - "8989:8989"  # hubs-admin
+    - "4000:4000"  # reticulum backend
+    - "4443:4443"  # dialog voice/video
+    - "9090:9090"  # spoke
+    - "5432:5432"  # database
+    - "3000:3000"  # postgrest
+    - "40000-40050:40000-40050"     # mediasoup RTP
+    - "40000-40050:40000-40050/udp" # mediasoup RTCP
+
+  # Environment variables that may need configuration
+  environment:
+    PRIVATE_NETWORK_IP: "${PRIVATE_NETWORK_IP:-127.0.0.1}"
+    POSTGRES_PASSWORD: "postgres"
+
+  tips:
+    before_install:
+      en_us: |
+        Configuration Details:
+        1. WebUI: Main app accessible at port 8080, path "/"
+        2. Volumes: pgdata (PostgreSQL) and retstorage (Reticulum) - managed by Docker
+        3. Ports: 8080 (main), 8989 (admin), 4000 (API), 4443 (voice/video)
+        4. Set PRIVATE_NETWORK_IP environment variable for voice/video functionality
+        
+        Access points:
+        - Main app: https://yourdomain:8080
+        - Admin panel: https://yourdomain:8989/admin.html
