@@ -9,9 +9,8 @@ services:
     expose:
       - 80
     volumes:
-      - /DATA/AppData/rclone/config:/config/rclone
-      - /DATA/AppData/rclone/cache:/cache
-      - /DATA/Shared-Rclone:/data:rshared,z
+      - /DATA/AppData/rclone/config/:/config/rclone/
+      - /DATA/Rclone/:/data/:rshared,z
       - /etc/passwd:/etc/passwd:ro
       - /etc/group:/etc/group:ro
       - /etc/fuse.conf:/etc/fuse.conf:ro
@@ -75,13 +74,13 @@ x-casaos:
         2. **Verify Connection**: Use "Explorer" to browse and test access to your remote files
         3. **Mount Remote**: Use "Mount" to mount your remote to `/data` path
         
-        **Important**: After mounting, files will be accessible at `/DATA/Shared-Rclone/` on your host system and to other containers.
+        **Important**: After mounting, files will be accessible at `/DATA/Rclone/` on your host system and to other containers.
         
         **Mount Configuration**:
         - Always mount remotes to `/data` inside the rclone web UI
-        - This maps to `/DATA/Shared-Rclone/` on your CasaOS system
+        - This maps to `/DATA/Rclone/` on your CasaOS system
         - Files will be accessible to other containers that mount this directory
-        - Other apps can access your cloud files by mounting `/DATA/Shared-Rclone/`
+        - Other apps can access your cloud files by mounting `/DATA/Rclone/`
         
         **Virtual Files Setup (OneDrive/Dropbox style)**:
         For virtual files that download on-demand (like cloud sync clients):
