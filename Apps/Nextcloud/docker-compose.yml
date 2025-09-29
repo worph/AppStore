@@ -4,6 +4,7 @@ services:
   nextcloud:
     image: nextcloud:31.0.9
     container_name: nextcloud
+    restart: unless-stopped
     user: $PUID:$PGID
     cpu_shares: 70
     depends_on:
@@ -31,13 +32,14 @@ services:
       # Security & setup warnings fixes "Server has no maintenance window start time configured ..." - set to 4am
       - NC_maintenance_window_start=4
     volumes:
+      # nextcloud root directory, Contains the core application files
+      - /DATA/AppData/nextcloud/root/:/var/www/html:z
       # Stores all user files, uploads, and app data
       - /DATA/AppData/nextcloud/data/:/var/www/html/data/
       # Essential for maintaining settings between container updates
       - /DATA/AppData/nextcloud/config/:/var/www/html/config/
       # Stores manually installed apps that aren't part of the base image, Preserves custom apps during updates
       - /DATA/AppData/nextcloud/apps/:/var/www/html/apps/
-    restart: unless-stopped
     networks:
       - nextcloud-network
 
@@ -81,6 +83,16 @@ services:
     restart: unless-stopped
     networks:
       - nextcloud-network
+
+  cron:
+    image: nextcloud:31.0.9
+    restart: unless-stopped
+    volumes:
+      - /DATA/AppData/nextcloud/root/:/var/www/html:z
+    entrypoint: /cron.sh
+    depends_on:
+      - db
+      - redis
 
 networks:
   nextcloud-network:
@@ -414,6 +426,11 @@ x-casaos:
       else
         echo "Redis memcache already configured, skipping"
       fi
+
+      # Configure background jobs to use cron
+      echo "Configuring background jobs to use cron..."
+      php occ background:cron
+      echo "Background jobs configured to use cron"
     '
   tips:
     before_install:
