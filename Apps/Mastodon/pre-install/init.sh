@@ -46,68 +46,44 @@ fi
 # Store email for post-install use
 echo "$EMAIL" > /DATA/AppData/mastodon/.admin_email
 
-# Create .env.production file
-cat > /DATA/AppData/mastodon/.env.production << EOF
-# Mastodon Configuration
-# Generated on $(date)
-
-# Federation
-LOCAL_DOMAIN=mastodon-${DOMAIN}
-SINGLE_USER_MODE=true
-WEB_DOMAIN=mastodon-${DOMAIN}
-
-# Redis
-REDIS_HOST=redis
-REDIS_PORT=6379
-
-# PostgreSQL
-DB_HOST=db
-DB_USER=mastodon
-DB_NAME=mastodon_production
-DB_PASS=${DB_PASSWORD}
-DB_PORT=5432
-
-# Secrets - DO NOT SHARE THESE
-SECRET_KEY_BASE=${SECRET_KEY_BASE}
-OTP_SECRET=${OTP_SECRET}
-
-# VAPID keys for Web Push
-VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
-VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
-
-# File storage
-PAPERCLIP_ROOT_PATH=/mastodon/public/system
-
-# Optional: Email configuration (uncomment and configure if needed)
-# SMTP_SERVER=smtp.example.com
-# SMTP_PORT=587
-# SMTP_LOGIN=notifications@mastodon-${DOMAIN}
-# SMTP_PASSWORD=your_smtp_password
-# SMTP_FROM_ADDRESS=notifications@mastodon-${DOMAIN}
-# SMTP_AUTH_METHOD=plain
-# SMTP_OPENSSL_VERIFY_MODE=none
-
-# Optional: S3/Object Storage (uncomment if using)
-# S3_ENABLED=true
-# S3_BUCKET=mastodon
-# AWS_ACCESS_KEY_ID=
-# AWS_SECRET_ACCESS_KEY=
-# S3_REGION=us-east-1
-# S3_PROTOCOL=https
-# S3_HOSTNAME=s3.us-east-1.amazonaws.com
-
-# Streaming API configuration
-STREAMING_API_BASE_URL=https://mastodon-${DOMAIN}
-
-# Advanced settings
-MAX_TOOT_CHARS=500
-PREPARED_STATEMENTS=true
+# Create secrets file (only contains SECRET_KEY_BASE, OTP_SECRET, and VAPID keys)
+cat > /DATA/AppData/mastodon/.secrets.env << EOF
+export SECRET_KEY_BASE="${SECRET_KEY_BASE}"
+export OTP_SECRET="${OTP_SECRET}"
+export VAPID_PRIVATE_KEY="${VAPID_PRIVATE_KEY}"
+export VAPID_PUBLIC_KEY="${VAPID_PUBLIC_KEY}"
 EOF
 
 # Set appropriate permissions
-chmod 600 /DATA/AppData/mastodon/.env.production
+chmod 600 /DATA/AppData/mastodon/.secrets.env
 
-echo "Configuration file created at /DATA/AppData/mastodon/.env.production"
+# Also create a backup configuration file for reference
+cat > /DATA/AppData/mastodon/config-reference.txt << EOF
+# Mastodon Configuration Reference
+# Generated on $(date)
+
+Domain: mastodon-${DOMAIN}
+Admin Email: ${EMAIL}
+Database Password: ${DB_PASSWORD}
+
+Secrets (stored in .secrets.env):
+- SECRET_KEY_BASE
+- OTP_SECRET
+- VAPID_PRIVATE_KEY
+- VAPID_PUBLIC_KEY
+
+Optional Email Configuration:
+To enable email notifications, you can add these to the container environment:
+  SMTP_SERVER=smtp.example.com
+  SMTP_PORT=587
+  SMTP_LOGIN=notifications@mastodon-${DOMAIN}
+  SMTP_PASSWORD=your_smtp_password
+  SMTP_FROM_ADDRESS=notifications@mastodon-${DOMAIN}
+EOF
+
+chmod 644 /DATA/AppData/mastodon/config-reference.txt
+
+echo "Configuration file created at /DATA/AppData/mastodon/.secrets.env"
 echo "Secrets have been generated successfully!"
 echo ""
 echo "IMPORTANT: Save these credentials securely!"

@@ -31,13 +31,27 @@ services:
     networks:
       - mastodon-network
 
-  web:
+  mastodon:
     image: ghcr.io/mastodon/mastodon:v4.4.4
     restart: unless-stopped
     user: $PUID:$PGID
     cpu_shares: 70
-    env_file: /DATA/AppData/mastodon/.env.production
-    command: bash -c "rm -f /mastodon/tmp/pids/server.pid; bundle exec rails s -p 3000"
+    environment:
+      - LOCAL_DOMAIN=mastodon-$domain
+      - SINGLE_USER_MODE=true
+      - WEB_DOMAIN=mastodon-$domain
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DB_HOST=db
+      - DB_USER=mastodon
+      - DB_NAME=mastodon_production
+      - DB_PASS=$default_pwd
+      - DB_PORT=5432
+      - PAPERCLIP_ROOT_PATH=/mastodon/public/system
+      - STREAMING_API_BASE_URL=https://mastodon-$domain
+      - MAX_TOOT_CHARS=500
+      - PREPARED_STATEMENTS=true
+    command: bash -c "test -f /secrets/.secrets.env && source /secrets/.secrets.env; rm -f /mastodon/tmp/pids/server.pid; bundle exec rails s -p 3000"
     healthcheck:
       test: ['CMD-SHELL', 'wget -q --spider --proxy=off localhost:3000/health || exit 1']
       interval: 30s
@@ -52,6 +66,7 @@ services:
         condition: service_healthy
     volumes:
       - /DATA/AppData/mastodon/public/system:/mastodon/public/system
+      - /DATA/AppData/mastodon:/secrets:ro
     networks:
       - mastodon-network
 
@@ -60,8 +75,16 @@ services:
     restart: unless-stopped
     user: $PUID:$PGID
     cpu_shares: 30
-    env_file: /DATA/AppData/mastodon/.env.production
-    command: node ./streaming/index.js
+    environment:
+      - LOCAL_DOMAIN=mastodon-$domain
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DB_HOST=db
+      - DB_USER=mastodon
+      - DB_NAME=mastodon_production
+      - DB_PASS=$default_pwd
+      - DB_PORT=5432
+    command: sh -c "test -f /secrets/.secrets.env && . /secrets/.secrets.env; node ./streaming/index.js"
     healthcheck:
       test: ['CMD-SHELL', 'wget -q --spider --proxy=off localhost:4000/api/v1/streaming/health || exit 1']
       interval: 30s
@@ -72,6 +95,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - /DATA/AppData/mastodon:/secrets:ro
     networks:
       - mastodon-network
 
@@ -80,8 +105,18 @@ services:
     restart: unless-stopped
     user: $PUID:$PGID
     cpu_shares: 50
-    env_file: /DATA/AppData/mastodon/.env.production
-    command: bundle exec sidekiq
+    environment:
+      - LOCAL_DOMAIN=mastodon-$domain
+      - SINGLE_USER_MODE=true
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DB_HOST=db
+      - DB_USER=mastodon
+      - DB_NAME=mastodon_production
+      - DB_PASS=$default_pwd
+      - DB_PORT=5432
+      - PAPERCLIP_ROOT_PATH=/mastodon/public/system
+    command: bash -c "test -f /secrets/.secrets.env && source /secrets/.secrets.env; bundle exec sidekiq"
     depends_on:
       db:
         condition: service_healthy
@@ -89,6 +124,7 @@ services:
         condition: service_healthy
     volumes:
       - /DATA/AppData/mastodon/public/system:/mastodon/public/system
+      - /DATA/AppData/mastodon:/secrets:ro
     healthcheck:
       test: ['CMD-SHELL', "ps aux | grep '[s]idekiq 6' || exit 1"]
       interval: 30s
@@ -104,7 +140,7 @@ networks:
 x-casaos:
   index: /
   webui_port: 3000
-  main: web
+  main: mastodon
 
   icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Mastodon/icon.png
   screenshot_link:
@@ -136,11 +172,29 @@ x-casaos:
   title:
     en_us: Mastodon
 
-  # Pre-install script automatically generates all required secrets
-  pre-install: /bin/bash -c 'bash <(cat /workspace/yundera/Worph-AppStore/Apps/Mastodon/pre-install/init.sh)'
+  # Pre-install command generates all required secrets before containers start
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/mastodon &&
+    if [ ! -f /DATA/AppData/mastodon/.secrets.env ]; then
+      echo "Generating Mastodon secrets..." &&
+      SECRET_KEY_BASE=$(docker run --rm ghcr.io/mastodon/mastodon:v4.4.4 bundle exec rake secret) &&
+      OTP_SECRET=$(docker run --rm ghcr.io/mastodon/mastodon:v4.4.4 bundle exec rake secret) &&
+      VAPID_OUTPUT=$(docker run --rm ghcr.io/mastodon/mastodon:v4.4.4 bundle exec rake mastodon:webpush:generate_vapid_key) &&
+      VAPID_PRIVATE_KEY=$(echo "$VAPID_OUTPUT" | grep "VAPID_PRIVATE_KEY" | cut -d'=' -f2) &&
+      VAPID_PUBLIC_KEY=$(echo "$VAPID_OUTPUT" | grep "VAPID_PUBLIC_KEY" | cut -d'=' -f2) &&
+      echo "export SECRET_KEY_BASE=\"${SECRET_KEY_BASE}\"" > /DATA/AppData/mastodon/.secrets.env &&
+      echo "export OTP_SECRET=\"${OTP_SECRET}\"" >> /DATA/AppData/mastodon/.secrets.env &&
+      echo "export VAPID_PRIVATE_KEY=\"${VAPID_PRIVATE_KEY}\"" >> /DATA/AppData/mastodon/.secrets.env &&
+      echo "export VAPID_PUBLIC_KEY=\"${VAPID_PUBLIC_KEY}\"" >> /DATA/AppData/mastodon/.secrets.env &&
+      chmod 600 /DATA/AppData/mastodon/.secrets.env &&
+      echo "$email" > /DATA/AppData/mastodon/.admin_email &&
+      echo "Secrets generated successfully!";
+    else
+      echo "Secrets already exist, skipping generation.";
+    fi
 
   # Post-install script sets up database and creates admin account
-  post-install: |
+  post-install-cmd: |
     echo "Waiting for Mastodon services to be ready..." &&
     sleep 30 &&
     echo "Running database migrations..." &&
