@@ -1,0 +1,340 @@
+name: mastodon
+
+services:
+  db:
+    image: postgres:14-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mastodon
+      POSTGRES_PASSWORD: $default_pwd
+      POSTGRES_DB: mastodon_production
+    volumes:
+      - /DATA/AppData/mastodon/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'mastodon']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mastodon-network
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - /DATA/AppData/mastodon/redis:/data
+    networks:
+      - mastodon-network
+
+  web:
+    image: ghcr.io/mastodon/mastodon:v4.4.4
+    restart: unless-stopped
+    user: $PUID:$PGID
+    cpu_shares: 70
+    env_file: /DATA/AppData/mastodon/.env.production
+    command: bash -c "rm -f /mastodon/tmp/pids/server.pid; bundle exec rails s -p 3000"
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q --spider --proxy=off localhost:3000/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    expose:
+      - 3000
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - /DATA/AppData/mastodon/public/system:/mastodon/public/system
+    networks:
+      - mastodon-network
+
+  streaming:
+    image: ghcr.io/mastodon/mastodon-streaming:v4.4.4
+    restart: unless-stopped
+    user: $PUID:$PGID
+    cpu_shares: 30
+    env_file: /DATA/AppData/mastodon/.env.production
+    command: node ./streaming/index.js
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q --spider --proxy=off localhost:4000/api/v1/streaming/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - mastodon-network
+
+  sidekiq:
+    image: ghcr.io/mastodon/mastodon:v4.4.4
+    restart: unless-stopped
+    user: $PUID:$PGID
+    cpu_shares: 50
+    env_file: /DATA/AppData/mastodon/.env.production
+    command: bundle exec sidekiq
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - /DATA/AppData/mastodon/public/system:/mastodon/public/system
+    healthcheck:
+      test: ['CMD-SHELL', "ps aux | grep '[s]idekiq 6' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - mastodon-network
+
+networks:
+  mastodon-network:
+    driver: bridge
+
+x-casaos:
+  index: /
+  webui_port: 3000
+  main: web
+
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Mastodon/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Mastodon/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Mastodon/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Mastodon/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Mastodon/screenshot-1.png
+
+  architectures:
+    - amd64
+    - arm64
+  author: Worph Team
+  category: Communication
+  description:
+    en_us: Decentralized social network server. Join the fediverse and connect with millions across independent servers. Share posts, photos, videos, and follow anyone across the network. Ad-free, algorithm-free, and community-owned.
+    fr_fr: Serveur de réseau social décentralisé. Rejoignez le fediverse et connectez-vous avec des millions d'utilisateurs sur des serveurs indépendants. Partagez des posts, photos, vidéos et suivez n'importe qui sur le réseau. Sans publicité, sans algorithme, et géré par la communauté.
+    ko_kr: 탈중앙화 소셜 네트워크 서버. 페디버스에 가입하여 독립적인 서버의 수백만 명과 연결하세요. 게시물, 사진, 비디오를 공유하고 네트워크 전체의 누구든 팔로우할 수 있습니다. 광고 없음, 알고리즘 없음, 커뮤니티 소유.
+    zh_cn: 去中心化社交网络服务器。加入联邦宇宙，与独立服务器上的数百万人连接。分享帖子、照片、视频，并关注网络中的任何人。无广告、无算法，由社区拥有。
+    es_es: Servidor de red social descentralizada. Únete al fediverso y conéctate con millones en servidores independientes. Comparte publicaciones, fotos, videos y sigue a cualquiera en la red. Sin anuncios, sin algoritmos y propiedad de la comunidad.
+    de_de: Dezentraler Social-Network-Server. Treten Sie dem Fediverse bei und verbinden Sie sich mit Millionen auf unabhängigen Servern. Teilen Sie Beiträge, Fotos, Videos und folgen Sie jedem im Netzwerk. Werbefrei, algorithmusfrei und gemeinschaftseigen.
+  developer: Mastodon gGmbH
+  tagline:
+    en_us: Decentralized social network - join the fediverse
+    fr_fr: Réseau social décentralisé - rejoignez le fediverse
+    ko_kr: 탈중앙화 소셜 네트워크 - 페디버스에 가입하세요
+    zh_cn: 去中心化社交网络 - 加入联邦宇宙
+    es_es: Red social descentralizada - únete al fediverso
+    de_de: Dezentrales soziales Netzwerk - treten Sie dem Fediverse bei
+  title:
+    en_us: Mastodon
+
+  # Pre-install script automatically generates all required secrets
+  pre-install: /bin/bash -c 'bash <(cat /workspace/yundera/Worph-AppStore/Apps/Mastodon/pre-install/init.sh)'
+
+  # Post-install script sets up database and creates admin account
+  post-install: |
+    echo "Waiting for Mastodon services to be ready..." &&
+    sleep 30 &&
+    echo "Running database migrations..." &&
+    docker exec mastodon-web-1 bundle exec rails db:migrate &&
+    docker exec mastodon-web-1 bundle exec rails db:seed &&
+    echo "Database setup complete!" &&
+    echo "" &&
+    echo "Creating admin account..." &&
+    ADMIN_EMAIL=$(cat /DATA/AppData/mastodon/.admin_email 2>/dev/null || echo "admin@mastodon-$domain") &&
+    ADMIN_USERNAME="admin" &&
+    ADMIN_OUTPUT=$(docker exec mastodon-web-1 tootctl accounts create $ADMIN_USERNAME --email "$ADMIN_EMAIL" --confirmed --role Owner 2>&1) &&
+    ADMIN_PASSWORD=$(echo "$ADMIN_OUTPUT" | grep -oP 'New password: \K.*' || echo "$ADMIN_OUTPUT") &&
+    echo "" &&
+    echo "==================================================" &&
+    echo "  MASTODON INSTALLATION COMPLETE!" &&
+    echo "==================================================" &&
+    echo "" &&
+    echo "Access: https://mastodon-$domain" &&
+    echo "" &&
+    echo "Login Credentials:" &&
+    echo "  Username: $ADMIN_USERNAME" &&
+    echo "  Email: $ADMIN_EMAIL" &&
+    echo "  Password: $ADMIN_PASSWORD" &&
+    echo "" &&
+    echo "IMPORTANT: Change your password immediately after logging in!" &&
+    echo "" &&
+    echo "Configuration file: /DATA/AppData/mastodon/.env.production" &&
+    echo "=================================================="
+
+  tips:
+    before_install:
+      en_us: |
+        **Fully Automated Installation**
+
+        Everything is automated - just click install!
+
+        **What happens automatically:**
+        - Configuration directory creation
+        - Secret keys generation (SECRET_KEY_BASE, OTP_SECRET)
+        - VAPID keys generation for web push notifications
+        - Database setup and migrations
+        - Admin account creation with username "admin"
+        - Environment file configured with your domain
+
+        **After Installation:**
+        The post-install output will show your login credentials:
+        - Username: admin
+        - Email: (your configured email)
+        - Password: (auto-generated)
+
+        **Important:**
+        1. Access your instance at `https://mastodon-YOUR_DOMAIN`
+        2. Log in with the provided credentials
+        3. **Change your password immediately** in Settings
+        4. Complete your profile setup
+        5. Configure server settings in Admin panel
+
+        **Optional: Email Notifications**
+        To enable email notifications, edit `/DATA/AppData/mastodon/.env.production`:
+        ```
+        SMTP_SERVER=smtp.your-provider.com
+        SMTP_PORT=587
+        SMTP_LOGIN=your@email.com
+        SMTP_PASSWORD=your_smtp_password
+        SMTP_FROM_ADDRESS=notifications@mastodon-YOUR_DOMAIN
+        ```
+        Then restart: `docker restart mastodon-web-1 mastodon-streaming-1 mastodon-sidekiq-1`
+
+      fr_fr: |
+        **Installation Entièrement Automatisée**
+
+        Tout est automatisé - cliquez simplement sur installer !
+
+        **Ce qui se passe automatiquement :**
+        - Création du répertoire de configuration
+        - Génération des clés secrètes (SECRET_KEY_BASE, OTP_SECRET)
+        - Génération des clés VAPID pour les notifications push web
+        - Configuration et migrations de base de données
+        - Création du compte administrateur avec le nom d'utilisateur "admin"
+        - Fichier d'environnement configuré avec votre domaine
+
+        **Après l'installation :**
+        La sortie post-installation affichera vos identifiants de connexion :
+        - Nom d'utilisateur : admin
+        - Email : (votre email configuré)
+        - Mot de passe : (généré automatiquement)
+
+        **Important :**
+        1. Accédez à votre instance sur `https://mastodon-VOTRE_DOMAINE`
+        2. Connectez-vous avec les identifiants fournis
+        3. **Changez immédiatement votre mot de passe** dans les Paramètres
+        4. Complétez la configuration de votre profil
+        5. Configurez les paramètres du serveur dans le panneau Admin
+
+      zh_cn: |
+        **全自动安装**
+
+        一切都是自动化的 - 只需点击安装！
+
+        **自动执行的操作：**
+        - 创建配置目录
+        - 生成密钥（SECRET_KEY_BASE、OTP_SECRET）
+        - 生成用于Web推送通知的VAPID密钥
+        - 数据库设置和迁移
+        - 使用用户名"admin"创建管理员账户
+        - 使用您的域名配置环境文件
+
+        **安装后：**
+        安装后输出将显示您的登录凭据：
+        - 用户名：admin
+        - 邮箱：（您配置的邮箱）
+        - 密码：（自动生成）
+
+        **重要提示：**
+        1. 在`https://mastodon-您的域名`访问您的实例
+        2. 使用提供的凭据登录
+        3. **立即在设置中更改密码**
+        4. 完成个人资料设置
+        5. 在管理面板中配置服务器设置
+
+      ko_kr: |
+        **완전 자동 설치**
+
+        모든 것이 자동화됩니다 - 설치를 클릭하기만 하세요!
+
+        **자동으로 수행되는 작업:**
+        - 구성 디렉토리 생성
+        - 비밀 키 생성 (SECRET_KEY_BASE, OTP_SECRET)
+        - 웹 푸시 알림용 VAPID 키 생성
+        - 데이터베이스 설정 및 마이그레이션
+        - "admin" 사용자 이름으로 관리자 계정 생성
+        - 도메인으로 구성된 환경 파일
+
+        **설치 후:**
+        설치 후 출력에 로그인 자격 증명이 표시됩니다:
+        - 사용자명: admin
+        - 이메일: (구성된 이메일)
+        - 비밀번호: (자동 생성)
+
+        **중요:**
+        1. `https://mastodon-귀하의도메인`에서 인스턴스에 액세스
+        2. 제공된 자격 증명으로 로그인
+        3. **설정에서 즉시 비밀번호 변경**
+        4. 프로필 설정 완료
+        5. 관리 패널에서 서버 설정 구성
+
+      es_es: |
+        **Instalación Completamente Automatizada**
+
+        Todo está automatizado - ¡solo haz clic en instalar!
+
+        **Lo que sucede automáticamente:**
+        - Creación del directorio de configuración
+        - Generación de claves secretas (SECRET_KEY_BASE, OTP_SECRET)
+        - Generación de claves VAPID para notificaciones push web
+        - Configuración y migraciones de base de datos
+        - Creación de cuenta de administrador con nombre de usuario "admin"
+        - Archivo de entorno configurado con tu dominio
+
+        **Después de la instalación:**
+        La salida post-instalación mostrará tus credenciales de inicio de sesión:
+        - Nombre de usuario: admin
+        - Email: (tu email configurado)
+        - Contraseña: (generada automáticamente)
+
+        **Importante:**
+        1. Accede a tu instancia en `https://mastodon-TU_DOMINIO`
+        2. Inicia sesión con las credenciales proporcionadas
+        3. **Cambia tu contraseña inmediatamente** en Configuración
+        4. Completa la configuración de tu perfil
+        5. Configura los ajustes del servidor en el panel de Administración
+
+      de_de: |
+        **Vollständig Automatisierte Installation**
+
+        Alles ist automatisiert - einfach auf Installieren klicken!
+
+        **Was automatisch passiert:**
+        - Erstellung des Konfigurationsverzeichnisses
+        - Generierung geheimer Schlüssel (SECRET_KEY_BASE, OTP_SECRET)
+        - Generierung von VAPID-Schlüsseln für Web-Push-Benachrichtigungen
+        - Datenbankeinrichtung und Migrationen
+        - Admin-Kontoerstellung mit Benutzername "admin"
+        - Umgebungsdatei konfiguriert mit Ihrer Domain
+
+        **Nach der Installation:**
+        Die Post-Install-Ausgabe zeigt Ihre Anmeldedaten:
+        - Benutzername: admin
+        - E-Mail: (Ihre konfigurierte E-Mail)
+        - Passwort: (automatisch generiert)
+
+        **Wichtig:**
+        1. Greifen Sie auf Ihre Instanz unter `https://mastodon-IHRE_DOMAIN` zu
+        2. Melden Sie sich mit den bereitgestellten Anmeldedaten an
+        3. **Ändern Sie Ihr Passwort sofort** in den Einstellungen
+        4. Vervollständigen Sie Ihre Profilkonfiguration
+        5. Konfigurieren Sie die Servereinstellungen im Admin-Panel
