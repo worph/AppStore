@@ -222,10 +222,9 @@ x-casaos:
 
   # Post-install script sets up database and creates admin account (idempotent)
   post-install-cmd: |
-    wget -O /tmp/mastodon-post-install.sh https://raw.githubusercontent.com/Worph/AppStore/main/Apps/Mastodon/install/post-install.sh &&
-    chmod +x /tmp/mastodon-post-install.sh &&
-    bash /tmp/mastodon-post-install.sh &&
-    rm /tmp/mastodon-post-install.sh
+    wget -O /DATA/AppData/mastodon/mastodon-post-install.sh https://raw.githubusercontent.com/Worph/AppStore/main/Apps/Mastodon/install/post-install.sh &&
+    chmod +x /DATA/AppData/mastodon/mastodon-post-install.sh &&
+    bash /DATA/AppData/mastodon/mastodon-post-install.sh
 
   tips:
     before_install:
