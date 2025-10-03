@@ -360,9 +360,11 @@ x-casaos:
     ADMIN_EXISTS=\$(docker compose exec -T mastodon-backend bin/tootctl accounts list --limit 1 | grep -c "admin" || echo "0") &&
     if [ "\$ADMIN_EXISTS" -eq "0" ]; then
       echo "Creating admin user..." &&
-      ADMIN_EMAIL="\${email:-admin@mastodon-\${domain}}" &&
-      ADMIN_PASSWORD=\$(docker compose exec -T mastodon-backend bin/tootctl accounts create admin --email "\$ADMIN_EMAIL" --confirmed | grep "New password:" | awk '{print \$3}') &&
-      docker compose exec -T mastodon-backend bin/tootctl accounts modify admin --approve &&
+      ADMIN_EMAIL="\${email:-admin@\${domain}}" &&
+      ADMIN_PASSWORD="\${default_pwd:-changeme}" &&
+      docker compose exec -T mastodon-backend bin/tootctl accounts create admin --email "\$ADMIN_EMAIL" --confirmed | grep -v "New password:" &&
+      docker compose exec -T mastodon-backend bin/tootctl accounts modify admin --role Owner --approve &&
+      docker compose exec -T mastodon-backend bin/rails runner "user = User.find_by(email: '\$ADMIN_EMAIL'); user.update(password: '\$ADMIN_PASSWORD', password_confirmation: '\$ADMIN_PASSWORD')" &&
       echo "" &&
       echo "=== Admin User Created! ===" &&
       echo "Email: \$ADMIN_EMAIL" &&
@@ -391,16 +393,15 @@ x-casaos:
         - Admin account creation with username "admin"
         - Environment file configured with your domain
 
-        **After Installation:**
-        The post-install output will show your login credentials:
+        **Default Login Credentials:**
         - Username: admin
-        - Email: (your configured email)
-        - Password: (auto-generated)
+        - Email: admin@$domain
+        - Password: $default_pwd
 
         **Important:**
         1. Access your instance at `https://mastodon-$domain`
-        2. Log in with the provided credentials
-        3. **Change your password immediately** in Settings
+        2. Log in with the credentials above
+        3. **Change your password immediately** in Settings → Account → Change Password
         4. Complete your profile setup
         5. Configure server settings in Admin panel
 
