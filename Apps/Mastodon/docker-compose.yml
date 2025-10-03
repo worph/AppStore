@@ -242,16 +242,17 @@ x-casaos:
         - Environment file configured with your domain
 
         **Default Login Credentials:**
-        - Username: admin
-        - Email: admin@$domain
-        - Password: $default_pwd
+        - Username: `admin`
+        - Email: `$PCS_EMAIL`
+        - Password: `$PCS_DEFAULT_PASSWORD`
 
-        **Important:**
-        1. Access your instance at `https://mastodon-$domain`
-        2. Log in with the credentials above
-        3. **Change your password immediately** in Settings → Account → Change Password
-        4. Complete your profile setup
-        5. Configure server settings in Admin panel
+        **⚠️ IMPORTANT - SECURITY:**
+        1. Access your instance at `https://mastodon-$PCS_DOMAIN`
+        2. Log in with username `admin` and password `$PCS_DEFAULT_PASSWORD`
+        3. **IMMEDIATELY change your password** in Settings → Account → Change Password
+        4. The default password is shared across all apps - you must change it for security!
+        5. Complete your profile setup
+        6. Configure server settings in Admin panel
 
         **Configuration Files:**
         - Environment: `/DATA/AppData/casaos/apps/mastodon/.env`

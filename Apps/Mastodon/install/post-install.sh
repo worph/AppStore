@@ -42,16 +42,21 @@ echo "Migrations complete!"
 
 # Check if admin user exists (idempotent)
 echo "Checking for admin user..."
-ADMIN_EXISTS=$(docker compose exec -T mastodon-backend bin/tootctl accounts list --limit 1 | grep -c "admin" || echo "0")
+# Try to create admin account - if it exists, this will fail gracefully
+ADMIN_OUTPUT=$(docker compose exec -T mastodon-backend bin/tootctl accounts create admin --email $PCS_EMAIL --confirmed 2>&1 || true)
 
-if [ "$ADMIN_EXISTS" -eq "0" ]; then
+if echo "$ADMIN_OUTPUT" | grep -q "New password:"; then
     echo "Creating admin user..."
-    ADMIN_PASSWORD=$(docker compose exec -T mastodon-backend bin/tootctl accounts create admin --email $PCS_EMAIL --confirmed | grep "New password:" | awk '{print $3}')
     docker compose exec -T mastodon-backend bin/tootctl accounts modify admin --approve
+
+    # Set password to PCS_DEFAULT_PASSWORD
+    echo "Setting admin password..."
+    docker compose exec -T mastodon-backend bin/rails runner "u = User.find_by(email: '$PCS_EMAIL'); u.password = '$PCS_DEFAULT_PASSWORD'; u.password_confirmation = '$PCS_DEFAULT_PASSWORD'; u.save!"
+
     echo ""
     echo "=== Admin User Created! ==="
     echo "Email: $PCS_EMAIL"
-    echo "Password: $ADMIN_PASSWORD"
+    echo "Password: $PCS_DEFAULT_PASSWORD"
     echo ""
 else
     echo "Admin user already exists, skipping creation."
