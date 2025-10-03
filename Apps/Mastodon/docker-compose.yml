@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: mastodon_default_password_change_me
       POSTGRES_DB: mastodon_production
     volumes:
-      - /DATA/AppData/mastodon/postgres:/var/lib/postgresql/data
+      - /DATA/AppData/mastodon/postgres/:/var/lib/postgresql/data/
     healthcheck:
       test: ['CMD', 'pg_isready', '-U', 'mastodon']
       interval: 10s
@@ -22,7 +22,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     volumes:
-      - /DATA/AppData/mastodon/redis:/data
+      - /DATA/AppData/mastodon/redis/:/data
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
@@ -81,7 +81,7 @@ services:
       - RAILS_FORCE_SSL=${RAILS_FORCE_SSL}
     command: bash -c 'rm -f /mastodon/tmp/pids/server.pid && bundle exec rails s -p 3000 -b 0.0.0.0'
     volumes:
-      - /DATA/AppData/mastodon/public/system:/mastodon/public/system
+      - /DATA/AppData/mastodon/public/system/:/mastodon/public/system
     healthcheck:
       test: ['CMD-SHELL', 'wget -q --spider --proxy=off localhost:3000/health || exit 1']
       interval: 30s
