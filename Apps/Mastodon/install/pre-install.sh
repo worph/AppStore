@@ -31,8 +31,8 @@ if [ ! -s /DATA/AppData/casaos/apps/mastodon/.env ]; then
   echo "Generating Mastodon configuration..."
 
   # Generate secrets
-  SECRET_KEY_BASE=$(docker run --rm ghcr.io/mastodon/mastodon:v4.4.4 bundle exec rake secret)
-  OTP_SECRET=$(docker run --rm ghcr.io/mastodon/mastodon:v4.4.4 bundle exec rake secret)
+  SECRET_KEY_BASE=$(docker run --rm ghcr.io/mastodon/mastodon:v4.4.4 bin/rails secret)
+  OTP_SECRET=$(docker run --rm ghcr.io/mastodon/mastodon:v4.4.4 bin/rails secret)
   VAPID_OUTPUT=$(docker run --rm ghcr.io/mastodon/mastodon:v4.4.4 bundle exec rake mastodon:webpush:generate_vapid_key)
   VAPID_PRIVATE_KEY=$(echo "$VAPID_OUTPUT" | grep "VAPID_PRIVATE_KEY" | cut -d'=' -f2)
   VAPID_PUBLIC_KEY=$(echo "$VAPID_OUTPUT" | grep "VAPID_PUBLIC_KEY" | cut -d'=' -f2)
