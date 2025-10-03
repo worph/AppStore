@@ -1,14 +1,12 @@
 #!/bin/bash
 set -e
 
+echo "=== Mastodon Post-Install Script ==="
+echo "Running idempotent initialization tasks..."
+
 # Check required PCS environment variables
 if [ -z "$PCS_DOMAIN" ]; then
   echo "Error: PCS_DOMAIN is not set"
-  exit 1
-fi
-
-if [ -z "$PCS_DEFAULT_PASSWORD" ]; then
-  echo "Error: PCS_DEFAULT_PASSWORD is not set"
   exit 1
 fi
 
@@ -17,43 +15,49 @@ if [ -z "$PCS_EMAIL" ]; then
   exit 1
 fi
 
+# Wait for database to be ready
 echo "Waiting for database to be ready..."
-sleep 10
+until docker compose exec -T db pg_isready -U mastodon > /dev/null 2>&1; do
+    echo "Database not ready, waiting..."
+    sleep 2
+done
+echo "Database is ready!"
 
 # Check if database is initialized
-DB_INITIALIZED=$(docker exec mastodon-backend bundle exec rails runner "puts ActiveRecord::Base.connection.table_exists?('users')" 2>/dev/null || echo "false")
+echo "Checking database initialization..."
+DB_INITIALIZED=$(docker compose exec -T db psql -U mastodon -d mastodon_production -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null || echo "0")
 
-if [ "$DB_INITIALIZED" != "true" ]; then
-  echo "Initializing database..."
-  docker exec mastodon-backend bundle exec rails db:migrate
-  docker exec mastodon-backend bundle exec rails db:seed
+if [ "$DB_INITIALIZED" -eq "0" ]; then
+    echo "Database not initialized. Running schema load..."
+    docker compose run --rm mastodon-backend bundle exec rails db:schema:load
+    echo "Database schema loaded!"
+else
+    echo "Database already initialized (found $DB_INITIALIZED tables), skipping schema load."
 fi
 
-# Check if admin user exists
-ADMIN_EXISTS=$(docker exec mastodon-backend bundle exec rails runner "puts User.where(admin: true).exists?" 2>/dev/null || echo "false")
+# Run migrations (idempotent - only runs pending migrations)
+echo "Running database migrations..."
+docker compose run --rm mastodon-backend bundle exec rails db:migrate
+echo "Migrations complete!"
 
-if [ "$ADMIN_EXISTS" != "true" ]; then
-  echo "Creating admin user..."
+# Check if admin user exists (idempotent)
+echo "Checking for admin user..."
+ADMIN_EXISTS=$(docker compose exec -T mastodon-backend bin/tootctl accounts list --limit 1 | grep -c "admin" || echo "0")
 
-  docker exec mastodon-backend bundle exec bin/tootctl accounts create admin \
-    --email "$PCS_EMAIL" \
-    --confirmed \
-    --role Owner || true
-
-  docker exec mastodon-backend bundle exec bin/tootctl accounts modify admin \
-    --email "$PCS_EMAIL" \
-    --confirm || true
-
-  echo ""
-  echo "=== Admin Account Created ==="
-  echo "Email: $PCS_EMAIL"
-  echo "Password: $PCS_DEFAULT_PASSWORD"
-  echo "============================="
+if [ "$ADMIN_EXISTS" -eq "0" ]; then
+    echo "Creating admin user..."
+    ADMIN_PASSWORD=$(docker compose exec -T mastodon-backend bin/tootctl accounts create admin --email $PCS_EMAIL --confirmed | grep "New password:" | awk '{print $3}')
+    docker compose exec -T mastodon-backend bin/tootctl accounts modify admin --approve
+    echo ""
+    echo "=== Admin User Created! ==="
+    echo "Email: $PCS_EMAIL"
+    echo "Password: $ADMIN_PASSWORD"
+    echo ""
 else
-  echo "Admin user already exists, skipping creation."
+    echo "Admin user already exists, skipping creation."
 fi
 
 echo ""
-echo "=== Installation Complete! ==="
-echo "Your Mastodon instance: https://mastodon-${PCS_DOMAIN}"
+echo "=== Post-Install Complete! ==="
+echo "Your Mastodon instance should be accessible at: https://mastodon-${PCS_DOMAIN}"
 echo ""
