@@ -120,7 +120,7 @@ if echo "$ADMIN_OUTPUT" | grep -q "New password:"; then
 
     # Set password to PCS_DEFAULT_PASSWORD
     echo "Setting admin password..."
-    docker compose run --rm mastodon-backend bin/rails runner "u = User.find_by(email: '$PCS_EMAIL'); u.password = '$PCS_DEFAULT_PASSWORD'; u.password_confirmation = '$PCS_DEFAULT_PASSWORD'; u.save!"
+    docker compose run --rm mastodon-backend bin/rails runner "u = User.find_by(email: '$PCS_EMAIL'); u.password = '$PCS_DEFAULT_PASSWORD'; u.password_confirmation = '$PCS_DEFAULT_PASSWORD'; u.save"
 
     echo ""
     echo "=== Admin User Created! ==="
