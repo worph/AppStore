@@ -210,12 +210,13 @@ x-casaos:
 
   # Pre-install command generates all required secrets and stores persistent config
   pre-install-cmd: |
+    mkdir -p /DATA/AppData/casaos/apps/mastodon/ /DATA/AppData/mastodon/ &&
     touch /DATA/AppData/casaos/apps/mastodon/.env &&
-    chown $PUID:$PGID /DATA/AppData/casaos/apps/mastodon/.env &&
-    wget -O /tmp/mastodon-pre-install.sh https://raw.githubusercontent.com/Worph/AppStore/main/Apps/Mastodon/install/pre-install.sh &&
-    chmod +x /tmp/mastodon-pre-install.sh &&
-    bash /tmp/mastodon-pre-install.sh &&
-    rm /tmp/mastodon-pre-install.sh &&
+    chown -R $PUID:$PGID /DATA/AppData/casaos/apps/mastodon/ &&
+    chown -R $PUID:$PGID /DATA/AppData/mastodon/ &&
+    wget -O /DATA/AppData/mastodon/mastodon-pre-install.sh https://raw.githubusercontent.com/Worph/AppStore/main/Apps/Mastodon/install/pre-install.sh &&
+    chmod +x /DATA/AppData/mastodon/mastodon-pre-install.sh &&
+    bash /DATA/AppData/mastodon/mastodon-pre-install.sh &&
     wget -O /DATA/AppData/mastodon/nginx.conf https://raw.githubusercontent.com/Worph/AppStore/main/Apps/Mastodon/install/nginx.conf &&
     chown $PUID:$PGID /DATA/AppData/mastodon/nginx.conf
 
