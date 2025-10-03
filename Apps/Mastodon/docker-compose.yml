@@ -210,14 +210,14 @@ x-casaos:
 
   # Pre-install command generates all required secrets and stores persistent config
   pre-install-cmd: |
-    wget -O /tmp/mastodon-pre-install.sh https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Mastodon/install/pre-install.sh &&
+    wget -O /tmp/mastodon-pre-install.sh https://raw.githubusercontent.com/Worph/AppStore/main/Apps/Mastodon/install/pre-install.sh &&
     chmod +x /tmp/mastodon-pre-install.sh &&
     bash /tmp/mastodon-pre-install.sh &&
     rm /tmp/mastodon-pre-install.sh
 
   # Post-install script sets up database and creates admin account (idempotent)
   post-install-cmd: |
-    wget -O /tmp/mastodon-post-install.sh https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Mastodon/install/post-install.sh &&
+    wget -O /tmp/mastodon-post-install.sh https://raw.githubusercontent.com/Worph/AppStore/main/Apps/Mastodon/install/post-install.sh &&
     chmod +x /tmp/mastodon-post-install.sh &&
     bash /tmp/mastodon-post-install.sh &&
     rm /tmp/mastodon-post-install.sh
