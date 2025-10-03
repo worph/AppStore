@@ -210,10 +210,12 @@ x-casaos:
 
   # Pre-install command generates all required secrets and stores persistent config
   pre-install-cmd: |
+    mkdir -p /DATA/AppData/casaos/apps/mastodon &&
     mkdir -p /DATA/AppData/mastodon/postgres /DATA/AppData/mastodon/redis /DATA/AppData/mastodon/public/system &&
+    touch /DATA/AppData/casaos/apps/mastodon/.env &&
+    chown -R 1000:1000 /DATA/AppData/casaos/apps/mastodon &&
     chown -R 1000:1000 /DATA/AppData/mastodon &&
-    cd /DATA/AppData/casaos/apps/mastodon &&
-    if [ ! -f .env ]; then
+    if [ ! -f /DATA/AppData/casaos/apps/mastodon/.env ]; then
       echo "Generating Mastodon configuration..." &&
       SECRET_KEY_BASE=$(docker run --rm ghcr.io/mastodon/mastodon:v4.4.4 bundle exec rake secret) &&
       OTP_SECRET=$(docker run --rm ghcr.io/mastodon/mastodon:v4.4.4 bundle exec rake secret) &&
@@ -224,7 +226,7 @@ x-casaos:
       ENCRYPTION_DETERMINISTIC=$(echo "$ENCRYPTION_OUTPUT" | grep "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY" | cut -d'=' -f2) &&
       ENCRYPTION_SALT=$(echo "$ENCRYPTION_OUTPUT" | grep "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT" | cut -d'=' -f2) &&
       ENCRYPTION_PRIMARY=$(echo "$ENCRYPTION_OUTPUT" | grep "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY" | cut -d'=' -f2) &&
-      cat > .env << ENVEOF
+      cat > /DATA/AppData/casaos/apps/mastodon/.env << ENVEOF
       LOCAL_DOMAIN=mastodon-\${domain:-localhost}
       WEB_DOMAIN=mastodon-\${domain:-localhost}
       SINGLE_USER_MODE=true
@@ -252,7 +254,7 @@ x-casaos:
       TRUSTED_PROXY_IP=172.16.0.0/12
       RAILS_FORCE_SSL=false
       ENVEOF
-      chmod 600 .env &&
+      chmod 600 /DATA/AppData/casaos/apps/mastodon/.env &&
       cat > /DATA/AppData/mastodon/nginx.conf << 'NGINXEOF'
       map \$http_upgrade \$connection_upgrade {
           default upgrade;
