@@ -1,10 +1,21 @@
 #!/bin/bash
 set -e
 
-# Use PCS environment variables with fallbacks
-PCS_DOMAIN="${PCS_DOMAIN:-localhost}"
-PCS_DEFAULT_PASSWORD="${PCS_DEFAULT_PASSWORD:-changeme}"
-PCS_EMAIL="${PCS_EMAIL:-admin@${PCS_DOMAIN}}"
+# Check required PCS environment variables
+if [ -z "$PCS_DOMAIN" ]; then
+  echo "Error: PCS_DOMAIN is not set"
+  exit 1
+fi
+
+if [ -z "$PCS_DEFAULT_PASSWORD" ]; then
+  echo "Error: PCS_DEFAULT_PASSWORD is not set"
+  exit 1
+fi
+
+if [ -z "$PCS_EMAIL" ]; then
+  echo "Error: PCS_EMAIL is not set"
+  exit 1
+fi
 
 echo "Waiting for database to be ready..."
 sleep 10

@@ -1,23 +1,33 @@
 #!/bin/bash
 set -e
 
-# Use PCS environment variables with fallbacks
-PCS_DATA_ROOT="${PCS_DATA_ROOT:-/DATA}"
-PCS_DOMAIN="${PCS_DOMAIN:-localhost}"
-PCS_DEFAULT_PASSWORD="${PCS_DEFAULT_PASSWORD:-changeme}"
-PCS_EMAIL="${PCS_EMAIL:-admin@${PCS_DOMAIN}}"
+# Check required PCS environment variables
+if [ -z "$PCS_DOMAIN" ]; then
+  echo "Error: PCS_DOMAIN is not set"
+  exit 1
+fi
+
+if [ -z "$PCS_DEFAULT_PASSWORD" ]; then
+  echo "Error: PCS_DEFAULT_PASSWORD is not set"
+  exit 1
+fi
+
+if [ -z "$PCS_EMAIL" ]; then
+  echo "Error: PCS_EMAIL is not set"
+  exit 1
+fi
+
+PUID="${PUID:-1000}"
+PGID="${PGID:-1000}"
 
 # Create directories
-mkdir -p ${PCS_DATA_ROOT}/AppData/casaos/apps/mastodon
-mkdir -p ${PCS_DATA_ROOT}/AppData/mastodon/postgres ${PCS_DATA_ROOT}/AppData/mastodon/redis ${PCS_DATA_ROOT}/AppData/mastodon/public/system
-chown -R 1000:1000 ${PCS_DATA_ROOT}/AppData/casaos/apps/mastodon
-chown -R 1000:1000 ${PCS_DATA_ROOT}/AppData/mastodon
+mkdir -p /DATA/AppData/casaos/apps/mastodon
+mkdir -p /DATA/AppData/mastodon/postgres /DATA/AppData/mastodon/redis /DATA/AppData/mastodon/public/system
+chown -R ${PUID}:${PGID} /DATA/AppData/casaos/apps/mastodon
+chown -R ${PUID}:${PGID} /DATA/AppData/mastodon
 
 # Generate .env if it doesn't exist or is empty
-if [ ! -s ${PCS_DATA_ROOT}/AppData/casaos/apps/mastodon/.env ]; then
-  touch ${PCS_DATA_ROOT}/AppData/casaos/apps/mastodon/.env
-  chown 1000:1000 ${PCS_DATA_ROOT}/AppData/casaos/apps/mastodon/.env
-
+if [ ! -s /DATA/AppData/casaos/apps/mastodon/.env ]; then
   echo "Generating Mastodon configuration..."
 
   # Generate secrets
@@ -32,7 +42,7 @@ if [ ! -s ${PCS_DATA_ROOT}/AppData/casaos/apps/mastodon/.env ]; then
   ENCRYPTION_PRIMARY=$(echo "$ENCRYPTION_OUTPUT" | grep "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY" | cut -d'=' -f2)
 
   # Write .env file
-  cat > ${PCS_DATA_ROOT}/AppData/casaos/apps/mastodon/.env << EOF
+  cat > /DATA/AppData/casaos/apps/mastodon/.env << EOF
 LOCAL_DOMAIN=mastodon-${PCS_DOMAIN}
 WEB_DOMAIN=mastodon-${PCS_DOMAIN}
 SINGLE_USER_MODE=true
@@ -61,90 +71,7 @@ TRUSTED_PROXY_IP=172.16.0.0/12
 RAILS_FORCE_SSL=false
 EOF
 
-  chmod 600 ${PCS_DATA_ROOT}/AppData/casaos/apps/mastodon/.env
-
-  # Write nginx.conf
-  cat > ${PCS_DATA_ROOT}/AppData/mastodon/nginx.conf << 'NGINXEOF'
-map $http_upgrade $connection_upgrade {
-    default upgrade;
-    '' close;
-}
-
-upstream backend {
-    server mastodon-backend:3000 fail_timeout=0;
-}
-
-upstream streaming {
-    server streaming:4000 fail_timeout=0;
-}
-
-server {
-    listen 80;
-    server_name _;
-
-    keepalive_timeout 70;
-    client_max_body_size 80M;
-
-    root /dev/null;
-
-    gzip on;
-    gzip_disable "msie6";
-    gzip_vary on;
-    gzip_proxied any;
-    gzip_comp_level 6;
-    gzip_buffers 16 8k;
-    gzip_http_version 1.1;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml image/x-icon;
-
-    location / {
-        try_files $uri @proxy;
-    }
-
-    location ~ ^/(system|packs) {
-        add_header Cache-Control "public, max-age=2419200, immutable";
-        add_header Strict-Transport-Security "max-age=63072000; includeSubDomains";
-        try_files $uri @proxy;
-    }
-
-    location ^~ /api/v1/streaming {
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-        proxy_set_header Proxy "";
-
-        proxy_pass http://streaming;
-        proxy_buffering off;
-        proxy_redirect off;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-
-        tcp_nodelay on;
-    }
-
-    location @proxy {
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-        proxy_set_header Proxy "";
-
-        proxy_pass http://backend;
-        proxy_buffering on;
-        proxy_redirect off;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-
-        proxy_cache_bypass $http_upgrade;
-
-        tcp_nodelay on;
-    }
-
-    error_page 500 501 502 503 504 /500.html;
-}
-NGINXEOF
+  chown ${PUID}:${PGID} /DATA/AppData/casaos/apps/mastodon/.env
 
   echo "Configuration generated successfully!"
 else
