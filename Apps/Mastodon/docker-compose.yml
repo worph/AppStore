@@ -332,36 +332,49 @@ x-casaos:
       echo "Configuration already exists, skipping generation.";
     fi
 
-  # Post-install script sets up database and creates admin account
+  # Post-install script sets up database and creates admin account (idempotent)
   post-install-cmd: |
-    echo "Waiting for Mastodon services to be ready..." &&
-    sleep 30 &&
+    set -e &&
+    echo "=== Mastodon Post-Install ===" &&
+    echo "Running idempotent initialization tasks..." &&
+    cd /DATA/AppData/casaos/apps/mastodon &&
+    echo "Waiting for database to be ready..." &&
+    until docker compose exec -T db pg_isready -U mastodon > /dev/null 2>&1; do
+      echo "Database not ready, waiting..." &&
+      sleep 2;
+    done &&
+    echo "Database is ready!" &&
+    echo "Checking database initialization..." &&
+    DB_INITIALIZED=\$(docker compose exec -T db psql -U mastodon -d mastodon_production -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null || echo "0") &&
+    if [ "\$DB_INITIALIZED" -eq "0" ]; then
+      echo "Database not initialized. Running schema load..." &&
+      docker compose run --rm mastodon-backend bundle exec rails db:schema:load &&
+      echo "Database schema loaded!";
+    else
+      echo "Database already initialized (found \$DB_INITIALIZED tables), skipping schema load.";
+    fi &&
     echo "Running database migrations..." &&
-    docker exec mastodon-backend bundle exec rails db:migrate &&
-    docker exec mastodon-backend bundle exec rails db:seed &&
-    echo "Database setup complete!" &&
+    docker compose run --rm mastodon-backend bundle exec rails db:migrate &&
+    echo "Migrations complete!" &&
+    echo "Checking for admin user..." &&
+    ADMIN_EXISTS=\$(docker compose exec -T mastodon-backend bin/tootctl accounts list --limit 1 | grep -c "admin" || echo "0") &&
+    if [ "\$ADMIN_EXISTS" -eq "0" ]; then
+      echo "Creating admin user..." &&
+      ADMIN_EMAIL="\${email:-admin@mastodon-\${domain}}" &&
+      ADMIN_PASSWORD=\$(docker compose exec -T mastodon-backend bin/tootctl accounts create admin --email "\$ADMIN_EMAIL" --confirmed | grep "New password:" | awk '{print \$3}') &&
+      docker compose exec -T mastodon-backend bin/tootctl accounts modify admin --approve &&
+      echo "" &&
+      echo "=== Admin User Created! ===" &&
+      echo "Email: \$ADMIN_EMAIL" &&
+      echo "Password: \$ADMIN_PASSWORD" &&
+      echo "";
+    else
+      echo "Admin user already exists, skipping creation.";
+    fi &&
     echo "" &&
-    echo "Creating admin account..." &&
-    ADMIN_EMAIL="${email:-admin@mastodon-${domain}}" &&
-    ADMIN_USERNAME="admin" &&
-    ADMIN_OUTPUT=$(docker exec mastodon-backend tootctl accounts create $ADMIN_USERNAME --email "$ADMIN_EMAIL" --confirmed --role Owner 2>&1) &&
-    ADMIN_PASSWORD=$(echo "$ADMIN_OUTPUT" | grep -oP 'New password: \K.*' || echo "$ADMIN_OUTPUT") &&
-    echo "" &&
-    echo "==================================================" &&
-    echo "  MASTODON INSTALLATION COMPLETE!" &&
-    echo "==================================================" &&
-    echo "" &&
-    echo "Access: https://mastodon-${domain}" &&
-    echo "" &&
-    echo "Login Credentials:" &&
-    echo "  Username: $ADMIN_USERNAME" &&
-    echo "  Email: $ADMIN_EMAIL" &&
-    echo "  Password: $ADMIN_PASSWORD" &&
-    echo "" &&
-    echo "IMPORTANT: Change your password immediately after logging in!" &&
-    echo "" &&
-    echo "Configuration file: /DATA/AppData/casaos/apps/mastodon/.env" &&
-    echo "=================================================="
+    echo "=== Installation Complete! ===" &&
+    echo "Your Mastodon instance: https://mastodon-\${domain}" &&
+    echo ""
 
   tips:
     before_install:
