@@ -210,6 +210,8 @@ x-casaos:
 
   # Pre-install command generates all required secrets and stores persistent config
   pre-install-cmd: |
+    touch /DATA/AppData/casaos/apps/mastodon/.env &&
+    chown $PUID:$PGID /DATA/AppData/casaos/apps/mastodon/.env &&
     wget -O /tmp/mastodon-pre-install.sh https://raw.githubusercontent.com/Worph/AppStore/main/Apps/Mastodon/install/pre-install.sh &&
     chmod +x /tmp/mastodon-pre-install.sh &&
     bash /tmp/mastodon-pre-install.sh &&
