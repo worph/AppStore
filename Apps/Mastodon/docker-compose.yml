@@ -4,6 +4,7 @@ services:
   db:
     image: postgres:14-alpine
     restart: unless-stopped
+    user: "1000:1000"
     environment:
       POSTGRES_USER: mastodon
       POSTGRES_PASSWORD: mastodon_default_password_change_me
@@ -21,6 +22,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    user: "1000:1000"
     volumes:
       - /DATA/AppData/mastodon/redis/:/data
     healthcheck:
@@ -34,6 +36,7 @@ services:
   mastodon:
     image: nginx:alpine
     restart: unless-stopped
+    user: "1000:1000"
     cpu_shares: 10
     volumes:
       - /DATA/AppData/mastodon/nginx.conf:/etc/nginx/conf.d/default.conf:ro
@@ -50,6 +53,7 @@ services:
   mastodon-backend:
     image: ghcr.io/mastodon/mastodon:v4.4.4
     restart: unless-stopped
+    user: "1000:1000"
     cpu_shares: 70
     container_name: mastodon-backend
     environment:
@@ -98,6 +102,7 @@ services:
   streaming:
     image: ghcr.io/mastodon/mastodon-streaming:v4.4.4
     restart: unless-stopped
+    user: "1000:1000"
     cpu_shares: 30
     environment:
       - LOCAL_DOMAIN=${LOCAL_DOMAIN}
@@ -128,6 +133,7 @@ services:
   sidekiq:
     image: ghcr.io/mastodon/mastodon:v4.4.4
     restart: unless-stopped
+    user: "1000:1000"
     cpu_shares: 50
     environment:
       - LOCAL_DOMAIN=${LOCAL_DOMAIN}
@@ -204,7 +210,8 @@ x-casaos:
 
   # Pre-install command generates all required secrets and stores persistent config
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/mastodon &&
+    mkdir -p /DATA/AppData/mastodon/postgres /DATA/AppData/mastodon/redis /DATA/AppData/mastodon/public/system &&
+    chown -R 1000:1000 /DATA/AppData/mastodon &&
     cd /DATA/AppData/casaos/apps/mastodon &&
     if [ ! -f .env ]; then
       echo "Generating Mastodon configuration..." &&
