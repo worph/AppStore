@@ -23,8 +23,8 @@ PGID="${PGID:-1000}"
 # Create directories
 mkdir -p /DATA/AppData/casaos/apps/mastodon
 mkdir -p /DATA/AppData/mastodon/postgres /DATA/AppData/mastodon/redis /DATA/AppData/mastodon/public/system
-chown -R ${PUID}:${PGID} /DATA/AppData/casaos/apps/mastodon
-chown -R ${PUID}:${PGID} /DATA/AppData/mastodon
+chown -R ${PUID}:${PGID} /DATA/AppData/casaos/apps/mastodon || true
+chown -R ${PUID}:${PGID} /DATA/AppData/mastodon || true
 
 # Generate .env if it doesn't exist or is empty
 if [ ! -s /DATA/AppData/casaos/apps/mastodon/.env ]; then
@@ -71,7 +71,7 @@ TRUSTED_PROXY_IP=172.16.0.0/12
 RAILS_FORCE_SSL=false
 EOF
 
-  chown ${PUID}:${PGID} /DATA/AppData/casaos/apps/mastodon/.env
+  chown ${PUID}:${PGID} /DATA/AppData/casaos/apps/mastodon/.env || true
 
   echo "Configuration generated successfully!"
 else

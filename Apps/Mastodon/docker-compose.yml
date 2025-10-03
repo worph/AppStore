@@ -212,13 +212,13 @@ x-casaos:
   pre-install-cmd: |
     mkdir -p /DATA/AppData/casaos/apps/mastodon/ /DATA/AppData/mastodon/ &&
     touch /DATA/AppData/casaos/apps/mastodon/.env &&
-    chown -R $PUID:$PGID /DATA/AppData/casaos/apps/mastodon/ &&
-    chown -R $PUID:$PGID /DATA/AppData/mastodon/ &&
+    chown -R $PUID:$PGID /DATA/AppData/casaos/apps/mastodon/ || true &&
+    chown -R $PUID:$PGID /DATA/AppData/mastodon/ || true &&
     wget -O /DATA/AppData/mastodon/mastodon-pre-install.sh https://raw.githubusercontent.com/Worph/AppStore/main/Apps/Mastodon/install/pre-install.sh &&
     chmod +x /DATA/AppData/mastodon/mastodon-pre-install.sh &&
     bash /DATA/AppData/mastodon/mastodon-pre-install.sh &&
     wget -O /DATA/AppData/mastodon/nginx.conf https://raw.githubusercontent.com/Worph/AppStore/main/Apps/Mastodon/install/nginx.conf &&
-    chown $PUID:$PGID /DATA/AppData/mastodon/nginx.conf
+    chown $PUID:$PGID /DATA/AppData/mastodon/nginx.conf || true
 
   # Post-install script sets up database and creates admin account (idempotent)
   post-install-cmd: |
