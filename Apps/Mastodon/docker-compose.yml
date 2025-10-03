@@ -178,6 +178,18 @@ x-casaos:
   webui_port: 80
   main: mastodon
 
+  # Pre-install command generates all required secrets and stores persistent config - Keep it idempotent!
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/casaos/apps/mastodon/ /DATA/AppData/mastodon/ &&
+    touch /DATA/AppData/casaos/apps/mastodon/.env &&
+    chown -R $PUID:$PGID /DATA/AppData/casaos/apps/mastodon/ || true &&
+    chown -R $PUID:$PGID /DATA/AppData/mastodon/ || true &&
+    wget -O /DATA/AppData/mastodon/mastodon-pre-install.sh https://raw.githubusercontent.com/Worph/AppStore/main/Apps/Mastodon/install/pre-install.sh &&
+    chmod +x /DATA/AppData/mastodon/mastodon-pre-install.sh &&
+    bash /DATA/AppData/mastodon/mastodon-pre-install.sh &&
+    wget -O /DATA/AppData/mastodon/nginx.conf https://raw.githubusercontent.com/Worph/AppStore/main/Apps/Mastodon/install/nginx.conf &&
+    chown $PUID:$PGID /DATA/AppData/mastodon/nginx.conf || true
+
   icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Mastodon/icon.png
   screenshot_link:
     - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Mastodon/screenshot-1.png
@@ -207,24 +219,6 @@ x-casaos:
     de_de: Dezentrales soziales Netzwerk - treten Sie dem Fediverse bei
   title:
     en_us: Mastodon
-
-  # Pre-install command generates all required secrets and stores persistent config
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/casaos/apps/mastodon/ /DATA/AppData/mastodon/ &&
-    touch /DATA/AppData/casaos/apps/mastodon/.env &&
-    chown -R $PUID:$PGID /DATA/AppData/casaos/apps/mastodon/ || true &&
-    chown -R $PUID:$PGID /DATA/AppData/mastodon/ || true &&
-    wget -O /DATA/AppData/mastodon/mastodon-pre-install.sh https://raw.githubusercontent.com/Worph/AppStore/main/Apps/Mastodon/install/pre-install.sh &&
-    chmod +x /DATA/AppData/mastodon/mastodon-pre-install.sh &&
-    bash /DATA/AppData/mastodon/mastodon-pre-install.sh &&
-    wget -O /DATA/AppData/mastodon/nginx.conf https://raw.githubusercontent.com/Worph/AppStore/main/Apps/Mastodon/install/nginx.conf &&
-    chown $PUID:$PGID /DATA/AppData/mastodon/nginx.conf || true
-
-  # Post-install script sets up database and creates admin account (idempotent)
-  post-install-cmd: |
-    wget -O /DATA/AppData/mastodon/mastodon-post-install.sh https://raw.githubusercontent.com/Worph/AppStore/main/Apps/Mastodon/install/post-install.sh &&
-    chmod +x /DATA/AppData/mastodon/mastodon-post-install.sh &&
-    bash /DATA/AppData/mastodon/mastodon-post-install.sh
 
   tips:
     before_install:

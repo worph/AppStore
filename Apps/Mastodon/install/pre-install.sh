@@ -77,3 +77,64 @@ EOF
 else
   echo "Configuration already exists, skipping generation."
 fi
+
+echo ""
+echo "=== Initializing Database ==="
+
+# Start database and redis containers only
+cd /DATA/AppData/casaos/apps/mastodon
+docker compose up -d db redis
+
+# Wait for database to be ready
+echo "Waiting for database to be ready..."
+until docker compose exec -T db pg_isready -U mastodon > /dev/null 2>&1; do
+    echo "Database not ready, waiting..."
+    sleep 2
+done
+echo "Database is ready!"
+
+# Check if database is initialized
+echo "Checking database initialization..."
+DB_INITIALIZED=$(docker compose exec -T db psql -U mastodon -d mastodon_production -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null || echo "0")
+
+if [ "$DB_INITIALIZED" -eq "0" ]; then
+    echo "Database not initialized. Running schema load..."
+    docker compose run --rm mastodon-backend bundle exec rails db:schema:load
+    echo "Database schema loaded!"
+else
+    echo "Database already initialized (found $DB_INITIALIZED tables), skipping schema load."
+fi
+
+# Run migrations (idempotent - only runs pending migrations)
+echo "Running database migrations..."
+docker compose run --rm mastodon-backend bundle exec rails db:migrate
+echo "Migrations complete!"
+
+# Check if admin user exists and create if needed
+echo "Checking for admin user..."
+ADMIN_OUTPUT=$(docker compose run --rm mastodon-backend bin/tootctl accounts create admin --email $PCS_EMAIL --confirmed 2>&1 || true)
+
+if echo "$ADMIN_OUTPUT" | grep -q "New password:"; then
+    echo "Creating admin user..."
+    docker compose run --rm mastodon-backend bin/tootctl accounts modify admin --approve
+
+    # Set password to PCS_DEFAULT_PASSWORD
+    echo "Setting admin password..."
+    docker compose run --rm mastodon-backend bin/rails runner "u = User.find_by(email: '$PCS_EMAIL'); u.password = '$PCS_DEFAULT_PASSWORD'; u.password_confirmation = '$PCS_DEFAULT_PASSWORD'; u.save!"
+
+    echo ""
+    echo "=== Admin User Created! ==="
+    echo "Email: $PCS_EMAIL"
+    echo "Password: $PCS_DEFAULT_PASSWORD"
+    echo ""
+else
+    echo "Admin user already exists, skipping creation."
+fi
+
+# Stop temporary containers
+docker compose down
+
+echo ""
+echo "=== Pre-Install Complete! ==="
+echo "Database initialized and ready for application startup"
+echo ""
