@@ -1,16 +1,22 @@
 #!/bin/bash
 set -e
 
+# Use PCS environment variables with fallbacks
+PCS_DATA_ROOT="${PCS_DATA_ROOT:-/DATA}"
+PCS_DOMAIN="${PCS_DOMAIN:-localhost}"
+PCS_DEFAULT_PASSWORD="${PCS_DEFAULT_PASSWORD:-changeme}"
+PCS_EMAIL="${PCS_EMAIL:-admin@${PCS_DOMAIN}}"
+
 # Create directories
-mkdir -p /DATA/AppData/casaos/apps/mastodon
-mkdir -p /DATA/AppData/mastodon/postgres /DATA/AppData/mastodon/redis /DATA/AppData/mastodon/public/system
-chown -R 1000:1000 /DATA/AppData/casaos/apps/mastodon
-chown -R 1000:1000 /DATA/AppData/mastodon
+mkdir -p ${PCS_DATA_ROOT}/AppData/casaos/apps/mastodon
+mkdir -p ${PCS_DATA_ROOT}/AppData/mastodon/postgres ${PCS_DATA_ROOT}/AppData/mastodon/redis ${PCS_DATA_ROOT}/AppData/mastodon/public/system
+chown -R 1000:1000 ${PCS_DATA_ROOT}/AppData/casaos/apps/mastodon
+chown -R 1000:1000 ${PCS_DATA_ROOT}/AppData/mastodon
 
 # Generate .env if it doesn't exist or is empty
-if [ ! -s /DATA/AppData/casaos/apps/mastodon/.env ]; then
-  touch /DATA/AppData/casaos/apps/mastodon/.env
-  chown 1000:1000 /DATA/AppData/casaos/apps/mastodon/.env
+if [ ! -s ${PCS_DATA_ROOT}/AppData/casaos/apps/mastodon/.env ]; then
+  touch ${PCS_DATA_ROOT}/AppData/casaos/apps/mastodon/.env
+  chown 1000:1000 ${PCS_DATA_ROOT}/AppData/casaos/apps/mastodon/.env
 
   echo "Generating Mastodon configuration..."
 
@@ -26,11 +32,11 @@ if [ ! -s /DATA/AppData/casaos/apps/mastodon/.env ]; then
   ENCRYPTION_PRIMARY=$(echo "$ENCRYPTION_OUTPUT" | grep "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY" | cut -d'=' -f2)
 
   # Write .env file
-  cat > /DATA/AppData/casaos/apps/mastodon/.env << 'EOF'
-LOCAL_DOMAIN=mastodon-${domain:-localhost}
-WEB_DOMAIN=mastodon-${domain:-localhost}
+  cat > ${PCS_DATA_ROOT}/AppData/casaos/apps/mastodon/.env << EOF
+LOCAL_DOMAIN=mastodon-${PCS_DOMAIN}
+WEB_DOMAIN=mastodon-${PCS_DOMAIN}
 SINGLE_USER_MODE=true
-STREAMING_API_BASE_URL=https://mastodon-${domain:-localhost}
+STREAMING_API_BASE_URL=https://mastodon-${PCS_DOMAIN}
 REDIS_HOST=redis
 REDIS_PORT=6379
 DB_HOST=db
@@ -55,10 +61,10 @@ TRUSTED_PROXY_IP=172.16.0.0/12
 RAILS_FORCE_SSL=false
 EOF
 
-  chmod 600 /DATA/AppData/casaos/apps/mastodon/.env
+  chmod 600 ${PCS_DATA_ROOT}/AppData/casaos/apps/mastodon/.env
 
   # Write nginx.conf
-  cat > /DATA/AppData/mastodon/nginx.conf << 'NGINXEOF'
+  cat > ${PCS_DATA_ROOT}/AppData/mastodon/nginx.conf << 'NGINXEOF'
 map $http_upgrade $connection_upgrade {
     default upgrade;
     '' close;
