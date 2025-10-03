@@ -212,10 +212,11 @@ x-casaos:
   pre-install-cmd: |
     mkdir -p /DATA/AppData/casaos/apps/mastodon &&
     mkdir -p /DATA/AppData/mastodon/postgres /DATA/AppData/mastodon/redis /DATA/AppData/mastodon/public/system &&
-    touch /DATA/AppData/casaos/apps/mastodon/.env &&
     chown -R 1000:1000 /DATA/AppData/casaos/apps/mastodon &&
     chown -R 1000:1000 /DATA/AppData/mastodon &&
-    if [ ! -f /DATA/AppData/casaos/apps/mastodon/.env ]; then
+    if [ ! -s /DATA/AppData/casaos/apps/mastodon/.env ]; then
+      touch /DATA/AppData/casaos/apps/mastodon/.env &&
+      chown 1000:1000 /DATA/AppData/casaos/apps/mastodon/.env &&
       echo "Generating Mastodon configuration..." &&
       SECRET_KEY_BASE=$(docker run --rm ghcr.io/mastodon/mastodon:v4.4.4 bundle exec rake secret) &&
       OTP_SECRET=$(docker run --rm ghcr.io/mastodon/mastodon:v4.4.4 bundle exec rake secret) &&
