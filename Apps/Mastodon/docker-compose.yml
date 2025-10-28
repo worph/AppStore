@@ -223,42 +223,127 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        **Fully Automated Installation**
-
-        Everything is automated - just click install!
-
-        **What happens automatically:**
-        - Configuration directory creation
-        - Secret keys generation (SECRET_KEY_BASE, OTP_SECRET)
-        - VAPID keys generation for web push notifications
-        - Database setup and migrations
-        - Admin account creation with username "admin"
-        - Environment file configured with your domain
-
+        
         **Default Login Credentials:**
         - Username: `admin`
         - Email: `$PCS_EMAIL`
         - Password: `$PCS_DEFAULT_PASSWORD`
 
-        **⚠️ IMPORTANT - SECURITY:**
+        **⚠️ SECURITY:**
         1. Access your instance at `https://mastodon-$PCS_DOMAIN`
         2. Log in with username `admin` and password `$PCS_DEFAULT_PASSWORD`
-        3. **IMMEDIATELY change your password** in Settings → Account → Change Password
-        4. The default password is shared across all apps - you must change it for security!
-        5. Complete your profile setup
-        6. Configure server settings in Admin panel
+        3. **change your password** in Settings → Account → Change Password
+        4. The default password is shared across all apps - change it for security!
+        5. Consider disabling single-user mode if you want multiple users
+        6. Configure server settings in the Admin panel
 
+        **Single-User Mode:**
+        The instance starts in single-user mode. To allow registrations:
+        1. Edit `/DATA/AppData/casaos/apps/mastodon/.env`
+        2. Change `SINGLE_USER_MODE=true` to `SINGLE_USER_MODE=false`
+        3. Restart the containers: `docker compose restart`
+        
         **Configuration Files:**
-        - Environment: `/DATA/AppData/casaos/apps/mastodon/.env`
-        - Nginx config: `/DATA/AppData/mastodon/nginx.conf`
+        - Main environment: `/DATA/AppData/casaos/apps/mastodon/.env`
+        - Nginx proxy config: `/DATA/AppData/mastodon/nginx.conf`
+        - Media uploads: `/DATA/AppData/mastodon/public/system/`
+      fr_fr: |
+        
+        **Identifiants de connexion par défaut :**
+        - Nom d'utilisateur : `admin`
+        - Email : `$PCS_EMAIL`
+        - Mot de passe : `$PCS_DEFAULT_PASSWORD`
 
-        **Optional: Email Notifications**
-        To enable email notifications, edit `/DATA/AppData/casaos/apps/mastodon/.env`:
-        ```
-        SMTP_SERVER=smtp.your-provider.com
-        SMTP_PORT=587
-        SMTP_LOGIN=your@email.com
-        SMTP_PASSWORD=your_smtp_password
-        SMTP_FROM_ADDRESS=notifications@mastodon-$domain
-        ```
-        Then restart: `docker restart mastodon-backend mastodon-mastodon-streaming-1 mastodon-sidekiq-1`
+        **⚠️ SÉCURITÉ :**
+        1. Accédez à votre instance sur `https://mastodon-$PCS_DOMAIN`
+        2. Connectez-vous avec le nom d'utilisateur `admin` et le mot de passe `$PCS_DEFAULT_PASSWORD`
+        3. **Changez votre mot de passe** dans Paramètres → Compte → Changer le mot de passe
+        4. Le mot de passe par défaut est partagé entre toutes les applications - changez-le pour la sécurité !
+        5. Envisagez de désactiver le mode utilisateur unique si vous voulez plusieurs utilisateurs
+        6. Configurez les paramètres du serveur dans le panneau d'administration
+
+        **Mode utilisateur unique :**
+        L'instance démarre en mode utilisateur unique. Pour permettre les inscriptions :
+        1. Éditez `/DATA/AppData/casaos/apps/mastodon/.env`
+        2. Changez `SINGLE_USER_MODE=true` en `SINGLE_USER_MODE=false`
+        3. Redémarrez les conteneurs : `docker compose restart`
+        
+        **Fichiers de configuration :**
+        - Environnement principal : `/DATA/AppData/casaos/apps/mastodon/.env`
+        - Configuration proxy Nginx : `/DATA/AppData/mastodon/nginx.conf`
+        - Téléchargements média : `/DATA/AppData/mastodon/public/system/`
+      ko_kr: |
+        
+        **기본 로그인 자격 증명:**
+        - 사용자명: `admin`
+        - 이메일: `$PCS_EMAIL`
+        - 비밀번호: `$PCS_DEFAULT_PASSWORD`
+
+        **⚠️ 보안:**
+        1. `https://mastodon-$PCS_DOMAIN`에서 인스턴스에 액세스
+        2. 사용자명 `admin`과 비밀번호 `$PCS_DEFAULT_PASSWORD`로 로그인
+        3. 설정 → 계정 → 비밀번호 변경에서 **비밀번호를 변경**하세요
+        4. 기본 비밀번호는 모든 앱에서 공유됩니다 - 보안을 위해 변경하세요!
+        5. 여러 사용자를 원한다면 단일 사용자 모드 비활성화를 고려하세요
+        6. 관리자 패널에서 서버 설정을 구성하세요
+
+        **단일 사용자 모드:**
+        인스턴스는 단일 사용자 모드로 시작됩니다. 등록을 허용하려면:
+        1. `/DATA/AppData/casaos/apps/mastodon/.env` 편집
+        2. `SINGLE_USER_MODE=true`를 `SINGLE_USER_MODE=false`로 변경
+        3. 컨테이너 재시작: `docker compose restart`
+        
+        **구성 파일:**
+        - 메인 환경: `/DATA/AppData/casaos/apps/mastodon/.env`
+        - Nginx 프록시 구성: `/DATA/AppData/mastodon/nginx.conf`
+        - 미디어 업로드: `/DATA/AppData/mastodon/public/system/`
+      zh_cn: |
+        
+        **默认登录凭据:**
+        - 用户名: `admin`
+        - 邮箱: `$PCS_EMAIL`
+        - 密码: `$PCS_DEFAULT_PASSWORD`
+
+        **⚠️ 安全:**
+        1. 在 `https://mastodon-$PCS_DOMAIN` 访问您的实例
+        2. 使用用户名 `admin` 和密码 `$PCS_DEFAULT_PASSWORD` 登录
+        3. 在设置 → 账户 → 更改密码中**更改密码**
+        4. 默认密码在所有应用中共享 - 请更改以确保安全！
+        5. 如果需要多个用户，请考虑禁用单用户模式
+        6. 在管理面板中配置服务器设置
+
+        **单用户模式:**
+        实例以单用户模式启动。要允许注册:
+        1. 编辑 `/DATA/AppData/casaos/apps/mastodon/.env`
+        2. 将 `SINGLE_USER_MODE=true` 改为 `SINGLE_USER_MODE=false`
+        3. 重启容器: `docker compose restart`
+        
+        **配置文件:**
+        - 主环境: `/DATA/AppData/casaos/apps/mastodon/.env`
+        - Nginx 代理配置: `/DATA/AppData/mastodon/nginx.conf`
+        - 媒体上传: `/DATA/AppData/mastodon/public/system/`
+      es_es: |
+        
+        **Credenciales de inicio de sesión por defecto:**
+        - Nombre de usuario: `admin`
+        - Email: `$PCS_EMAIL`
+        - Contraseña: `$PCS_DEFAULT_PASSWORD`
+
+        **⚠️ SEGURIDAD:**
+        1. Accede a tu instancia en `https://mastodon-$PCS_DOMAIN`
+        2. Inicia sesión con nombre de usuario `admin` y contraseña `$PCS_DEFAULT_PASSWORD`
+        3. **Cambia tu contraseña** en Configuración → Cuenta → Cambiar contraseña
+        4. La contraseña por defecto se comparte entre todas las aplicaciones - ¡cámbiala por seguridad!
+        5. Considera desactivar el modo de usuario único si quieres múltiples usuarios
+        6. Configura las opciones del servidor en el panel de administración
+
+        **Modo usuario único:**
+        La instancia inicia en modo usuario único. Para permitir registros:
+        1. Edita `/DATA/AppData/casaos/apps/mastodon/.env`
+        2. Cambia `SINGLE_USER_MODE=true` a `SINGLE_USER_MODE=false`
+        3. Reinicia los contenedores: `docker compose restart`
+        
+        **Archivos de configuración:**
+        - Entorno principal: `/DATA/AppData/casaos/apps/mastodon/.env`
+        - Configuración proxy Nginx: `/DATA/AppData/mastodon/nginx.conf`
+        - Subidas de medios: `/DATA/AppData/mastodon/public/system/`
