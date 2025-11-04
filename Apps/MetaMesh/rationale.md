@@ -10,6 +10,21 @@ MetaMesh requires FUSE (Filesystem in Userspace) capabilities to create a virtua
 
 These capabilities are essential for the FUSE driver to mount and manage the virtual filesystem inside the container.
 
+## FUSE Mount Exposure
+
+The virtual filesystem is exposed to the host at `/DATA/MetaMesh` using the `shared` mount propagation mode:
+
+```yaml
+- /DATA/MetaMesh:/mnt/virtual:shared
+```
+
+The `shared` propagation is critical because:
+- The FUSE mount is created **inside** the container by the fuse-driver at `/mnt/virtual`
+- With `shared` propagation, this mount becomes visible on the host at `/DATA/MetaMesh`
+- Without `shared`, the mount would only exist inside the container
+
+This allows users to browse the organized virtual filesystem directly from the host system at `/DATA/MetaMesh`, showing the automatically organized structure (Anime/Movies/TV Shows) without any file duplication.
+
 ## Default Watch Folders
 
 The configuration monitors three default media locations:

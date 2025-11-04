@@ -39,7 +39,9 @@ The following screenshot files are **placeholders** and should be replaced with 
 
 2. Access the monitoring dashboard at `http://localhost/monitor`
 
-3. Capture screenshots at 1920x1080 resolution showing:
+3. Browse the virtual filesystem at `/DATA/MetaMesh` on the host (organized media structure)
+
+4. Capture screenshots at 1920x1080 resolution showing:
    - Main dashboard with statistics
    - Virtual filesystem interface
    - File processing details or etcd management UI

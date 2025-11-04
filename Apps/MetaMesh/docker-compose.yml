@@ -2,7 +2,7 @@ name: metamesh
 
 services:
   metamesh:
-    image: rg.fr-par.scw.cloud/aptero/meta-mesh:1.0.0
+    image: rg.fr-par.scw.cloud/aptero/meta-mesh:2.0.0
     container_name: metamesh
     restart: unless-stopped
 
@@ -28,10 +28,10 @@ services:
     # Volume bindings
     volumes:
       # Watch folders - Mount your media directories here
-      # Users should customize these paths to their media locations
-      - /DATA/Media/Movies:/data/watch/movies
-      - /DATA/Media/TV Shows:/data/watch/tvshows
       - /DATA/Downloads:/data/watch/downloads
+
+      # FUSE virtual filesystem mount (read-only organized view)
+      - /DATA/MetaMesh:/mnt/virtual:shared
 
       # Application data storage
       - /DATA/AppData/MetaMesh/cache:/data/cache
@@ -46,7 +46,7 @@ services:
       - NODE_ENV=production
       - BUILD_VERSION=1.0.0
       # Meta-mesh configuration
-      - WATCH_FOLDER_LIST=/data/watch/movies,/data/watch/tvshows,/data/watch/downloads
+      - WATCH_FOLDER_LIST=/data/watch/
       - OUTPUT_FOLDER=/data/output
       - CACHE_FOLDER_PATH=/data/cache
       - INDEX_FOLDER_PATH=/data/index
@@ -107,6 +107,7 @@ x-casaos:
         **Default Configuration:**
         - Web UI: Access at http://your-server/monitor
         - WebDAV: Available at http://your-server/webdav (credentials: metamesh/metamesh)
+        - FUSE Mount: Virtual filesystem accessible at /DATA/MetaMesh on the host
         - etcd Management: http://your-server/etcdkeeper/
         - rclone UI: http://your-server:5572/
 
@@ -139,6 +140,7 @@ x-casaos:
         **Configuration Par Défaut:**
         - Interface Web: Accès via http://votre-serveur/monitor
         - WebDAV: Disponible sur http://votre-serveur/webdav (identifiants: metamesh/metamesh)
+        - Montage FUSE: Système de fichiers virtuel accessible à /DATA/MetaMesh sur l'hôte
         - Gestion etcd: http://votre-serveur/etcdkeeper/
         - Interface rclone: http://votre-serveur:5572/
 
