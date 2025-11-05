@@ -31,7 +31,8 @@ services:
       - /DATA/Downloads:/data/watch/downloads
 
       # FUSE virtual filesystem mount (read-only organized view)
-      - /DATA/MetaMesh:/mnt/virtual:shared
+      # TODO activate
+      #- /DATA/MetaMesh:/mnt/virtual:shared
 
       # Application data storage
       - /DATA/AppData/MetaMesh/cache:/data/cache
@@ -52,7 +53,9 @@ services:
       - INDEX_FOLDER_PATH=/data/index
       - MAX_WORKER_THREADS=8
 
-    user: $PUID:$PGID
+    # Note: MetaMesh must run as root to manage nginx, etcd, and FUSE.
+    # The entrypoint script uses PUID/PGID for file ownership management.
+    user: 0:0
 
 x-casaos:
   architectures:
@@ -64,22 +67,42 @@ x-casaos:
 
   description:
     en_us: |
-      MetaMesh is a decentralized media management and metadata sharing platform that automatically organizes your media libraries through a virtual filesystem without moving or duplicating files.
+      **Automatically organize your massive media library without moving a single file.**
 
-      It monitors media folders, extracts metadata from filenames and content using FFmpeg, and provides an organized view accessible via FUSE mount or WebDAV. Features include automatic duplicate detection, real-time monitoring, and distributed metadata storage using etcd.
+      MetaMesh creates a beautifully organized virtual view of your media (Movies, TV Shows, Anime) while your actual files stay exactly where they are. No duplication, no disk space wasted.
 
-      Perfect for managing large media collections (900k+ files, 100TB+) with minimal overhead.
+      **Key Features:**
+      • **Zero File Movement** - Your files stay in place, MetaMesh creates an organized virtual view
+      • **Smart Metadata Extraction** - Automatically extracts titles, seasons, episodes, quality, language from filenames and FFmpeg analysis
+      • **Duplicate Detection** - Finds exact duplicates and different quality versions of the same content
+      • **Real-time Monitoring** - Watches folders and instantly processes new files
+      • **WebDAV Network Access** - Access your organized library as a network drive from any device
+      • **Built for Scale** - Handles collections up to 900k+ files and 100TB+ with optimized performance
+      • **Distributed Storage** - Uses etcd for reliable, distributed metadata storage
+
+      **Perfect for:** Media hoarders, Plex/Jellyfin users, content archivists, or anyone drowning in unorganized media files across multiple folders and drives.
+
+      **What you get:** Monitoring dashboard, WebDAV file access, virtual filesystem, duplicate detection, metadata management, and remote storage integration (rclone).
 
     fr_fr: |
-      MetaMesh est une plateforme décentralisée de gestion multimédia et de partage de métadonnées qui organise automatiquement vos bibliothèques multimédia via un système de fichiers virtuel sans déplacer ni dupliquer les fichiers.
+      **Organisez automatiquement votre immense bibliothèque multimédia sans déplacer un seul fichier.**
 
-      Il surveille les dossiers multimédias, extrait les métadonnées des noms de fichiers et du contenu avec FFmpeg, et fournit une vue organisée accessible via FUSE ou WebDAV. Détection automatique des doublons, surveillance en temps réel et stockage distribué des métadonnées avec etcd.
+      MetaMesh crée une vue virtuelle magnifiquement organisée de vos médias (Films, Séries TV, Anime) pendant que vos fichiers restent exactement où ils sont. Pas de duplication, pas d'espace disque gaspillé.
 
-      Parfait pour gérer de grandes collections multimédias (900k+ fichiers, 100TB+) avec une surcharge minimale.
+      **Fonctionnalités Clés:**
+      • **Zéro Déplacement de Fichiers** - Vos fichiers restent en place, MetaMesh crée une vue virtuelle organisée
+      • **Extraction Intelligente de Métadonnées** - Extrait automatiquement titres, saisons, épisodes, qualité, langue des noms de fichiers et analyse FFmpeg
+      • **Détection de Doublons** - Trouve les doublons exacts et différentes versions de qualité du même contenu
+      • **Surveillance Temps Réel** - Surveille les dossiers et traite instantanément les nouveaux fichiers
+      • **Accès Réseau WebDAV** - Accédez à votre bibliothèque organisée comme un lecteur réseau depuis n'importe quel appareil
+      • **Conçu pour l'Échelle** - Gère des collections jusqu'à 900k+ fichiers et 100TB+ avec performances optimisées
+      • **Stockage Distribué** - Utilise etcd pour un stockage de métadonnées fiable et distribué
+
+      **Parfait pour:** Les collectionneurs de médias, utilisateurs Plex/Jellyfin, archivistes de contenu, ou toute personne noyée dans des fichiers médias non organisés sur plusieurs dossiers et disques.
 
   tagline:
-    en_us: Automatic media organization without moving files - Virtual filesystem with metadata extraction
-    fr_fr: Organisation automatique des médias sans déplacer les fichiers - Système de fichiers virtuel avec extraction de métadonnées
+    en_us: Organize massive media libraries without moving files - Smart virtual filesystem for Movies, TV & Anime
+    fr_fr: Organisez d'immenses bibliothèques multimédia sans déplacer de fichiers - Système virtuel intelligent
 
   title:
     en_us: MetaMesh
@@ -91,76 +114,8 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaMesh/screenshot-3.png
   thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaMesh/thumbnail.png
 
-  index: /monitor
+  index: /
   store_app_id: metamesh
   main: metamesh
   is_uncontrolled: false
   webui_port: 80
-
-  tips:
-    before_install:
-      en_us: |
-        **IMPORTANT - System Requirements:**
-
-        MetaMesh requires FUSE support on your host system. Linux systems usually have this enabled by default.
-
-        **Default Configuration:**
-        - Web UI: Access at http://your-server/monitor
-        - WebDAV: Available at http://your-server/webdav (credentials: metamesh/metamesh)
-        - FUSE Mount: Virtual filesystem accessible at /DATA/MetaMesh on the host
-        - etcd Management: http://your-server/etcdkeeper/
-        - rclone UI: http://your-server:5572/
-
-        **Customizing Watch Folders:**
-        The default configuration monitors:
-        - /DATA/Media/Movies
-        - /DATA/Media/TV Shows
-        - /DATA/Downloads
-
-        To monitor additional folders, edit the docker-compose.yml and:
-        1. Add volume mappings for your media directories
-        2. Update the WATCH_FOLDER_LIST environment variable
-
-        **Performance:**
-        - Default worker threads: 8 (adjust MAX_WORKER_THREADS based on CPU cores)
-        - Configured for up to 900k+ files and 100TB+ media collections
-        - First scan may take time depending on library size
-
-        **Data Storage:**
-        All application data is stored in /DATA/AppData/MetaMesh/:
-        - cache/ - Processing cache
-        - index/ - File index
-        - etcd/ - Metadata database (can grow to 100GB for large collections)
-
-      fr_fr: |
-        **IMPORTANT - Configuration Système:**
-
-        MetaMesh nécessite le support FUSE sur votre système hôte. Les systèmes Linux l'ont généralement activé par défaut.
-
-        **Configuration Par Défaut:**
-        - Interface Web: Accès via http://votre-serveur/monitor
-        - WebDAV: Disponible sur http://votre-serveur/webdav (identifiants: metamesh/metamesh)
-        - Montage FUSE: Système de fichiers virtuel accessible à /DATA/MetaMesh sur l'hôte
-        - Gestion etcd: http://votre-serveur/etcdkeeper/
-        - Interface rclone: http://votre-serveur:5572/
-
-        **Personnalisation des Dossiers Surveillés:**
-        La configuration par défaut surveille:
-        - /DATA/Media/Movies
-        - /DATA/Media/TV Shows
-        - /DATA/Downloads
-
-        Pour surveiller des dossiers supplémentaires, éditez le docker-compose.yml et:
-        1. Ajoutez des mappages de volumes pour vos répertoires multimédia
-        2. Mettez à jour la variable d'environnement WATCH_FOLDER_LIST
-
-        **Performance:**
-        - Threads par défaut: 8 (ajustez MAX_WORKER_THREADS selon vos CPU)
-        - Configuré pour jusqu'à 900k+ fichiers et 100TB+ de collections
-        - Le premier scan peut prendre du temps selon la taille de la bibliothèque
-
-        **Stockage des Données:**
-        Toutes les données sont stockées dans /DATA/AppData/MetaMesh/:
-        - cache/ - Cache de traitement
-        - index/ - Index des fichiers
-        - etcd/ - Base de métadonnées (peut atteindre 100GB pour de grandes collections)
