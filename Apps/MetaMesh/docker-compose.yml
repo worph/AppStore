@@ -31,8 +31,7 @@ services:
       - /DATA/Downloads:/data/watch/downloads
 
       # FUSE virtual filesystem mount (read-only organized view)
-      # TODO activate
-      #- /DATA/MetaMesh:/mnt/virtual:shared
+      - /DATA/MetaMesh:/mnt/virtual:shared
 
       # Application data storage
       - /DATA/AppData/MetaMesh/cache:/data/cache
