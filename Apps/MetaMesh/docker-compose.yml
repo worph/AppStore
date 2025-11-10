@@ -53,7 +53,7 @@ services:
 
     # Note: MetaMesh must run as root to manage nginx, etcd, and FUSE.
     # The entrypoint script uses PUID/PGID for file ownership management.
-    user: 0:0
+    user: $PUID:$PGID
 
 x-casaos:
   architectures:
@@ -63,13 +63,11 @@ x-casaos:
   category: Media
   developer: Aptero Team
 
-  #prepare and cleanup potential previous installation
+  #cleanup potential previous installation
   pre-install-cmd: |
     umount -l /mnt/data/user/MetaMesh 2>/dev/null || true &&
     umount -l /DATA/MetaMesh 2>/dev/null || true &&
-    rm -rf /DATA/MetaMesh/ 2>/dev/null || true &&
-    mkdir -p /DATA/MetaMesh &&
-    chown $PUID:$PGID /DATA/MetaMesh
+    rm -rf /DATA/MetaMesh/ 2>/dev/null || true
 
   description:
     en_us: |
