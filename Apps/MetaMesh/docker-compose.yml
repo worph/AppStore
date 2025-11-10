@@ -2,7 +2,7 @@ name: metamesh
 
 services:
   metamesh:
-    image: rg.fr-par.scw.cloud/aptero/meta-mesh:2.0.0
+    image: pierreh37/meta-mesh:latest
     container_name: metamesh
     restart: unless-stopped
 
