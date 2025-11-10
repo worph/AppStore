@@ -27,16 +27,15 @@ services:
 
     # Volume bindings
     volumes:
-      # Watch folders - Mount your media directories here
-      - /DATA/Downloads:/data/watch/downloads
+      # Watch folders - Mount your media directories in watch
+      - /DATA/Downloads:/data/watch/downloads:ro
+      - /DATA/Media:/data/watch/media:ro
 
-      # FUSE virtual filesystem mount (read-only organized view)
-      - /DATA/MetaMesh:/mnt/virtual:shared
+      # FUSE virtual filesystem mount (view-only organized view)
+      - /DATA/MetaMesh/:/mnt/virtual:shared
 
       # Application data storage
-      - /DATA/AppData/MetaMesh/cache:/data/cache
-      - /DATA/AppData/MetaMesh/index:/data/index
-      - /DATA/AppData/MetaMesh/etcd:/data/etcd
+      - /DATA/AppData/MetaMesh/database/:/data/etcd
 
     # Environment variables
     environment:
@@ -63,6 +62,14 @@ x-casaos:
   author: Worph Team
   category: Media
   developer: Aptero Team
+
+  #prepare and cleanup potential previous installation
+  pre-install-cmd: |
+    umount -l /mnt/data/user/MetaMesh 2>/dev/null || true &&
+    umount -l /DATA/MetaMesh 2>/dev/null || true &&
+    rm -rf /DATA/MetaMesh/ 2>/dev/null || true &&
+    mkdir -p /DATA/MetaMesh &&
+    chown $PUID:$PGID /DATA/MetaMesh
 
   description:
     en_us: |
