@@ -52,9 +52,9 @@ services:
       - INDEX_FOLDER_PATH=/data/index
       - MAX_WORKER_THREADS=8
 
-    # Note: MetaMesh must run as root to manage nginx, etcd, and FUSE.
+    # Note: MetaMesh must run as root due to nginx, etcd, and FUSE.
     # The entrypoint script uses PUID/PGID for file ownership management.
-    user: $PUID:$PGID
+    user: 0:0
 
 x-casaos:
   architectures:
