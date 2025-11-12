@@ -33,7 +33,7 @@ services:
       - /DATA/Media:/data/watch/media:ro
 
       # FUSE virtual filesystem mount (view-only organized view)
-      - /DATA/MetaMesh:/mnt/virtual:shared
+      - /DATA/MetaMesh/Library:/mnt/virtual:shared
 
       # Application data storage
       - /DATA/AppData/MetaMesh/hash-cache/:/data/index
@@ -67,7 +67,7 @@ x-casaos:
 
   #cleanup potential previous installation
   pre-install-cmd: |
-    umount -l /DATA/MetaMesh 2>/dev/null || true &&
+    umount -l /DATA/MetaMesh/Library 2>/dev/null || true &&
     umount -l /mnt/data/user/MetaMesh 2>/dev/null || true &&
     rm -rf /DATA/MetaMesh/ 2>/dev/null || true
 
