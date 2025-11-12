@@ -68,7 +68,7 @@ x-casaos:
   #cleanup potential previous installation
   pre-install-cmd: |
     umount -l /DATA/MetaMesh/Library 2>/dev/null || true &&
-    umount -l /mnt/data/user/MetaMesh 2>/dev/null || true &&
+    umount -l /mnt/data/user/MetaMesh/Library 2>/dev/null || true &&
     rm -rf /DATA/MetaMesh/ 2>/dev/null || true
 
   description:
