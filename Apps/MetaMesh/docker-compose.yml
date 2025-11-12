@@ -5,6 +5,7 @@ services:
     image: pierreh37/meta-mesh:latest
     container_name: metamesh
     restart: unless-stopped
+    cpu_shares: 20
 
     # Expose nginx router port for web UI and API access
     expose:
