@@ -65,11 +65,8 @@ x-casaos:
   category: Media
   developer: Aptero Team
 
-  #cleanup potential previous installation
-  pre-install-cmd: |
-    umount -l /DATA/MetaMesh/Library 2>/dev/null || true &&
-    umount -l /mnt/data/user/MetaMesh/Library 2>/dev/null || true &&
-    rm -rf /DATA/MetaMesh/ 2>/dev/null || true
+  # Cleanup stale FUSE mounts from previous installations
+  pre-install-cmd: wget -qO- https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaMesh/pre-install/cleanup.sh | sh
 
   description:
     en_us: |
