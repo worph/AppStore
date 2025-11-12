@@ -65,9 +65,6 @@ x-casaos:
   category: Media
   developer: Aptero Team
 
-  # Cleanup stale FUSE mounts from previous installations
-  pre-install-cmd: wget -qO- https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaMesh/pre-install/cleanup.sh | sh
-
   description:
     en_us: |
       **Automatically organize your massive media library without moving a single file.**
