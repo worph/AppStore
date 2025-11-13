@@ -41,17 +41,11 @@ services:
 
     # Environment variables
     environment:
+      - BASE_URL=https://metamesh-$PCS_DOMAIN
+      - TMDB_API_KEY=
       - PUID=$PUID
       - PGID=$PGID
       - TZ=$TZ
-      - NODE_ENV=production
-      - BUILD_VERSION=1.0.0
-      # Meta-mesh configuration
-      - WATCH_FOLDER_LIST=/data/watch/
-      - OUTPUT_FOLDER=/data/output
-      - CACHE_FOLDER_PATH=/data/cache
-      - INDEX_FOLDER_PATH=/data/index
-      - MAX_WORKER_THREADS=8
 
     # Note: MetaMesh must run as root due to nginx, etcd, and FUSE.
     # The entrypoint script uses PUID/PGID for file ownership management.
