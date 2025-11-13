@@ -10,12 +10,16 @@ services:
     # Expose nginx router port for web UI and API access
     expose:
       - 80
-    
+
     devices:
       # FUSE capabilities required for virtual filesystem
       - /dev/fuse:/dev/fuse
       # Hardware acceleration access
       - /dev/dri:/dev/dri
+
+    group_add:
+      - video
+
     cap_add:
       - SYS_ADMIN
       - SETPCAP
