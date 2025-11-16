@@ -14,11 +14,6 @@ services:
     devices:
       # FUSE capabilities required for virtual filesystem
       - /dev/fuse:/dev/fuse
-      # Hardware acceleration access
-      - /dev/dri:/dev/dri
-
-    group_add:
-      - video
 
     cap_add:
       - SYS_ADMIN
@@ -42,8 +37,8 @@ services:
       - /DATA/MetaMesh/Library:/mnt/virtual:shared
 
       # Application data storage
-      - /DATA/AppData/MetaMesh/hash-cache/:/data/index
-      - /DATA/AppData/MetaMesh/database/:/data/etcd
+      - /DATA/AppData/metamesh/hash-cache/:/data/index
+      - /DATA/AppData/metamesh/database/:/data/etcd
 
     # Environment variables
     environment:
