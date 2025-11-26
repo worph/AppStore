@@ -37,7 +37,7 @@ services:
       - /DATA/MetaMesh/Library:/mnt/virtual:shared
 
       # Application data storage
-      - /DATA/AppData/metamesh/hash-cache/:/data/index
+      - /DATA/AppData/metamesh/cache/:/data/cache
       - /DATA/AppData/metamesh/database/:/data/etcd
 
     # Environment variables
