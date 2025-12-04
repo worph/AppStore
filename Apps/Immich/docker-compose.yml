@@ -2,7 +2,7 @@ name: immich
 
 services:
   immich:
-    image: ghcr.io/immich-app/immich-server:v1.141.1
+    image: ghcr.io/immich-app/immich-server:v1.143.1
     container_name: immich
     user: $PUID:$PGID
     cpu_shares: 70
@@ -29,7 +29,7 @@ services:
       - immich
 
   immich-machine-learning:
-    image: ghcr.io/immich-app/immich-machine-learning:v1.141.1
+    image: ghcr.io/immich-app/immich-machine-learning:v1.143.1
     container_name: immich_machine_learning
     cpu_shares: 5
     deploy:
@@ -37,7 +37,7 @@ services:
         limits:
           memory: 2048M
           cpus: '0.5'
-    user: 0:0
+    user: 0:0  # no users volume mount so can run as root
     environment:
       TZ: $TZ
       PGID: 0
@@ -52,12 +52,10 @@ services:
     image: docker.io/valkey/valkey:8-bookworm@sha256:a137a2b60aca1a75130022d6bb96af423fefae4eb55faf395732db3544803280
     container_name: immich-redis
     cpu_shares: 10
-    user: $PUID:$PGID
+    user: 0:0 # no volume mount so can run as root
     healthcheck:
       test: redis-cli ping || exit 1
     environment:
-      PGID: $PGID
-      PUID: $PUID
       TZ: $TZ
     restart: unless-stopped
     networks:
@@ -101,12 +99,12 @@ x-casaos:
   webui_port: 80
   index: /
 
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Immich/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Immich/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Immich/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Immich/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Immich/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Immich/thumbnail.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Immich/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Immich/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Immich/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Immich/thumbnail.png
 
   architectures:
     - amd64
@@ -334,20 +332,17 @@ x-casaos:
     before_install:
       en_us: |
         **Setup Information:**
-        
+
         📱 **Mobile App**: After installation, download the Immich mobile app by scanning the QR code from the web interface settings page.
-        
+
         ⏰ **Startup Time**: Immich takes approximately 5 minutes to fully start up. Please wait before accessing the web panel.
-        
+
         🔐 **First Setup**: Create your admin account on first visit to the web interface.
-      en_gb: |
-        **Setup Information:**
-        
-        📱 **Mobile App**: After installation, download the Immich mobile app by scanning the QR code from the web interface settings page.
-        
-        ⏰ **Startup Time**: Immich takes approximately 5 minutes to fully start up. Please wait before accessing the web panel.
-        
-        🔐 **First Setup**: Create your admin account on first visit to the web interface.
+
+        📁 **Direct Upload from PCS**: To upload files directly from your host (useful for initial import of existing photo libraries or large file imports):
+        1. Generate an API key in Immich (Account Settings > API Keys) - Immich is multi-user so you can create a api keys for different users if needed
+        2. Login: `docker exec immich immich login-key http://localhost YOUR_API_KEY`
+        3. Place files in `/DATA/Gallery/` and run: `docker exec immich immich upload --recursive /import`
       it_it: |
         **Informazioni di configurazione:**
         
