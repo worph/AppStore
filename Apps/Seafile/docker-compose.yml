@@ -13,7 +13,7 @@ services:
       - MARIADB_AUTO_UPGRADE=1
       - TZ=$TZ
     volumes:
-      - /DATA/AppData/seafile/mysql:/var/lib/mysql
+      - /DATA/AppData/seafile/mysql/:/var/lib/mysql
     networks:
       - seafile-net
     healthcheck:
@@ -52,7 +52,7 @@ services:
       retries: 5
 
   seafile-app:
-    image: seafileltd/seafile-mc:13.0.9
+    image: seafileltd/seafile-mc:13.0.12
     container_name: seafile
     hostname: seafile-app
     restart: unless-stopped
@@ -62,7 +62,7 @@ services:
       - 80
       - 8080
     volumes:
-      - /DATA/AppData/seafile/shared:/shared
+      - /DATA/AppData/seafile/shared/:/shared
     environment:
       - INIT_SEAFILE_ADMIN_EMAIL=admin@$domain
       - INIT_SEAFILE_ADMIN_PASSWORD=$default_pwd
@@ -128,7 +128,7 @@ services:
       retries: 5
 
   notification-server:
-    image: seafileltd/notification-server:13.0.7
+    image: seafileltd/notification-server:13.0.10
     container_name: notification-server
     restart: unless-stopped
     user: 0:0
@@ -136,7 +136,7 @@ services:
     expose:
       - 8083
     volumes:
-      - /DATA/AppData/seafile/shared/seafile/logs:/shared/seafile/logs
+      - /DATA/AppData/seafile/shared/seafile/logs/:/shared/seafile/logs
     environment:
       - SEAFILE_SERVER_HOSTNAME=seafile-$domain
       - SEAFILE_SERVER_PROTOCOL=https
@@ -160,7 +160,7 @@ services:
       caddy.reverse_proxy: "notification-server:8083"
 
   seadoc:
-    image: seafileltd/sdoc-server:2.0.6
+    image: seafileltd/sdoc-server:2.0.9
     container_name: seafile-seadoc
     hostname: seadoc
     restart: unless-stopped
@@ -169,7 +169,7 @@ services:
     expose:
       - 80
     volumes:
-      - /DATA/AppData/seafile/seadoc-data:/shared
+      - /DATA/AppData/seafile/seadoc-data/:/shared
     environment:
       - DB_HOST=db
       - DB_PORT=3306
@@ -230,8 +230,8 @@ services:
       --uid $PUID
       --gid $PGID
     volumes:
-      - /DATA/Seafile:/data/seafile:shared
-      - /DATA/AppData/seafile/rclone:/config
+      - /DATA/Seafile/:/data/seafile:shared
+      - /DATA/AppData/seafile/rclone/:/config
     environment:
       - PUID=$PUID
       - PGID=$PGID
@@ -329,7 +329,6 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-3.png
     - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Seafile/screenshot-4.png
-    -
   architectures:
     - amd64
     - arm64
