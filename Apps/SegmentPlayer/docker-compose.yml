@@ -3,7 +3,6 @@ name: segment
 services:
   segment:
     image: ghcr.io/worph/segmentplayer:latest
-    container_name: segment-player
     volumes:
       - /DATA/Downloads:/data/media/Downloads:ro
       - /DATA/Media:/data/media/Media:ro
@@ -13,6 +12,9 @@ services:
       - MEDIA_DIR=/data/media
       - SEGMENT_DURATION=4
     restart: unless-stopped
+    user: 0:0
+    cpu_shares: 90
+
 
 x-casaos:
   index: /
