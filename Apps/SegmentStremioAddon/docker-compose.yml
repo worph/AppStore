@@ -7,7 +7,7 @@ services:
       - /DATA/Downloads:/data/media/Downloads:ro
       - /DATA/Media:/data/media/Media:ro
     expose:
-      - 7000
+      - 80
     environment:
       - MEDIA_DIR=/data/media
     restart: unless-stopped
@@ -15,7 +15,7 @@ services:
 
 x-casaos:
   index: /
-  webui_port: 7000
+  webui_port: 80
   main: ssa
   access_domain: ssa-user.nsl.sh
 
