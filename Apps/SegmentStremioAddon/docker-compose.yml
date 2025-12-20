@@ -10,6 +10,7 @@ services:
       - 80
     environment:
       - MEDIA_DIR=/data/media
+      - PORT=80
     restart: unless-stopped
     user: 0:0
 
