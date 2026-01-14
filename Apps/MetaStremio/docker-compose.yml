@@ -1,0 +1,114 @@
+name: metastremio
+
+services:
+  metastremio:
+    image: ghcr.io/worph/meta-stremio:latest
+    container_name: metastremio
+    restart: unless-stopped
+
+    # Stremio addon port
+    expose:
+      - 7000
+
+    volumes:
+      # Shared files volume (same as MetaSort - contains watch, plugin, poster, remotes)
+      - metamesh-files:/files:ro
+
+      # User's media directories (same paths as MetaSort)
+      - /DATA/Downloads:/files/watch/downloads:ro
+      - /DATA/Media:/files/watch/media:ro
+
+      # Shared infrastructure volume (leader election, service discovery, Redis)
+      # Mounted at fixed path so all MetaMesh apps share the same data
+      - /DATA/Apps/MetaCore:/meta-core:rw
+
+      # Transcoding cache
+      - /DATA/AppData/metastremio/cache:/data/cache
+
+    environment:
+      - STORAGE_MODE=redis
+      - REDIS_URL=redis://metasort:6379
+      - META_CORE_PATH=/meta-core
+      - FILES_PATH=/files
+      - MEDIA_DIR=/files/watch
+      - CACHE_DIR=/data/cache
+      - SEGMENT_DURATION=4
+      - PREFETCH_SEGMENTS=4
+      - SCHEME=auto
+      - SERVICE_NAME=meta-stremio
+      - SERVICE_VERSION=1.0.0
+      - BASE_URL=https://metastremio-$PCS_DOMAIN
+      - TZ=$TZ
+
+    networks:
+      - metamesh
+
+volumes:
+  metamesh-files:
+    external: true
+
+networks:
+  metamesh:
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  author: Worph Team
+  category: Media
+  developer: Aptero Team
+
+  description:
+    en_us: |
+      **Stream your media library directly to Stremio with automatic transcoding.**
+
+      MetaStremio is a Stremio addon that connects to your MetaSort-indexed media library. Browse movies and TV shows with rich metadata, stream with HLS transcoding, and enjoy your personal collection in Stremio.
+
+      **Key Features:**
+      - **Stremio Integration** - Native addon for the Stremio media center
+      - **HLS Transcoding** - On-the-fly transcoding for any device compatibility
+      - **Rich Metadata** - Movie/TV info, posters, descriptions from TMDB
+      - **IMDB Lookup** - Search by IMDB ID to find matching local files
+      - **Adaptive Streaming** - Automatic quality adjustment based on bandwidth
+      - **Episode Browser** - Full TV series support with season/episode navigation
+      - **Direct Play** - Stream original files when transcoding isn't needed
+
+      **Requires:** MetaSort (for metadata and Redis)
+
+      **How to use:** Install the addon in Stremio using the manifest URL from the dashboard
+
+    fr_fr: |
+      **Diffusez votre bibliothèque multimédia directement vers Stremio avec transcodage automatique.**
+
+      MetaStremio est un addon Stremio qui se connecte à votre bibliothèque indexée par MetaSort. Parcourez films et séries TV avec métadonnées riches, streamez avec transcodage HLS.
+
+      **Fonctionnalités Clés:**
+      - **Intégration Stremio** - Addon natif pour le centre multimédia Stremio
+      - **Transcodage HLS** - Transcodage à la volée pour compatibilité tous appareils
+      - **Métadonnées Riches** - Infos films/TV, affiches, descriptions depuis TMDB
+      - **Recherche IMDB** - Recherchez par ID IMDB pour trouver les fichiers locaux correspondants
+      - **Streaming Adaptatif** - Ajustement automatique de la qualité selon la bande passante
+      - **Navigateur d'Épisodes** - Support complet des séries TV avec navigation saison/épisode
+
+      **Nécessite:** MetaSort (pour les métadonnées et Redis)
+
+  tagline:
+    en_us: Stremio addon for your personal media library - HLS transcoding and TMDB metadata
+    fr_fr: Addon Stremio pour votre bibliothèque personnelle - Transcodage HLS et métadonnées TMDB
+
+  title:
+    en_us: MetaStremio
+
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaStremio/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaStremio/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaStremio/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaStremio/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaStremio/thumbnail.png
+
+  index: /
+  store_app_id: metastremio
+  main: metastremio
+  is_uncontrolled: false
+  webui_port: 7000

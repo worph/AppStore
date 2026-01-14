@@ -1,0 +1,124 @@
+name: metasort
+
+services:
+  metasort:
+    image: ghcr.io/worph/meta-sort:latest
+    container_name: metasort
+    restart: unless-stopped
+    cpu_shares: 20
+
+    # Web UI and API port
+    expose:
+      - 80
+
+    volumes:
+      # Shared files volume (root for all file access)
+      - metamesh-files:/files:rw
+
+      # User's media directories mounted into the files volume
+      - /DATA/Downloads:/files/watch/downloads:ro
+      - /DATA/Media:/files/watch/media:ro
+
+      # Shared infrastructure volume (leader election, service discovery, Redis)
+      # Mounted at fixed path so all MetaMesh apps share the same data
+      - /DATA/Apps/MetaCore:/meta-core:rw
+
+      # Application cache storage
+      - /DATA/AppData/metasort/cache:/data/cache
+
+      # Docker socket for container plugin management
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+    environment:
+      - NODE_ENV=production
+      - META_CORE_PATH=/meta-core
+      - FILES_PATH=/files
+      - WATCH_FOLDER_LIST=/files/watch
+      - CACHE_FOLDER_PATH=/data/cache
+      - SERVICE_NAME=meta-sort
+      - SERVICE_VERSION=1.0.0
+      - BASE_URL=https://metasort-$PCS_DOMAIN
+      - TMDB_API_KEY=
+      - TMDB_LANGUAGE=en-US
+      - TZ=$TZ
+
+    # Note: Runs as root for nginx, Redis, and file management
+    user: 0:0
+
+    networks:
+      - metamesh
+
+volumes:
+  # Shared files volume structure:
+  # /files/watch/* = user media (bind mounts)
+  # /files/plugin/* = plugin output data
+  # /files/poster = poster storage
+  # /files/<remote> = rclone remote mounts
+  metamesh-files:
+    name: metamesh-files
+    driver: local
+
+networks:
+  metamesh:
+    name: metamesh
+    driver: bridge
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  author: Worph Team
+  category: Media
+  developer: Aptero Team
+
+  description:
+    en_us: |
+      **Smart metadata extraction and file indexing for massive media libraries.**
+
+      MetaSort is the brain of the MetaMesh ecosystem. It watches your media folders, extracts metadata using intelligent plugins, and stores everything in a distributed database for other services to use.
+
+      **Key Features:**
+      - **Plugin-Based Processing** - Containerized plugins for FFmpeg analysis, TMDB enrichment, filename parsing, and more
+      - **Smart Metadata Extraction** - Automatically extracts titles, seasons, episodes, quality, language, codecs
+      - **Duplicate Detection** - Finds exact duplicates and different quality versions of the same content
+      - **Real-time Monitoring** - Watches folders and instantly processes new files
+      - **Built for Scale** - Handles collections up to 900k+ files and 100TB+
+      - **Leader Election** - Distributed architecture with automatic failover
+
+      **Works with:** MetaFuse (virtual filesystem), MetaStremio (streaming)
+
+      **Dashboard Features:** File monitoring, plugin status, duplicate detection, metadata browser, processing queue
+
+    fr_fr: |
+      **Extraction intelligente de métadonnées et indexation de fichiers pour d'immenses bibliothèques multimédia.**
+
+      MetaSort est le cerveau de l'écosystème MetaMesh. Il surveille vos dossiers multimédia, extrait les métadonnées à l'aide de plugins intelligents et stocke tout dans une base de données distribuée.
+
+      **Fonctionnalités Clés:**
+      - **Traitement par Plugins** - Plugins conteneurisés pour analyse FFmpeg, enrichissement TMDB, parsing de noms de fichiers
+      - **Extraction Intelligente** - Extrait automatiquement titres, saisons, épisodes, qualité, langue, codecs
+      - **Détection de Doublons** - Trouve les doublons exacts et différentes versions de qualité
+      - **Surveillance Temps Réel** - Surveille les dossiers et traite instantanément les nouveaux fichiers
+      - **Conçu pour l'Échelle** - Gère des collections jusqu'à 900k+ fichiers et 100TB+
+
+      **Fonctionne avec:** MetaFuse (système de fichiers virtuel), MetaStremio (streaming)
+
+  tagline:
+    en_us: Smart metadata extraction engine - Index and organize massive media libraries with intelligent plugins
+    fr_fr: Moteur d'extraction de métadonnées - Indexez et organisez d'immenses bibliothèques avec des plugins intelligents
+
+  title:
+    en_us: MetaSort
+
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaSort/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaSort/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaSort/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaSort/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaSort/thumbnail.png
+
+  index: /
+  store_app_id: metasort
+  main: metasort
+  is_uncontrolled: false
+  webui_port: 80
