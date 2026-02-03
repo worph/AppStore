@@ -4,31 +4,19 @@ services:
   # Nginx-hash-lock provides perimeter authentication
   openclaw-auth:
     image: ghcr.io/yundera/nginx-hash-lock:latest
-    deploy:
-      resources:
-        limits:
-          memory: 128M
-    cpu_shares: 10
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://127.0.0.1:80/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+    restart: unless-stopped
     expose:
       - 80
+    user: "root"
     environment:
-      TZ: $TZ
-      LISTEN_PORT: "80"
+      AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: openclaw
       BACKEND_PORT: "8080"
-      AUTH_HASH: $default_pwd_hash
-    restart: unless-stopped
-    networks:
-      - openclaw
+      LISTEN_PORT: "80"
     depends_on:
-      openclaw:
-        condition: service_healthy
+      - openclaw
+    networks:
+      - pcs
 
   openclaw:
     image: alpine/openclaw:latest
@@ -50,18 +38,18 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       # Gateway token (matches AUTH_HASH for nginx-hash-lock)
-      OPENCLAW_GATEWAY_TOKEN: $default_pwd_hash
+      OPENCLAW_GATEWAY_TOKEN: $AUTH_HASH
     # Gateway with token auth (perimeter auth handled by nginx-hash-lock)
     command: ["node", "dist/index.js", "gateway", "--bind", "lan", "--port", "8080", "--allow-unconfigured"]
     volumes:
       - /DATA/AppData/openclaw:/home/node/.openclaw
     restart: unless-stopped
     networks:
-      - openclaw
+      - pcs
 
 networks:
-  openclaw:
-    name: openclaw
+  pcs:
+    external: true
 
 x-casaos:
   architectures:
@@ -190,7 +178,6 @@ x-casaos:
   icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenClaw/icon.png
   screenshot_link:
     - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenClaw/screenshot-1.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenClaw/screenshot-1.png
   tagline:
     en_us: Open-source AI assistant that actually does things
     fr_fr: Assistant IA open-source qui agit vraiment
@@ -214,9 +201,9 @@ x-casaos:
 
         **First-Time Setup**
 
-        1. **Access the Web UI**: Open `https://openclaw-$domain/`
-        2. **Authenticate**: Enter your password when prompted (default: `$default_pwd`)
-        3. **Configure API Key**: Add your Anthropic or OpenAI API key in the Config section
+        1. **Access the Web UI**: Click the app icon from your dashboard (authentication is automatic)
+        2. **Configure API Key**: Add your Anthropic or OpenAI API key in the Config section
+        3. **Start chatting**: Use the built-in WebChat or connect messaging platforms
 
         **Messaging Integrations:**
 
@@ -235,9 +222,8 @@ x-casaos:
 
         **Configuration initiale**
 
-        1. **Acceder a l'interface Web** : Ouvrez `https://openclaw-$domain/`
-        2. **Authentification** : Entrez votre mot de passe (par defaut: `$default_pwd`)
-        3. **Configurer la cle API** : Ajoutez votre cle API dans la section Config
+        1. **Acceder a l'interface Web** : Cliquez sur l'icone de l'app (authentification automatique)
+        2. **Configurer la cle API** : Ajoutez votre cle API dans la section Config
 
         **Documentation :** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
       de_de: |
@@ -252,9 +238,8 @@ x-casaos:
 
         **Ersteinrichtung**
 
-        1. **Web-UI aufrufen**: Offnen Sie `https://openclaw-$domain/`
-        2. **Authentifizierung**: Geben Sie Ihr Passwort ein (Standard: `$default_pwd`)
-        3. **API-Schlussel konfigurieren**: Fugen Sie Ihren API-Schlussel im Config-Bereich hinzu
+        1. **Web-UI aufrufen**: Klicken Sie auf das App-Symbol (automatische Authentifizierung)
+        2. **API-Schlussel konfigurieren**: Fugen Sie Ihren API-Schlussel im Config-Bereich hinzu
 
         **Dokumentation:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
       es_es: |
@@ -269,9 +254,8 @@ x-casaos:
 
         **Configuracion inicial**
 
-        1. **Acceder a la interfaz Web**: Abre `https://openclaw-$domain/`
-        2. **Autenticacion**: Ingresa tu contrasena (por defecto: `$default_pwd`)
-        3. **Configurar clave API**: Agrega tu clave API en la seccion Config
+        1. **Acceder a la interfaz Web**: Haz clic en el icono de la app (autenticacion automatica)
+        2. **Configurar clave API**: Agrega tu clave API en la seccion Config
 
         **Documentacion:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
       zh_cn: |
@@ -286,9 +270,8 @@ x-casaos:
 
         **首次设置**
 
-        1. **访问Web界面**：打开 `https://openclaw-$domain/`
-        2. **身份验证**：输入密码（默认：`$default_pwd`）
-        3. **配置API密钥**：在Config部分添加您的API密钥
+        1. **访问Web界面**：点击应用图标（自动认证）
+        2. **配置API密钥**：在Config部分添加您的API密钥
 
         **文档：** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
       ko_kr: |
@@ -303,10 +286,9 @@ x-casaos:
 
         **최초 설정**
 
-        1. **웹 UI 접속**: `https://openclaw-$domain/` 열기
-        2. **인증**: 비밀번호 입력 (기본값: `$default_pwd`)
-        3. **API 키 구성**: Config 섹션에서 API 키 추가
+        1. **웹 UI 접속**: 앱 아이콘 클릭 (자동 인증)
+        2. **API 키 구성**: Config 섹션에서 API 키 추가
 
         **문서:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
-  index: /?hash=$default_pwd_hash
+  index: /?hash=$AUTH_HASH
   webui_port: 80
