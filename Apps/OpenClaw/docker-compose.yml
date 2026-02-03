@@ -39,7 +39,8 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       # Gateway token (matches AUTH_HASH for nginx-hash-lock)
       OPENCLAW_GATEWAY_TOKEN: $AUTH_HASH
-      # Disable device pairing (perimeter auth handled by nginx-hash-lock)
+      # Control UI settings for reverse proxy deployment
+      OPENCLAW_GATEWAY_CONTROL_UI_ALLOW_INSECURE_AUTH: "true"
       OPENCLAW_GATEWAY_CONTROL_UI_DANGEROUSLY_DISABLE_DEVICE_AUTH: "true"
     # Gateway with token auth (perimeter auth handled by nginx-hash-lock)
     command: ["node", "dist/index.js", "gateway", "--bind", "lan", "--port", "8080", "--allow-unconfigured"]
@@ -294,3 +295,17 @@ x-casaos:
         **문서:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
   index: /?hash=$AUTH_HASH&token=$AUTH_HASH
   webui_port: 80
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/openclaw 2>/dev/null || true
+    cat > /DATA/AppData/openclaw/openclaw.json << 'OCEOF'
+    {
+      "gateway": {
+        "controlUi": {
+          "enabled": true,
+          "allowInsecureAuth": true,
+          "dangerouslyDisableDeviceAuth": true
+        }
+      }
+    }
+    OCEOF
+    chmod 644 /DATA/AppData/openclaw/openclaw.json
