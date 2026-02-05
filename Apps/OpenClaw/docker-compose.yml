@@ -22,7 +22,7 @@ services:
       - pcs
 
   openclaw-backend:
-    image: alpine/openclaw:2026.2.3
+    image: alpine/openclaw:2026.2.2
     init: true
     deploy:
       resources:
