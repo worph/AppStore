@@ -6,8 +6,9 @@ services:
   # because the mesh-router extracts the service name from the URL subdomain
   # (e.g. openclaw-username.nsl.sh -> routes to http://openclaw:80)
   openclaw:
-    image: ghcr.io/yundera/nginx-hash-lock:latest
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
     restart: unless-stopped
+    cpu_shares: 50
     expose:
       - 80
     user: "root"
@@ -299,6 +300,7 @@ x-casaos:
         **문서:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
   index: /?hash=$AUTH_HASH&token=$AUTH_HASH
   webui_port: 80
+  port_map: "80"
   pre-install-cmd: |
     mkdir -p /DATA/AppData/openclaw 2>/dev/null || true
     cat > /DATA/AppData/openclaw/openclaw.json << 'OCEOF'
