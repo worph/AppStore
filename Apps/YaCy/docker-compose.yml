@@ -194,7 +194,13 @@ x-casaos:
         - **Portal**: Run your own independent search portal
         - **Intranet**: Private search for internal documents
 
-        **Tip:** Start with a small crawl of your favorite websites to see how indexing works!
+        **Understanding Crawling & P2P:**
+        - **Searching**: Works immediately - query the global index built by other peers
+        - **Crawling**: Tell YaCy to download and index websites (Admin > Crawler). This builds YOUR local index
+        - **Junior peer** (default): You search the network but don't share your index
+        - **Senior peer**: You share your crawled content with other peers
+
+        **Want to contribute to the network?** If you plan to crawl content and share it, open port 8090 on your firewall. YaCy will automatically become a senior peer and share your index with others.
       fr_fr: |
         **Acces Admin par Defaut**
 
