@@ -31,7 +31,14 @@ x-casaos:
   webui_port: 8090
   index: /
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/yacy/data &&
+    mkdir -p /DATA/AppData/yacy/data/SETTINGS &&
+    PASSWORD="$default_pwd" &&
+    HASH=$(echo -n "admin:${PASSWORD}" | md5sum | cut -d' ' -f1) &&
+    cat > /DATA/AppData/yacy/data/SETTINGS/yacy.conf << EOFYACY
+    adminAccountBase64MD5=MD5:${HASH}
+    adminAccountForLocalhost=false
+    server.https=false
+    EOFYACY
     chown -R $PUID:$PGID /DATA/AppData/yacy
 
   icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/YaCy/icon.png
@@ -168,15 +175,13 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        **Getting Started**
+        **Default Admin Access**
 
         | Setting | Value |
         |---------|-------|
-        | Admin URL | [Admin Panel](https://yacy-$domain/) |
-        | Default Username | `admin` |
-        | Default Password | `yacy` |
-
-        **Change the admin password after your first login!**
+        | Admin Panel | [Admin Panel](https://yacy-$domain/) |
+        | Username | `admin` |
+        | Password | `$default_pwd` |
 
         **How to use:**
         1. Visit the admin interface and log in
@@ -191,15 +196,13 @@ x-casaos:
 
         **Tip:** Start with a small crawl of your favorite websites to see how indexing works!
       fr_fr: |
-        **Commencer**
+        **Acces Admin par Defaut**
 
         | Parametre | Valeur |
         |-----------|--------|
-        | URL Admin | [Panneau Admin](https://yacy-$domain/) |
-        | Nom d'utilisateur par defaut | `admin` |
-        | Mot de passe par defaut | `yacy` |
-
-        **Changez le mot de passe admin apres votre premiere connexion!**
+        | Panneau Admin | [Panneau Admin](https://yacy-$domain/) |
+        | Nom d'utilisateur | `admin` |
+        | Mot de passe | `$default_pwd` |
 
         **Comment utiliser:**
         1. Visitez l'interface d'administration et connectez-vous
@@ -209,15 +212,13 @@ x-casaos:
 
         **Astuce:** Commencez par un petit crawl de vos sites web preferes pour voir comment fonctionne l'indexation!
       de_de: |
-        **Erste Schritte**
+        **Standard-Admin-Zugang**
 
         | Einstellung | Wert |
         |-------------|------|
-        | Admin-URL | [Admin-Panel](https://yacy-$domain/) |
-        | Standard-Benutzername | `admin` |
-        | Standard-Passwort | `yacy` |
-
-        **Aendern Sie das Admin-Passwort nach Ihrer ersten Anmeldung!**
+        | Admin-Panel | [Admin-Panel](https://yacy-$domain/) |
+        | Benutzername | `admin` |
+        | Passwort | `$default_pwd` |
 
         **Verwendung:**
         1. Besuchen Sie die Admin-Oberflaeche und melden Sie sich an
@@ -227,15 +228,13 @@ x-casaos:
 
         **Tipp:** Beginnen Sie mit einem kleinen Crawl Ihrer Lieblingswebsites, um zu sehen, wie die Indexierung funktioniert!
       es_es: |
-        **Comenzar**
+        **Acceso Admin por Defecto**
 
         | Configuracion | Valor |
         |---------------|-------|
-        | URL Admin | [Panel Admin](https://yacy-$domain/) |
-        | Usuario predeterminado | `admin` |
-        | Contrasena predeterminada | `yacy` |
-
-        **Cambia la contrasena de admin despues de tu primer inicio de sesion!**
+        | Panel Admin | [Panel Admin](https://yacy-$domain/) |
+        | Usuario | `admin` |
+        | Contrasena | `$default_pwd` |
 
         **Como usar:**
         1. Visita la interfaz de administracion e inicia sesion
@@ -245,15 +244,13 @@ x-casaos:
 
         **Consejo:** Comienza con un pequeno rastreo de tus sitios web favoritos para ver como funciona la indexacion!
       zh_cn: |
-        **开始使用**
+        **默认管理员访问**
 
         | 设置 | 值 |
         |------|-----|
-        | 管理员URL | [管理面板](https://yacy-$domain/) |
-        | 默认用户名 | `admin` |
-        | 默认密码 | `yacy` |
-
-        **首次登录后请更改管理员密码!**
+        | 管理面板 | [管理面板](https://yacy-$domain/) |
+        | 用户名 | `admin` |
+        | 密码 | `$default_pwd` |
 
         **使用方法:**
         1. 访问管理界面并登录
@@ -263,15 +260,13 @@ x-casaos:
 
         **提示:** 从您喜欢的网站开始小规模抓取，看看索引是如何工作的!
       ko_kr: |
-        **시작하기**
+        **기본 관리자 접근**
 
         | 설정 | 값 |
         |------|-----|
-        | 관리자 URL | [관리자 패널](https://yacy-$domain/) |
-        | 기본 사용자명 | `admin` |
-        | 기본 비밀번호 | `yacy` |
-
-        **첫 로그인 후 관리자 비밀번호를 변경하세요!**
+        | 관리자 패널 | [관리자 패널](https://yacy-$domain/) |
+        | 사용자명 | `admin` |
+        | 비밀번호 | `$default_pwd` |
 
         **사용 방법:**
         1. 관리자 인터페이스를 방문하고 로그인
