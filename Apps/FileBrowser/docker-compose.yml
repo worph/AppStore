@@ -12,10 +12,10 @@ services:
     restart: unless-stopped
     volumes:
       - type: bind
-        source: ${DATA_ROOT}/AppData/filebrowser/db/
+        source: ${APP_DATA_ROOT}/AppData/filebrowser/db/
         target: /db/
       - type: bind
-        source: ${DATA_ROOT}/
+        source: ${APP_DATA_ROOT}/
         target: /srv
     expose:
       - 80
@@ -29,14 +29,14 @@ services:
 
 networks:
   net:
-    name: ${REF_NET}
+    name: ${APP_NET}
     external: true
 
 x-casaos:
   pre-install-cmd: |
-    docker run --rm -v ${DATA_ROOT}/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 config init --database /db/database.db &&
-    docker run --rm -v ${DATA_ROOT}/AppData/filebrowser/:/data ubuntu:22.04 chown -R $PUID:$PGID /data &&
-    docker run --rm -v ${DATA_ROOT}/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 users add admin $default_pwd --perm.admin --database /db/database.db
+    docker run --rm -v ${APP_DATA_ROOT}/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 config init --database /db/database.db &&
+    docker run --rm -v ${APP_DATA_ROOT}/AppData/filebrowser/:/data ubuntu:22.04 chown -R $PUID:$PGID /data &&
+    docker run --rm -v ${APP_DATA_ROOT}/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 users add admin $APP_DEFAULT_PASSWORD --perm.admin --database /db/database.db
   architectures:
     - amd64
     - arm64
@@ -123,7 +123,7 @@ x-casaos:
         Default Account
         | Username   | Password       |
         | --------   | ------------   |
-        | `admin`    | `$default_pwd` |
+        | `admin`    | `$APP_DEFAULT_PASSWORD` |
   title:
     en_us: FileBrowser
   index: /
