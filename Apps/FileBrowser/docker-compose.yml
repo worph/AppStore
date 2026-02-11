@@ -29,7 +29,8 @@ services:
 
 networks:
   net:
-    name: ${APP_NET}
+    #name: ${APP_NET}
+    name: pcs
     external: true
 
 x-casaos:
