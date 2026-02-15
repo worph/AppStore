@@ -23,6 +23,7 @@ services:
     image: ghcr.io/wg-easy/wg-easy:14
     restart: unless-stopped
     network_mode: host
+    user: 0:0  # root required for WireGuard kernel module
     environment:
       PASSWORD: '${APP_DEFAULT_PASSWORD}'
       WG_HOST: '${APP_PUBLIC_IP}'
