@@ -1,14 +1,33 @@
 name: wgeasy
 services:
   wgeasy:
-    image: ghcr.io/wg-easy/wg-easy:13
+    image: caddy:2-alpine
+    container_name: wgeasy
     restart: unless-stopped
-    network_mode: bridge
+    cpu_shares: 30
+    expose:
+      - 80
+    labels:
+      - "caddy=wgeasy-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: caddy reverse-proxy --from :80 --to host.docker.internal:51821
+    networks:
+      - pcs
+    depends_on:
+      - wgeasyui
+
+  wgeasyui:
+    container_name: wgeasyui
+    image: ghcr.io/wg-easy/wg-easy:15
+    restart: unless-stopped
+    network_mode: host
     environment:
-      PASSWORD: '$default_pwd'
-      WG_HOST: '$public_ip'
-      WG_PORT: '51820'
-      WG_DEFAULT_DNS: '9.9.9.9'
+      INIT_WG_PASSWORD: '$default_pwd'
+      INIT_WG_HOST: '$public_ip'
+      INIT_WG_PORT: '51820'
+      INIT_WG_DNS: '9.9.9.9'
     x-casaos:
       volumes:
         - container: /etc/wireguard
@@ -18,29 +37,30 @@ services:
         - container: '51820'
           description:
             en_us: Wireguard VPN port
-    expose:
-      - 51821
-    ports:
-      - target: 51820
-        published: 51820
-        protocol: udp
     volumes:
       - type: bind
         source: /DATA/AppData/$AppID/wireguard
         target: /etc/wireguard
+      - type: bind
+        source: /lib/modules
+        target: /lib/modules
+        read_only: true
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
     sysctls:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1
-    container_name: wgeasy
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
 x-casaos:
   architectures:
     - amd64
-    - arm
     - arm64
-  main: wgeasy
   tagline:
     en_us: WEB UI to manage WireGuard VPN.
     zh_cn: 管理 WireGuard VPN 的 WEB UI。
@@ -67,15 +87,16 @@ x-casaos:
     pt_br: Você encontrou a maneira mais fácil de instalar e gerenciar o WireGuard em qualquer host Linux!
     sv_se: Du har hittat det enklaste sättet att installera och hantera WireGuard på en Linux-värd!
     uk_ua: Ви знайшли найпростіший спосіб встановити WireGuard та керувати ним на будь-якому комп'ютері з Linux!
-  developer: WeejeWel
-  author: Sawy
   screenshot_link:
     - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasy/screenshot-1.png
     - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasy/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasy/screenshot-3.png
+  developer: WeejeWel
+  author: Sawy
   icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasy/icon.png
   thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasy/icon.png
   category: Network
   title:
     en_us: WireGuard Easy
-  webui_port: 51821
+  main: wgeasy
+  webui_port: 80
