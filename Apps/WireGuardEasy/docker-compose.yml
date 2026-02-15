@@ -25,10 +25,15 @@ services:
     network_mode: host
     user: 0:0 #needs to be root
     environment:
-      INIT_WG_PASSWORD: '$default_pwd'
-      INIT_WG_HOST: '$public_ip'
-      INIT_WG_PORT: '51820'
-      INIT_WG_DNS: '9.9.9.9'
+      INIT_ENABLED: 'true'
+      INIT_USERNAME: 'admin'
+      INIT_PASSWORD: '$default_pwd'
+      INIT_HOST: '$public_ip'
+      INIT_PORT: '51820'
+      INIT_DNS: '9.9.9.9'
+      INIT_IPV4_CIDR: '10.8.0.0/24'
+      INIT_IPV6_CIDR: 'fd00::/64'
+      INIT_ALLOWED_IPS: '10.8.0.0/24, fd00::/64'
     x-casaos:
       volumes:
         - container: /etc/wireguard
@@ -103,5 +108,35 @@ x-casaos:
   category: Network
   title:
     en_us: WireGuard Easy
+  tips:
+    before_install:
+      en_us: |
+        **Default Login**
+
+        | Field    | Value          |
+        |----------|----------------|
+        | Username | `admin`        |
+        | Password | `$default_pwd` |
+
+        **Quick Start**
+
+        1. Open the WireGuard Easy web interface
+        2. Click **+ New** to create a new client
+        3. Download the configuration file or scan the QR code with the WireGuard app
+        4. Import the config into your WireGuard client and connect
+
+        **Full Tunnel VPN (Route All Traffic)**
+
+        By default, clients are configured for split tunneling. To route ALL traffic through the VPN (full tunnel mode):
+
+        1. Go to **Settings** in the web interface
+        2. Set **Allowed IPs** to: `0.0.0.0/0, ::/0`
+        3. Save and regenerate client configs
+
+        This acts as a "kill switch" - all internet traffic will go through your VPN server, and if the VPN disconnects, traffic will stop.
+
+        **WireGuard Port**
+
+        The VPN listens on UDP port `51820`. Make sure this port is accessible from the internet for clients to connect.
   main: wgeasy
   webui_port: 80
