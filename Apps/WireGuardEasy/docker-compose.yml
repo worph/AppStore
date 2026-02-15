@@ -39,7 +39,7 @@ services:
             en_us: Wireguard VPN port
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/wireguard
+        source: /DATA/AppData/wgeasy/wireguard/
         target: /etc/wireguard
       - type: bind
         source: /lib/modules
@@ -58,6 +58,10 @@ networks:
     external: true
 
 x-casaos:
+  pre-install-cmd: |
+    sysctl -w net.ipv4.ip_forward=1 &&
+    sysctl -w net.ipv4.conf.all.src_valid_mark=1 &&
+    sysctl -w net.ipv6.conf.all.forwarding=1
   architectures:
     - amd64
     - arm64
