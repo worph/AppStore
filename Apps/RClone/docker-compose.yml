@@ -29,7 +29,7 @@ services:
       - --rc-user
       - admin
       - --rc-pass
-      - $default_pwd
+      - $APP_DEFAULT_PASSWORD
       - --rc-allow-origin
       - "*"
       - --config
@@ -104,6 +104,6 @@ x-casaos:
         **Default Account**:
         | Username | Password |
         |----------|----------|
-        | `admin`  | `$default_pwd` |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
   main: rclone
   webui_port: 80

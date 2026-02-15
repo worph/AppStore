@@ -37,7 +37,7 @@ services:
       - CACHE_FOLDER_PATH=/data/cache
       - SERVICE_NAME=meta-sort
       - SERVICE_VERSION=1.0.0
-      - BASE_URL=https://metasort-$PCS_DOMAIN
+      - BASE_URL=https://metasort-$APP_DOMAIN
       - TMDB_API_KEY=
       - TMDB_LANGUAGE=en-US
       - TZ=$TZ

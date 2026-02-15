@@ -19,7 +19,7 @@ services:
       ALLOW_SIGNUP: "false"    # Disable user registration after initial setup
       
       # NSL Router settings
-      BASE_URL: https://mealie-$domain  # Set base URL for proper routing
+      BASE_URL: https://mealie-$APP_DOMAIN  # Set base URL for proper routing
       
       # Performance settings
       MAX_WORKERS: 1           # Single worker for resource efficiency
@@ -28,8 +28,8 @@ services:
       # Database settings
       DB_ENGINE: sqlite        # Use SQLite for simplicity
 
-      DEFAULT_EMAIL: admin@$domain
-      DEFAULT_PASSWORD: $default_pwd
+      DEFAULT_EMAIL: admin@$APP_DOMAIN
+      DEFAULT_PASSWORD: $APP_DEFAULT_PASSWORD
     volumes:
       - /DATA/AppData/mealie/data:/app/data
     healthcheck:

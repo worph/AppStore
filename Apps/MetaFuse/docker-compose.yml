@@ -49,7 +49,7 @@ services:
       - REDIS_URL=redis://metasort:6379
       - SERVICE_NAME=meta-fuse
       - SERVICE_VERSION=1.0.0
-      - BASE_URL=https://metafuse-$PCS_DOMAIN
+      - BASE_URL=https://metafuse-$APP_DOMAIN
       - TZ=$TZ
 
     # Note: Runs as root for FUSE mount operations

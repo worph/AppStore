@@ -12,7 +12,7 @@ services:
       TZ: $TZ
       NAME: "DATA"
       USER: "admin"
-      PASS: $default_pwd
+      PASS: $APP_DEFAULT_PASSWORD
       UID: $PUID
       GID: $PGID
       RW: "true"
@@ -101,12 +101,12 @@ x-casaos:
         Default SMB Access
         | Username   | Password       | Share Name    |
         | --------   | ------------   | ----------    |
-        | `admin`    | `$default_pwd` | DATA  |
+        | `admin`    | `$APP_DEFAULT_PASSWORD` | DATA  |
         
         Network Access Instructions:
-        • Windows: File Explorer → Network → \\${public_ip:-ip_or_host}\DATA
-        • macOS: Finder → Go → Connect to Server → smb://${public_ip:-ip_or_host}/DATA
-        • Linux: Files → Other Locations → smb://${public_ip:-ip_or_host}/DATA
+        • Windows: File Explorer → Network → \\${APP_PUBLIC_IP:-ip_or_host}\DATA
+        • macOS: Finder → Go → Connect to Server → smb://${APP_PUBLIC_IP:-ip_or_host}/DATA
+        • Linux: Files → Other Locations → smb://${APP_PUBLIC_IP:-ip_or_host}/DATA
         
         Port Requirements:
         • SMB: 445 (primary)

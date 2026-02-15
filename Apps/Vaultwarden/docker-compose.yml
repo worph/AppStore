@@ -10,7 +10,7 @@ services:
           memory: 1024M
     cpu_shares: 70
     healthcheck:
-      test: ["CMD", "sh", "-c", "curl -f -o /dev/null -s -w '%{http_code}' https://vaultwarden-$domain/ | grep -q '200'"]
+      test: ["CMD", "sh", "-c", "curl -f -o /dev/null -s -w '%{http_code}' https://vaultwarden-$APP_DOMAIN/ | grep -q '200'"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -24,10 +24,10 @@ services:
       ROCKET_PORT: 80
       ROCKET_ADDRESS: 0.0.0.0
       SIGNUPS_ALLOWED: "true"
-      ADMIN_TOKEN: $default_pwd
-      DOMAIN: https://vaultwarden-$domain
+      ADMIN_TOKEN: $APP_DEFAULT_PASSWORD
+      DOMAIN: https://vaultwarden-$APP_DOMAIN
       SMTP_HOST: postfix
-      SMTP_FROM: vaultwarden@$domain
+      SMTP_FROM: vaultwarden@$APP_DOMAIN
       SMTP_PORT: 25
       SMTP_SECURITY: off
       SMTP_FROM_NAME: Vaultwarden
@@ -44,7 +44,7 @@ services:
     user: 0:0
     cpu_shares: 30
     environment:
-      ALLOWED_SENDER_DOMAINS: $domain
+      ALLOWED_SENDER_DOMAINS: $APP_DOMAIN
     networks:
       - vaultwarden
     restart: unless-stopped
@@ -278,8 +278,8 @@ x-casaos:
 
         | Setting | Value |
         |---------|-------|
-        | Admin Panel | [🔗 Admin Panel](https://vaultwarden-$domain/admin) |
-        | Admin Token | `$default_pwd` |
+        | Admin Panel | [🔗 Admin Panel](https://vaultwarden-$APP_DOMAIN/admin) |
+        | Admin Token | `$APP_DEFAULT_PASSWORD` |
         
         Note: The admin token will not give you access to user vaults, only the user master password will.
 
@@ -287,7 +287,7 @@ x-casaos:
 
         1. **Create your main account**: After installation, create your first user account via signup.
 
-        2. **Access Admin Panel**: [🔗 Admin Panel](https://vaultwarden-$domain/admin)
+        2. **Access Admin Panel**: [🔗 Admin Panel](https://vaultwarden-$APP_DOMAIN/admin)
 
         3. **Secure your instance**: Disable new signups in admin panel once set up.
 
@@ -301,8 +301,8 @@ x-casaos:
 
         | 설정 | 값 |
         |------|-----|
-        | 관리자 패널 | [🔗 관리자 패널](https://vaultwarden-$domain/admin) |
-        | 관리자 토큰 | `$default_pwd` |
+        | 관리자 패널 | [🔗 관리자 패널](https://vaultwarden-$APP_DOMAIN/admin) |
+        | 관리자 토큰 | `$APP_DEFAULT_PASSWORD` |
         
         참고: 관리자 토큰으로는 사용자 보관함에 접근할 수 없으며, 오직 사용자 마스터 비밀번호만으로 가능합니다.
 
@@ -317,7 +317,7 @@ x-casaos:
 
         1. **메인 계정 생성**: 설치 후 가입을 통해 첫 번째 사용자 계정을 생성하세요.
 
-        2. **관리자 패널 접근**: [🔗 관리자 패널](https://vaultwarden-$domain/admin)
+        2. **관리자 패널 접근**: [🔗 관리자 패널](https://vaultwarden-$APP_DOMAIN/admin)
 
         3. **인스턴스 보안**: 설정 완료 후 관리자 패널에서 새로운 가입을 비활성화하세요.
 
@@ -332,7 +332,7 @@ x-casaos:
         | 设置 | 值 |
         |------|-----|
         | 管理员面板 | 在应用URL后添加 `/admin` |
-        | 管理员令牌 | `$default_pwd` |
+        | 管理员令牌 | `$APP_DEFAULT_PASSWORD` |
 
         **📧 内置邮件系统**
 
@@ -362,8 +362,8 @@ x-casaos:
 
         | Paramètre | Valeur |
         |-----------|--------|
-        | Panneau Admin | [🔗 Panneau Admin](https://vaultwarden-$domain/admin) |
-        | Token Admin | `$default_pwd` |
+        | Panneau Admin | [🔗 Panneau Admin](https://vaultwarden-$APP_DOMAIN/admin) |
+        | Token Admin | `$APP_DEFAULT_PASSWORD` |
         
         Note : Le token admin ne vous donnera pas accès aux coffres-forts des utilisateurs, seul le mot de passe principal de l'utilisateur le peut.
 
@@ -378,7 +378,7 @@ x-casaos:
 
         1. **Créez votre compte principal** : Après installation, créez votre premier compte utilisateur via inscription.
 
-        2. **Accédez au Panneau Admin** : [🔗 Panneau Admin](https://vaultwarden-$domain/admin)
+        2. **Accédez au Panneau Admin** : [🔗 Panneau Admin](https://vaultwarden-$APP_DOMAIN/admin)
 
         3. **Sécurisez votre instance** : Désactivez les nouvelles inscriptions dans le panneau admin une fois configuré.
 
@@ -394,8 +394,8 @@ x-casaos:
 
         | Einstellung | Wert |
         |-------------|------|
-        | Admin-Panel | [🔗 Admin-Panel](https://vaultwarden-$domain/admin) |
-        | Admin-Token | `$default_pwd` |
+        | Admin-Panel | [🔗 Admin-Panel](https://vaultwarden-$APP_DOMAIN/admin) |
+        | Admin-Token | `$APP_DEFAULT_PASSWORD` |
         
         Hinweis: Das Admin-Token gewährt Ihnen keinen Zugang zu Benutzer-Tresoren, nur das Benutzer-Master-Passwort kann das.
 
@@ -410,7 +410,7 @@ x-casaos:
 
         1. **Erstellen Sie Ihr Hauptkonto**: Nach der Installation erstellen Sie Ihr erstes Benutzerkonto über die Registrierung.
 
-        2. **Zugriff auf das Admin-Panel**: [🔗 Admin-Panel](https://vaultwarden-$domain/admin)
+        2. **Zugriff auf das Admin-Panel**: [🔗 Admin-Panel](https://vaultwarden-$APP_DOMAIN/admin)
 
         3. **Sichern Sie Ihre Instanz**: Deaktivieren Sie neue Registrierungen im Admin-Panel nach der Einrichtung.
 
@@ -426,8 +426,8 @@ x-casaos:
 
         | Configuración | Valor |
         |---------------|-------|
-        | Panel de Admin | [🔗 Panel de Admin](https://vaultwarden-$domain/admin) |
-        | Token de Admin | `$default_pwd` |
+        | Panel de Admin | [🔗 Panel de Admin](https://vaultwarden-$APP_DOMAIN/admin) |
+        | Token de Admin | `$APP_DEFAULT_PASSWORD` |
         
         Nota: El token de admin no te dará acceso a las bóvedas de usuarios, solo la contraseña maestra del usuario puede hacerlo.
 
@@ -442,7 +442,7 @@ x-casaos:
 
         1. **Crea tu cuenta principal**: Después de la instalación, crea tu primera cuenta de usuario mediante registro.
 
-        2. **Accede al Panel de Admin**: [🔗 Panel de Admin](https://vaultwarden-$domain/admin)
+        2. **Accede al Panel de Admin**: [🔗 Panel de Admin](https://vaultwarden-$APP_DOMAIN/admin)
 
         3. **Asegura tu instancia**: Deshabilita nuevos registros en el panel de admin una vez configurado.
 

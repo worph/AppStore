@@ -19,7 +19,7 @@ services:
       # Authentication settings - Simple Login method
       AUTH_MODE: simple_login
       AUTH_USERNAME: admin
-      AUTH_PASSWORD: $default_pwd
+      AUTH_PASSWORD: $APP_DEFAULT_PASSWORD
 
       # Download settings
       DOWNLOAD_AS_CBZ: true
@@ -155,7 +155,7 @@ x-casaos:
         **Getting Started**
         | Username | Password       |
         | -------- | -------------- |
-        | `admin`  | `$default_pwd` |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
         
         **How to use:**
         1. Open the website in your browser
@@ -172,7 +172,7 @@ x-casaos:
         **시작하기**
         | 사용자명 | 비밀번호       |
         | -------- | -------------- |
-        | `admin`  | `$default_pwd` |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
         
         **사용 방법:**
         1. 브라우저에서 웹사이트 열기
@@ -189,7 +189,7 @@ x-casaos:
         **开始使用**
         | 用户名   | 密码           |
         | -------- | -------------- |
-        | `admin`  | `$default_pwd` |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
         
         **使用方法:**
         1. 在浏览器中打开网站
@@ -206,7 +206,7 @@ x-casaos:
         **Commencer**
         | Nom d'utilisateur | Mot de passe   |
         | ----------------- | -------------- |
-        | `admin`           | `$default_pwd` |
+        | `admin`           | `$APP_DEFAULT_PASSWORD` |
         
         **Comment utiliser:**
         1. Ouvrez le site web dans votre navigateur
@@ -223,7 +223,7 @@ x-casaos:
         **Comenzar**
         | Usuario  | Contraseña     |
         | -------- | -------------- |
-        | `admin`  | `$default_pwd` |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
         
         **Cómo usar:**
         1. Abre el sitio web en tu navegador

@@ -25,7 +25,7 @@ x-casaos:
   pre-install-cmd: |
     docker run --rm -v /DATA/AppData/filebrowser-root/db/:/db filebrowser/filebrowser:v2.32.0 config init --database /db/database.db &&
     chown -R 0:0 /DATA/AppData/filebrowser-root/ &&
-    docker run --rm -v /DATA/AppData/filebrowser-root/db/:/db filebrowser/filebrowser:v2.32.0 users add admin $default_pwd --perm.admin --database /db/database.db
+    docker run --rm -v /DATA/AppData/filebrowser-root/db/:/db filebrowser/filebrowser:v2.32.0 users add admin $APP_DEFAULT_PASSWORD --perm.admin --database /db/database.db
   architectures:
     - amd64
     - arm64
@@ -118,7 +118,7 @@ x-casaos:
         Default Account
         | Username   | Password       |
         | --------   | ------------   |
-        | `admin`    | `$default_pwd` |
+        | `admin`    | `$APP_DEFAULT_PASSWORD` |
   title:
     en_us: FileBrowser Root
   index: /

@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     network_mode: bridge
     environment:
-      VNC_PASSWORD: '$default_pwd'
+      VNC_PASSWORD: '$APP_DEFAULT_PASSWORD'
     expose:
       - 5800
     volumes:

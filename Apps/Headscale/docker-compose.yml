@@ -12,7 +12,7 @@ services:
           cpus: '0.25'
     environment:
       TZ: $TZ
-      HEADSCALE_PASSWORD: $default_pwd
+      HEADSCALE_PASSWORD: $APP_DEFAULT_PASSWORD
     volumes:
       - /DATA/AppData/headscale/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - /DATA/AppData/headscale/nginx/.htpasswd:/etc/nginx/.htpasswd:ro
@@ -93,7 +93,7 @@ x-casaos:
       sed -i "s|grpc_listen_addr: 127.0.0.1:50443|grpc_listen_addr: 0.0.0.0:50443|g" /DATA/AppData/headscale/config/config.yaml
     fi &&
     curl -s https://raw.githubusercontent.com/worph/AppStore/main/Apps/Headscale/pre-install/nginx.conf -o /DATA/AppData/headscale/nginx/nginx.conf &&
-    echo "admin:$(openssl passwd -apr1 "$default_pwd")" > /DATA/AppData/headscale/nginx/.htpasswd
+    echo "admin:$(openssl passwd -apr1 "$APP_DEFAULT_PASSWORD")" > /DATA/AppData/headscale/nginx/.htpasswd
 
 
   architectures:
@@ -126,15 +126,15 @@ x-casaos:
              ```
            - Copy the generated API key for later use.
         1. **Login to Web Interface**: 
-           - Visit `https://headscale-$domain.nsl.sh/web`
+           - Visit `https://headscale-$APP_DOMAIN.nsl.sh/web`
            - Login with username: `admin`, password: (your default CasaOS password)
            - Go to the **Settings** tab
            - In web UI settings, enter:
-             - **Server URL**: `https://headscale-$domain.nsl.sh` (note: now goes through nginx)
+             - **Server URL**: `https://headscale-$APP_DOMAIN.nsl.sh` (note: now goes through nginx)
              - **API Key**: (from command above)
         
         2. **Connect Devices**: Use this command on your devices:
            ```
-           tailscale up --login-server https://headscale-$domain.nsl.sh
+           tailscale up --login-server https://headscale-$APP_DOMAIN.nsl.sh
            ```
         3. **Approve Devices**: Use the web UI to approve new device connections

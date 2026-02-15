@@ -37,7 +37,7 @@ services:
       - SCHEME=auto
       - SERVICE_NAME=meta-stremio
       - SERVICE_VERSION=1.0.0
-      - BASE_URL=https://metastremio-$PCS_DOMAIN
+      - BASE_URL=https://metastremio-$APP_DOMAIN
       - TZ=$TZ
 
     networks:

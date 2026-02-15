@@ -49,13 +49,13 @@ services:
       - postgres
       - redis
     environment:
-      FUNKWHALE_HOSTNAME: ${domain:-localhost}
+      FUNKWHALE_HOSTNAME: ${APP_DOMAIN:-localhost}
       FUNKWHALE_PROTOCOL: https
       DATABASE_URL: postgresql://funkwhale:funkwhale@postgres:5432/funkwhale
       CACHE_URL: redis://redis:6379/0
-      DJANGO_SECRET_KEY: ${default_pwd:-funkwhale-secret-key-change-me-please}
-      MEDIA_URL: https://${domain:-localhost}/media/
-      STATIC_URL: https://${domain:-localhost}/staticfiles/
+      DJANGO_SECRET_KEY: ${APP_DEFAULT_PASSWORD:-funkwhale-secret-key-change-me-please}
+      MEDIA_URL: https://${APP_DOMAIN:-localhost}/media/
+      STATIC_URL: https://${APP_DOMAIN:-localhost}/staticfiles/
       TZ: ${TZ:-UTC}
       NESTED_PROXY: 1
     volumes:
