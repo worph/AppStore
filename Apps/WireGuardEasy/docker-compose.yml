@@ -27,8 +27,8 @@ services:
     environment:
       INIT_ENABLED: 'true'
       INIT_USERNAME: 'admin'
-      INIT_PASSWORD: '$default_pwd'
-      INIT_HOST: '$public_ip'
+      INIT_PASSWORD: '${APP_DEFAULT_PASSWORD}'
+      INIT_HOST: '${APP_PUBLIC_IP}'
       INIT_PORT: '51820'
       INIT_DNS: '9.9.9.9'
       INIT_IPV4_CIDR: '10.8.0.0/24'
@@ -54,9 +54,6 @@ services:
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
-    sysctls:
-      - net.ipv4.ip_forward=1
-      - net.ipv4.conf.all.src_valid_mark=1
 
 networks:
   pcs:
@@ -116,7 +113,7 @@ x-casaos:
         | Field    | Value          |
         |----------|----------------|
         | Username | `admin`        |
-        | Password | `$default_pwd` |
+        | Password | `$APP_DEFAULT_PASSWORD` |
 
         **Quick Start**
 
