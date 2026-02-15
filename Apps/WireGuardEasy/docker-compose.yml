@@ -24,10 +24,8 @@ services:
     restart: unless-stopped
     network_mode: host
     user: 0:0  # root required for WireGuard kernel module
-    env_file:
-      - path: /DATA/AppData/wgeasy/wireguard/.env
-        required: false
     environment:
+      PASSWORD_HASH: '${PASSWORD_HASH}'
       WG_HOST: '${APP_PUBLIC_IP}'
       WG_PORT: '51820'
       WG_DEFAULT_DNS: '9.9.9.9'
@@ -71,7 +69,7 @@ x-casaos:
     wget -q https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasy/pre-install/postdown.sh -O /DATA/AppData/wgeasy/wireguard/postdown.sh &&
     wget -q https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/WireGuardEasy/pre-install/init.sh -O /DATA/AppData/wgeasy/wireguard/init.sh &&
     chmod +x /DATA/AppData/wgeasy/wireguard/*.sh &&
-    /DATA/AppData/wgeasy/wireguard/init.sh "${APP_DEFAULT_PASSWORD}"
+    /DATA/AppData/wgeasy/wireguard/init.sh "${APP_DEFAULT_PASSWORD}" "wgeasy"
   architectures:
     - amd64
     - arm64
