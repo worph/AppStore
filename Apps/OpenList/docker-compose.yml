@@ -1,0 +1,139 @@
+name: openlist
+
+services:
+  openlist:
+    image: ghcr.io/yundera/nginx-hash-lock:latest
+    container_name: openlist
+    restart: unless-stopped
+    expose:
+      - 80
+    labels:
+      - "caddy=openlist-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
+    user: "root"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: "openlist-backend"
+      BACKEND_PORT: "80"
+      LISTEN_PORT: "80"
+    depends_on:
+      - openlist-backend
+    networks:
+      - pcs
+
+  openlist-backend:
+    image: ghcr.io/worph/open-list:main
+    container_name: openlist-backend
+    restart: unless-stopped
+    user: $PUID:$PGID
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+      PORT: "80"
+      DATA_DIR: /data
+    volumes:
+      - /DATA/AppData/$AppID/data:/data
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    external: true
+
+x-casaos:
+  main: openlist
+  webui_port: 80
+  index: /
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/$AppID/data &&
+    chown -R $PUID:$PGID /DATA/AppData/$AppID
+
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenList/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenList/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenList/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenList/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenList/thumbnail.png
+
+  architectures:
+    - amd64
+    - arm64
+  author: Worph
+  category: Utilities
+  developer: Worph
+  title:
+    en_us: Open List
+  tagline:
+    en_us: A minimal shared checkbox list
+    fr_fr: Une liste de cases a cocher partagee minimale
+  description:
+    en_us: |
+      **A minimal, single-list checkbox application designed for simplicity**
+
+      Open List is a lightweight shared checkbox list inspired by Google Keep. Perfect for quick to-do lists, shopping lists, or any simple checklist you want to share.
+
+      **What you can do:**
+      - Add and check off items with a clean, simple interface
+      - Drag and drop to reorder items
+      - Real-time sync across all connected browsers
+      - Get web notifications when items are added or checked
+      - Undo deletions with a quick snackbar action
+      - Collapse completed items to focus on what's left
+
+      **Think of it like:** A shared sticky note checklist that syncs instantly across all your devices.
+
+      **Perfect if you:** Need a quick, no-frills shared list without accounts or complex setup.
+    fr_fr: |
+      **Une application de liste de cases a cocher minimale et simple**
+
+      Open List est une liste de cases a cocher legere et partagee inspiree de Google Keep. Parfait pour les listes de taches, les listes de courses ou toute liste simple que vous souhaitez partager.
+
+      **Ce que vous pouvez faire:**
+      - Ajouter et cocher des elements avec une interface simple
+      - Glisser-deposer pour reorganiser les elements
+      - Synchronisation en temps reel sur tous les navigateurs connectes
+      - Notifications web lorsque des elements sont ajoutes ou coches
+      - Annuler les suppressions avec une action rapide
+      - Replier les elements termines pour se concentrer sur ce qui reste
+
+      **Parfait si vous:** Avez besoin d'une liste partagee rapide et simple.
+  tips:
+    before_install:
+      en_us: |
+        **Getting Started**
+
+        Open List is ready to use immediately!
+
+        **How to use:**
+        1. Type in the input field and press Enter to add items
+        2. Click the checkbox to mark items as complete
+        3. Drag items to reorder them
+        4. Click the X to delete an item (you have 5 seconds to undo)
+        5. Click "Enable Notifications" for real-time alerts
+
+        **Features:**
+        - All connected users see changes instantly via SSE
+        - Completed items collapse into a separate section
+        - No database needed - data stored as simple JSON
+
+        **Tip:** This is a shared list - everyone with access sees the same items!
+      fr_fr: |
+        **Pour commencer**
+
+        Open List est pret a l'emploi immediatement!
+
+        **Comment utiliser:**
+        1. Tapez dans le champ et appuyez sur Entree pour ajouter des elements
+        2. Cliquez sur la case pour marquer comme termine
+        3. Glissez les elements pour les reorganiser
+        4. Cliquez sur X pour supprimer (5 secondes pour annuler)
+        5. Cliquez sur "Activer les notifications" pour les alertes en temps reel
+
+        **Astuce:** C'est une liste partagee - tous les utilisateurs voient les memes elements!

@@ -1,0 +1,141 @@
+name: openkeep
+
+services:
+  openkeep:
+    image: ghcr.io/yundera/nginx-hash-lock:latest
+    container_name: openkeep
+    restart: unless-stopped
+    expose:
+      - 80
+    labels:
+      - "caddy=openkeep-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
+    user: "root"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: "openkeep-backend"
+      BACKEND_PORT: "80"
+      LISTEN_PORT: "80"
+    depends_on:
+      - openkeep-backend
+    networks:
+      - pcs
+
+  openkeep-backend:
+    image: ghcr.io/worph/open-keep:latest
+    container_name: openkeep-backend
+    restart: unless-stopped
+    user: $PUID:$PGID
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+      DATABASE_URL: file:./data/openkeep.db
+    volumes:
+      - /DATA/AppData/$AppID/data:/app/data
+    healthcheck:
+      test: ["CMD", "timeout", "5", "bash", "-c", "cat < /dev/null > /dev/tcp/localhost/80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    external: true
+
+x-casaos:
+  main: openkeep
+  webui_port: 80
+  index: /
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/$AppID/data &&
+    chown -R $PUID:$PGID /DATA/AppData/$AppID
+
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenKeep/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenKeep/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenKeep/screenshot-2.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenKeep/screenshot-1.png
+
+  architectures:
+    - amd64
+    - arm64
+  author: Yundera Team
+  category: Utilities
+  description:
+    en_us: |
+      **A simple, self-hosted note-taking app inspired by Google Keep**
+
+      OpenKeep is a lightweight, privacy-focused alternative to Google Keep. Capture your thoughts, create checklists, and organize with labels - all stored on your own server.
+
+      **What you can do:**
+      - Create notes and checklists with a familiar interface
+      - Organize with color-coded notes and custom labels
+      - Pin important notes to the top
+      - Archive old notes or send them to trash
+      - Search across all your notes instantly
+      - Drag and drop to reorder notes
+
+      **Think of it like:** Your own private Google Keep that runs on your server, keeping your notes safe and private.
+
+      **Perfect if you:** Want a simple note-taking app without relying on cloud services, or need a quick way to capture ideas and to-do lists.
+    fr_fr: |
+      **Une application de prise de notes simple et auto-hebergee inspiree de Google Keep**
+
+      OpenKeep est une alternative legere et axee sur la confidentialite a Google Keep. Capturez vos pensees, creez des listes de controle et organisez avec des etiquettes - tout stocke sur votre propre serveur.
+
+      **Ce que vous pouvez faire:**
+      - Creer des notes et des listes avec une interface familiere
+      - Organiser avec des notes colorees et des etiquettes personnalisees
+      - Epingler les notes importantes en haut
+      - Archiver les anciennes notes ou les mettre a la corbeille
+      - Rechercher instantanement dans toutes vos notes
+      - Glisser-deposer pour reorganiser les notes
+
+      **Pensez-y comme:** Votre propre Google Keep prive qui fonctionne sur votre serveur.
+
+      **Parfait si vous:** Voulez une application de notes simple sans dependre des services cloud.
+  developer: Worph
+  tagline:
+    en_us: Self-hosted note-taking inspired by Google Keep
+    fr_fr: Prise de notes auto-hebergee inspiree de Google Keep
+  title:
+    en_us: OpenKeep
+  tips:
+    before_install:
+      en_us: |
+        **Getting Started**
+
+        OpenKeep is ready to use immediately - no account required!
+
+        **How to use:**
+        1. Click "Take a note..." to create your first note
+        2. Use the color palette to organize notes visually
+        3. Create labels in the sidebar for better organization
+        4. Pin important notes to keep them at the top
+        5. Use keyboard shortcuts: `C` for new note, `L` for checklist, `/` to search
+
+        **Features:**
+        - Masonry grid layout like Google Keep
+        - Dark mode support
+        - Drag and drop reordering
+        - Full-text search
+        - Auto-save as you type
+
+        **Tip:** Your data is stored locally in SQLite - it's fast and doesn't need any external database!
+      fr_fr: |
+        **Pour commencer**
+
+        OpenKeep est pret a l'emploi immediatement - aucun compte requis!
+
+        **Comment utiliser:**
+        1. Cliquez sur "Prendre une note..." pour creer votre premiere note
+        2. Utilisez la palette de couleurs pour organiser visuellement les notes
+        3. Creez des etiquettes dans la barre laterale pour une meilleure organisation
+        4. Epinglez les notes importantes pour les garder en haut
+        5. Raccourcis clavier: `C` nouvelle note, `L` liste, `/` rechercher
+
+        **Astuce:** Vos donnees sont stockees localement en SQLite!
