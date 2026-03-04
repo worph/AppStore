@@ -14,6 +14,17 @@ services:
       - 8081
     environment:
       - TZ=UTC
+    networks:
+      - pcs
+    labels:
+      caddy_0: hysteria2-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8081}}"
+      caddy_1: hysteria2-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8081}}"
+      caddy_2: hysteria2-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8081}}"
     x-casaos:
       envs:
         - container: TZ
@@ -68,6 +79,11 @@ services:
     sysctls:
       - net.ipv4.ip_forward=1
     container_name: hysteria2
+
+networks:
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   pre-install-cmd: docker run --rm -v /DATA/AppData/hysteria2/:/data/ -e PASSWORD=$APP_DEFAULT_PASSWORD nasselle/pre-install-toolbox https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Hysteria/pre-install/init.sh

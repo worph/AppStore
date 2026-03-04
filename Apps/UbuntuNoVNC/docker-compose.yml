@@ -3,7 +3,17 @@ services:
   ubuntu:
     image: dorowu/ubuntu-desktop-lxde-vnc:latest
     restart: unless-stopped
-    network_mode: bridge
+    labels:
+      caddy_0: ubuntu-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: ubuntu-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: ubuntu-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - pcs
     environment:
       VNC_PASSWORD: '$APP_DEFAULT_PASSWORD'
     expose:
@@ -17,6 +27,11 @@ services:
         source: /dev/shm
         target: /dev/shm
     container_name: ubuntu
+
+networks:
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   main: ubuntu

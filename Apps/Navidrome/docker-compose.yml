@@ -8,6 +8,17 @@ services:
     user: $PUID:$PGID
     expose:
       - 80  # Navidrome Web UI Port
+    labels:
+      caddy_0: navidrome-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: navidrome-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: navidrome-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - pcs
     volumes:
       - /DATA/AppData/navidrome/data:/data        # Navidrome database and configuration directory
       - /DATA/Media/Music:/music:ro            # Music library directory (read-only)
@@ -24,6 +35,11 @@ services:
       resources:
         limits:
           memory: 512M
+
+networks:
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   store_app_id: navidrome

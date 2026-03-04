@@ -8,8 +8,14 @@ services:
     expose:
       - 80
     labels:
-      - "caddy=wgeasy-${APP_DOMAIN}"
-      - "caddy.reverse_proxy={{upstreams 80}}"
+      caddy_0: wgeasy-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: wgeasy-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: wgeasy-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     command: caddy reverse-proxy --from :80 --to host.docker.internal:51821

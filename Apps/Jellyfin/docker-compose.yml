@@ -29,6 +29,22 @@ services:
       resources:
         limits:
           memory: 256M
+    networks:
+      - pcs
+    labels:
+      caddy_0: jellyfin-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8096}}"
+      caddy_1: jellyfin-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8096}}"
+      caddy_2: jellyfin-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8096}}"
+
+networks:
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   architectures:

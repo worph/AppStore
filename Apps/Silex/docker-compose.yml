@@ -3,7 +3,6 @@ services:
   silex:
     image: silexlabs/silex:v3.0.3
     restart: unless-stopped
-    network_mode: bridge
     x-casaos:
       volumes:
         - container: /app/data
@@ -20,6 +19,23 @@ services:
         source: /DATA/AppData/$AppID/silex
         target: /app/data
     container_name: silex
+    networks:
+      - pcs
+    labels:
+      caddy_0: silex-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 6805}}"
+      caddy_1: silex-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 6805}}"
+      caddy_2: silex-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 6805}}"
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
 x-casaos:
   architectures:
     - amd64

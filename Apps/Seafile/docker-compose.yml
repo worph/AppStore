@@ -249,6 +249,15 @@ services:
     cpu_shares: 30
     expose:
       - 80
+    labels:
+      caddy_0: seafile-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: seafile-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: seafile-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
     environment:
       - CADDY_INGRESS_NETWORKS=seafile-net
     volumes:
@@ -260,6 +269,7 @@ services:
         condition: service_started
     networks:
       - seafile-net  # Routes traffic to internal services
+      - pcs
     healthcheck:
       test: ["CMD-SHELL", "curl -f -s -L -o /dev/null -w '%{http_code}' https://seafile-$APP_DOMAIN/ | grep -q '^200$' || exit 1"]
       interval: 30s
@@ -270,6 +280,9 @@ services:
 networks:
   seafile-net:
     name: seafile-net
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   store_app_id: seafile

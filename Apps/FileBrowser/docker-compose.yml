@@ -25,11 +25,19 @@ services:
         limits:
           memory: 256M
     networks:
-      - net
+      - pcs
+    labels:
+      caddy_0: filebrowser-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: filebrowser-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: filebrowser-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
 
 networks:
-  net:
-    #name: ${APP_NET}
+  pcs:
     name: pcs
     external: true
 

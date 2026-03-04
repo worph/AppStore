@@ -3,7 +3,6 @@ services:
   firefox:
     image: jlesage/firefox:latest
     restart: unless-stopped
-    network_mode: bridge
     environment:
       VNC_PASSWORD: '$APP_DEFAULT_PASSWORD'
     expose:
@@ -13,6 +12,22 @@ services:
         source: /DATA/AppData/$AppID/firefox
         target: /config
     container_name: firefox
+    networks:
+      - pcs
+    labels:
+      caddy_0: firefox-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 5800}}"
+      caddy_1: firefox-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 5800}}"
+      caddy_2: firefox-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 5800}}"
+
+networks:
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   main: firefox

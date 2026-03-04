@@ -49,6 +49,16 @@ services:
         condition: service_healthy
     networks:
       - mastodon-network
+      - pcs
+    labels:
+      caddy_0: mastodon-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: mastodon-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: mastodon-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
 
   mastodon-backend:
     image: ghcr.io/mastodon/mastodon:v4.4.4
@@ -172,6 +182,9 @@ services:
 networks:
   mastodon-network:
     driver: bridge
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   index: /
