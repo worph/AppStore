@@ -83,7 +83,7 @@ x-casaos:
   category: Utilities
   developer: Worph
   title:
-    en_us: Open List
+    en_us: Lystik
   tagline:
     en_us: A minimal shared checkbox list
     fr_fr: Une liste de cases a cocher partagee minimale
@@ -91,7 +91,7 @@ x-casaos:
     en_us: |
       **A minimal, single-list checkbox application designed for simplicity**
 
-      Open List is a lightweight shared checkbox list inspired by Google Keep. Perfect for quick to-do lists, shopping lists, or any simple checklist you want to share.
+      Lystik is a lightweight shared checkbox list inspired by Google Keep. Perfect for quick to-do lists, shopping lists, or any simple checklist you want to share.
 
       **What you can do:**
       - Add and check off items with a clean, simple interface
@@ -107,7 +107,7 @@ x-casaos:
     fr_fr: |
       **Une application de liste de cases a cocher minimale et simple**
 
-      Open List est une liste de cases a cocher legere et partagee inspiree de Google Keep. Parfait pour les listes de taches, les listes de courses ou toute liste simple que vous souhaitez partager.
+      Lystik est une liste de cases a cocher legere et partagee inspiree de Google Keep. Parfait pour les listes de taches, les listes de courses ou toute liste simple que vous souhaitez partager.
 
       **Ce que vous pouvez faire:**
       - Ajouter et cocher des elements avec une interface simple
@@ -123,7 +123,7 @@ x-casaos:
       en_us: |
         **Getting Started**
 
-        Open List is ready to use immediately!
+        Lystik is ready to use immediately!
 
         **How to use:**
         1. Type in the input field and press Enter to add items
@@ -141,7 +141,7 @@ x-casaos:
       fr_fr: |
         **Pour commencer**
 
-        Open List est pret a l'emploi immediatement!
+        Lystik est pret a l'emploi immediatement!
 
         **Comment utiliser:**
         1. Tapez dans le champ et appuyez sur Entree pour ajouter des elements
