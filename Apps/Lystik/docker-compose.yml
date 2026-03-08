@@ -16,7 +16,7 @@ services:
       caddy_1.reverse_proxy: "{{upstreams 80}}"
       caddy_2: lystik-${PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
-    user: "root"
+    user: 0:0
     environment:
       AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: "lystik-backend"
@@ -26,6 +26,11 @@ services:
       - lystik-backend
     networks:
       - pcs
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
   lystik-backend:
     image: ghcr.io/worph/lystik:latest
@@ -48,6 +53,11 @@ services:
       start_period: 40s
     networks:
       - pcs
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
 
 networks:
   pcs:
@@ -59,12 +69,12 @@ x-casaos:
   webui_port: 80
   index: /
 
-  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/lystik/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Lystik/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/lystik/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/lystik/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/lystik/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/lystik/thumbnail.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Lystik/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Lystik/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Lystik/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Lystik/thumbnail.png
 
   architectures:
     - amd64
