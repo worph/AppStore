@@ -35,7 +35,7 @@ services:
           memory: 256M
 
   lystik-backend:
-    image: ghcr.io/worph/lystik:latest
+    image: ghcr.io/worph/lystik:1.2.0
     container_name: lystik-backend
     restart: unless-stopped
     user: $PUID:$PGID
