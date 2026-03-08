@@ -38,8 +38,8 @@ All apps follow a consistent pattern:
 - **Media**: Common media paths: `/DATA/Media/Movies`, `/DATA/Media/TV Shows`, `/DATA/Downloads`
 - **Networking**: Apps use Caddy labels for automatic HTTPS routing with three access methods:
   - `caddy_0`: Gateway-routed domain (`appname-${APP_DOMAIN}`) with `gateway_tls` import
-  - `caddy_1`: Direct access via nip.io (`appname-${PUBLIC_IP_DASH}.nip.io`) with `gateway_tls` import
-  - `caddy_2`: Direct access via sslip.io (`appname-${PUBLIC_IP_DASH}.sslip.io`) - no import, uses Let's Encrypt
+  - `caddy_1`: Direct access via nip.io (`appname-\${APP_PUBLIC_IP_DASH}.nip.io`) with `gateway_tls` import
+  - `caddy_2`: Direct access via sslip.io (`appname-\${APP_PUBLIC_IP_DASH}.sslip.io`) - no import, uses Let's Encrypt
 - **Multi-language Support**: Descriptions and taglines support multiple locales (en_us, fr_fr, es_es, zh_cn, ko_kr, de_de)
 
 ## Development Workflow

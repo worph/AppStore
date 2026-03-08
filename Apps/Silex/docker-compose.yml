@@ -25,10 +25,10 @@ services:
       caddy_0: silex-${APP_DOMAIN}
       caddy_0.import: gateway_tls
       caddy_0.reverse_proxy: "{{upstreams 6805}}"
-      caddy_1: silex-${PUBLIC_IP_DASH}.nip.io
+      caddy_1: silex-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.reverse_proxy: "{{upstreams 6805}}"
-      caddy_2: silex-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2: silex-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 6805}}"
 
 networks:

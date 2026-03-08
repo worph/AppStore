@@ -25,10 +25,10 @@ services:
       caddy_0: openclaw-${APP_DOMAIN}
       caddy_0.import: gateway_tls
       caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: openclaw-${PUBLIC_IP_DASH}.nip.io
+      caddy_1: openclaw-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: openclaw-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2: openclaw-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
 
   openclaw-backend:

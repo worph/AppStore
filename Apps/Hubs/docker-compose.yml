@@ -77,10 +77,10 @@ services:
       caddy_0: hubs-${APP_DOMAIN}
       caddy_0.import: gateway_tls
       caddy_0.reverse_proxy: "{{upstreams 8080}}"
-      caddy_1: hubs-${PUBLIC_IP_DASH}.nip.io
+      caddy_1: hubs-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.reverse_proxy: "{{upstreams 8080}}"
-      caddy_2: hubs-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2: hubs-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 8080}}"
 
   dialog:
