@@ -127,6 +127,11 @@ x-casaos:
 
         Lystik is ready to use immediately!
 
+        **Authentication:**
+        - **Username:** `ADMIN`
+        - **Password:** The password you set during installation
+        - Opening from the CasaOS dashboard auto-authenticates you
+
         **How to use:**
         1. Type in the input field and press Enter to add items
         2. Click the checkbox to mark items as complete
@@ -139,11 +144,41 @@ x-casaos:
         - Completed items collapse into a separate section
         - No database needed - data stored as simple JSON
 
+        **MCP Integration (for AI/LLMs):**
+
+        Lystik includes a Model Context Protocol (MCP) endpoint that allows AI assistants to manage your list.
+
+        **MCP Server URL:** `https://lystik-${APP_DOMAIN}/mcp`
+
+        **Claude Desktop config** (`claude_desktop_config.json`):
+        ```json
+        {
+          "mcpServers": {
+            "lystik": {
+              "url": "https://lystik-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+            }
+          }
+        }
+        ```
+
+        **Available MCP Tools:**
+        | Tool | Description |
+        |------|-------------|
+        | `list_items` | Get all tasks |
+        | `add_item` | Add a new task (param: `text`) |
+        | `toggle_item` | Toggle checked state (param: `id`) |
+        | `delete_item` | Delete a task (param: `id`) |
+
         **Tip:** This is a shared list - everyone with access sees the same items!
       fr_fr: |
         **Pour commencer**
 
         Lystik est pret a l'emploi immediatement!
+
+        **Authentification:**
+        - **Utilisateur:** `ADMIN`
+        - **Mot de passe:** Le mot de passe defini lors de l'installation
+        - L'ouverture depuis le tableau de bord CasaOS vous authentifie automatiquement
 
         **Comment utiliser:**
         1. Tapez dans le champ et appuyez sur Entree pour ajouter des elements
@@ -151,5 +186,19 @@ x-casaos:
         3. Glissez les elements pour les reorganiser
         4. Cliquez sur X pour supprimer (5 secondes pour annuler)
         5. Cliquez sur "Activer les notifications" pour les alertes en temps reel
+
+        **Integration MCP (pour IA/LLMs):**
+
+        Lystik inclut un endpoint MCP permettant aux assistants IA de gerer votre liste.
+
+        **URL du serveur MCP:** `https://lystik-${APP_DOMAIN}/mcp`
+
+        **Outils MCP disponibles:**
+        | Outil | Description |
+        |-------|-------------|
+        | `list_items` | Obtenir toutes les taches |
+        | `add_item` | Ajouter une tache (param: `text`) |
+        | `toggle_item` | Basculer l'etat (param: `id`) |
+        | `delete_item` | Supprimer une tache (param: `id`) |
 
         **Astuce:** C'est une liste partagee - tous les utilisateurs voient les memes elements!
