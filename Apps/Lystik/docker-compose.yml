@@ -1,35 +1,35 @@
-name: openlist
+name: lystik
 
 services:
-  openlist:
+  lystik:
     image: ghcr.io/yundera/nginx-hash-lock:latest
-    container_name: openlist
+    container_name: lystik
     restart: unless-stopped
     expose:
       - 80
     labels:
-      caddy_0: openlist-${APP_DOMAIN}
+      caddy_0: lystik-${APP_DOMAIN}
       caddy_0.import: gateway_tls
       caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: openlist-${PUBLIC_IP_DASH}.nip.io
+      caddy_1: lystik-${PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: openlist-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2: lystik-${PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     user: "root"
     environment:
       AUTH_HASH: $AUTH_HASH
-      BACKEND_HOST: "openlist-backend"
+      BACKEND_HOST: "lystik-backend"
       BACKEND_PORT: "80"
       LISTEN_PORT: "80"
     depends_on:
-      - openlist-backend
+      - lystik-backend
     networks:
       - pcs
 
-  openlist-backend:
-    image: ghcr.io/worph/open-list:main
-    container_name: openlist-backend
+  lystik-backend:
+    image: ghcr.io/worph/lystik:latest
+    container_name: lystik-backend
     restart: unless-stopped
     user: $PUID:$PGID
     environment:
@@ -39,7 +39,7 @@ services:
       PORT: "80"
       DATA_DIR: /data
     volumes:
-      - /DATA/AppData/$AppID/data:/data
+      - /DATA/AppData/lystik/data/:/data
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
       interval: 30s
@@ -55,19 +55,16 @@ networks:
     external: true
 
 x-casaos:
-  main: openlist
+  main: lystik
   webui_port: 80
   index: /
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/$AppID/data &&
-    chown -R $PUID:$PGID /DATA/AppData/$AppID
 
-  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenList/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/lystik/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenList/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenList/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenList/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenList/thumbnail.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/lystik/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/lystik/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/lystik/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/lystik/thumbnail.png
 
   architectures:
     - amd64
