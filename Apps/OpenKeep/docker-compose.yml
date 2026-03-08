@@ -40,7 +40,7 @@ services:
       TZ: $TZ
       DATABASE_URL: file:./data/openkeep.db
     volumes:
-      - /DATA/AppData/$AppID/data:/app/data
+      - /DATA/AppData/openkeep/data/:/app/data
     healthcheck:
       test: ["CMD", "timeout", "5", "bash", "-c", "cat < /dev/null > /dev/tcp/localhost/80"]
       interval: 30s
@@ -59,9 +59,6 @@ x-casaos:
   main: openkeep
   webui_port: 80
   index: /?hash=$AUTH_HASH
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/$AppID/data &&
-    chown -R $PUID:$PGID /DATA/AppData/$AppID
 
   icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenKeep/icon.png
   screenshot_link:
