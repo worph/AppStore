@@ -37,9 +37,9 @@ services:
       DOWNLOAD_AS_CBZ: true
       AUTO_DOWNLOAD_CHAPTERS: false
 
-      # WebUI settings - Preview version (per-device settings support)
+      # WebUI settings - Use bundled version, no auto-updates (managed via container)
       WEB_UI_CHANNEL: bundled
-      WEB_UI_UPDATE_INTERVAL: 0.0
+      WEB_UI_UPDATE_INTERVAL: 0
 
       # Extension repository (Keiyoushi only)
       EXTENSION_REPOS: >-

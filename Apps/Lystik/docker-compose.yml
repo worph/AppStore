@@ -69,7 +69,7 @@ networks:
 x-casaos:
   main: lystik
   webui_port: 80
-  index: /?hash=$AUTH_HASH
+  index: /
 
   icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Lystik/icon.png
   screenshot_link:
@@ -130,7 +130,6 @@ x-casaos:
         **Authentication:**
         - **Username:** `ADMIN`
         - **Password:** The password you set during installation
-        - Opening from the CasaOS dashboard auto-authenticates you
 
         **How to use:**
         1. Type in the input field and press Enter to add items
@@ -148,7 +147,7 @@ x-casaos:
 
         Lystik includes a Model Context Protocol (MCP) endpoint that allows AI assistants to manage your list.
 
-        **Option 1: Public URL (with auth)**
+        **Option 1: Public URL (with hash auth)**
         ```json
         {
           "mcpServers": {
@@ -194,7 +193,6 @@ x-casaos:
         **Authentification:**
         - **Utilisateur:** `ADMIN`
         - **Mot de passe:** Le mot de passe defini lors de l'installation
-        - L'ouverture depuis le tableau de bord CasaOS vous authentifie automatiquement
 
         **Comment utiliser:**
         1. Tapez dans le champ et appuyez sur Entree pour ajouter des elements
@@ -207,7 +205,7 @@ x-casaos:
 
         Lystik inclut un endpoint MCP permettant aux assistants IA de gerer votre liste.
 
-        **Option 1: URL publique (avec auth)**
+        **Option 1: URL publique (avec hash auth)**
         ```json
         {
           "mcpServers": {
