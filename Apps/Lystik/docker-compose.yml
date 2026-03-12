@@ -35,7 +35,7 @@ services:
           memory: 256M
 
   lystik-backend:
-    image: ghcr.io/worph/lystik:1.2.1
+    image: ghcr.io/worph/lystik:1.2.2
     container_name: lystik-backend
     restart: unless-stopped
     user: $PUID:$PGID
@@ -153,6 +153,7 @@ x-casaos:
         {
           "mcpServers": {
             "lystik": {
+              "type": "http",
               "url": "https://lystik-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
             }
           }
@@ -166,12 +167,15 @@ x-casaos:
         {
           "mcpServers": {
             "lystik": {
+              "type": "sse",
               "url": "http://lystik-backend:80/mcp"
             }
           }
         }
         ```
         *Note: Requires the AI assistant to be on the `pcs` Docker network.*
+
+        **Transport types:** Both `http` and `sse` transports are supported.
 
         **Available MCP Tools:**
         | Tool | Description |
@@ -208,6 +212,7 @@ x-casaos:
         {
           "mcpServers": {
             "lystik": {
+              "type": "http",
               "url": "https://lystik-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
             }
           }
@@ -221,12 +226,15 @@ x-casaos:
         {
           "mcpServers": {
             "lystik": {
+              "type": "sse",
               "url": "http://lystik-backend:80/mcp"
             }
           }
         }
         ```
         *Note: L'assistant IA doit etre sur le reseau Docker `pcs`.*
+
+        **Types de transport:** Les transports `http` et `sse` sont supportes.
 
         **Outils MCP disponibles:**
         | Outil | Description |
