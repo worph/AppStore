@@ -148,9 +148,7 @@ x-casaos:
 
         Lystik includes a Model Context Protocol (MCP) endpoint that allows AI assistants to manage your list.
 
-        **MCP Server URL:** `https://lystik-${APP_DOMAIN}/mcp`
-
-        **Claude Desktop config** (`claude_desktop_config.json`):
+        **Option 1: Public URL (with auth)**
         ```json
         {
           "mcpServers": {
@@ -160,6 +158,20 @@ x-casaos:
           }
         }
         ```
+
+        **Option 2: Local Docker connection (no auth required)**
+
+        For AI assistants running on the same server, connect directly to the backend container via the Docker network, bypassing authentication:
+        ```json
+        {
+          "mcpServers": {
+            "lystik": {
+              "url": "http://lystik-backend:80/mcp"
+            }
+          }
+        }
+        ```
+        *Note: Requires the AI assistant to be on the `pcs` Docker network.*
 
         **Available MCP Tools:**
         | Tool | Description |
@@ -191,7 +203,30 @@ x-casaos:
 
         Lystik inclut un endpoint MCP permettant aux assistants IA de gerer votre liste.
 
-        **URL du serveur MCP:** `https://lystik-${APP_DOMAIN}/mcp`
+        **Option 1: URL publique (avec auth)**
+        ```json
+        {
+          "mcpServers": {
+            "lystik": {
+              "url": "https://lystik-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+            }
+          }
+        }
+        ```
+
+        **Option 2: Connexion Docker locale (sans auth)**
+
+        Pour les assistants IA sur le meme serveur, connectez-vous directement au conteneur backend via le reseau Docker:
+        ```json
+        {
+          "mcpServers": {
+            "lystik": {
+              "url": "http://lystik-backend:80/mcp"
+            }
+          }
+        }
+        ```
+        *Note: L'assistant IA doit etre sur le reseau Docker `pcs`.*
 
         **Outils MCP disponibles:**
         | Outil | Description |
