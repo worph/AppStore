@@ -2,13 +2,14 @@ name: suwayomi
 
 services:
   suwayomi:
-    image: ghcr.io/suwayomi/tachidesk:v2.1.1867
+    image: ghcr.io/suwayomi/suwayomi-server:v2.1.2087
     user: $PUID:$PGID
     container_name: suwayomi
     expose:
       - 80
     networks:
       - pcs
+      - default
     labels:
       caddy_0: suwayomi-${APP_DOMAIN}
       caddy_0.import: gateway_tls
@@ -50,15 +51,17 @@ services:
 
     volumes:
       - /DATA/Media/Mangas:/home/suwayomi/.local/share/Tachidesk/downloads
-      - /DATA/AppData/$AppID/data:/home/suwayomi/.local/share/Tachidesk
+      - /DATA/AppData/suwayomi/data:/home/suwayomi/.local/share/Tachidesk
     restart: unless-stopped
     depends_on:
       - flaresolverr
 
   flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:v3.4.0
+    image: ghcr.io/flaresolverr/flaresolverr:v3.4.5
     container_name: suwayomi-flaresolverr
     user: 0:0
+    networks:
+      - default
     environment:
       TZ: $TZ
     restart: unless-stopped
@@ -73,12 +76,12 @@ x-casaos:
   index: /
   webui_port: 80
 
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Suwayomi/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Suwayomi/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Suwayomi/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Suwayomi/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Suwayomi/screenshot-1.png
 
   architectures:
     - amd64
