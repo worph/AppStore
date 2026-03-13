@@ -129,7 +129,7 @@ x-casaos:
 
         **Authentication:**
         - **Username:** `ADMIN`
-        - **Password:** The password you set during installation
+        - **Password:** `$APP_DEFAULT_PASSWORD`
 
         **How to use:**
         1. Type in the input field and press Enter to add items
@@ -192,7 +192,7 @@ x-casaos:
 
         **Authentification:**
         - **Utilisateur:** `ADMIN`
-        - **Mot de passe:** Le mot de passe defini lors de l'installation
+        - **Mot de passe:** `$APP_DEFAULT_PASSWORD`
 
         **Comment utiliser:**
         1. Tapez dans le champ et appuyez sur Entree pour ajouter des elements
