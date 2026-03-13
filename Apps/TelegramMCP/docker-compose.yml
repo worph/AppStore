@@ -1,4 +1,4 @@
-name: telegram-mcp
+name: telegrammcp
 services:
   # Nginx-hash-lock provides perimeter authentication
   # IMPORTANT: This service MUST be named "telegrammcp" (matching the caddy subdomain)
@@ -30,7 +30,7 @@ services:
       caddy_2.reverse_proxy: "{{upstreams 80}}"
 
   telegrammcp-backend:
-    image: ghcr.io/worph/telegram-mcp:1.1.0
+    image: ghcr.io/worph/telegram-mcp:1.1.1
     container_name: telegrammcp-backend
     user: $PUID:$PGID
     restart: unless-stopped
