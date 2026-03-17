@@ -1,0 +1,95 @@
+name: chronosmcp
+services:
+  # Nginx-hash-lock provides perimeter authentication
+  # IMPORTANT: This service MUST be named "chronosmcp" (matching the caddy subdomain)
+  # because the mesh-router extracts the service name from the URL subdomain
+  chronosmcp:
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
+    restart: unless-stopped
+    cpu_shares: 50
+    expose:
+      - 80
+    user: "root"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: chronosmcp-backend
+      BACKEND_PORT: "9054"
+      LISTEN_PORT: "80"
+    depends_on:
+      - chronosmcp-backend
+    networks:
+      - pcs
+    labels:
+      caddy_0: chronosmcp-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: chronosmcp-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: chronosmcp-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+
+  chronosmcp-backend:
+    image: ghcr.io/worph/chronos-mcp:1.0.0
+    container_name: chronosmcp-backend
+    user: $PUID:$PGID
+    restart: unless-stopped
+    expose:
+      - 9054
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - CONFIG_PATH=/app/config.json
+    volumes:
+      - type: bind
+        source: /DATA/AppData/chronos-mcp/
+        target: /app/data
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: chronosmcp
+  author: Worph
+  category: Utilities
+  description:
+    en_us: |
+      Chronos MCP is a cron-based scheduler that triggers MCP (Model Context Protocol)
+      tool calls at configured times. It connects to any MCP-compatible server via stdio,
+      HTTP, or SSE transports and invokes tools on a schedule defined by cron expressions.
+
+      Features:
+      - Cron-based scheduling of MCP tool calls
+      - Support for stdio, HTTP, and SSE transports
+      - Parameter templating with date/time variables
+      - Web dashboard for managing rules and viewing execution logs
+    zh_cn: |
+      Chronos MCP 是一个基于 cron 的调度器，可在配置的时间触发 MCP（模型上下文协议）
+      工具调用。它通过 stdio、HTTP 或 SSE 传输连接到任何兼容 MCP 的服务器，
+      并按 cron 表达式定义的计划调用工具。
+  developer: Worph
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/ChronosMCP/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/ChronosMCP/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/ChronosMCP/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/ChronosMCP/screenshot-3.png
+  tagline:
+    en_us: Cron-based scheduler for MCP tool calls
+    zh_cn: 基于 cron 的 MCP 工具调用调度器
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/ChronosMCP/thumbnail.png
+  title:
+    en_us: Chronos MCP
+  index: /?hash=$AUTH_HASH
+  webui_port: 80
+  chips:
+    - key: mcp
+      name:
+        en_us: MCP
