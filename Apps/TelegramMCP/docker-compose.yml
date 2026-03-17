@@ -30,7 +30,7 @@ services:
       caddy_2.reverse_proxy: "{{upstreams 80}}"
 
   telegrammcp-backend:
-    image: ghcr.io/worph/telegram-mcp:1.1.1
+    image: ghcr.io/worph/telegram-mcp:1.1.4
     container_name: telegrammcp-backend
     user: $PUID:$PGID
     restart: unless-stopped
