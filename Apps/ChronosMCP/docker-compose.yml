@@ -32,6 +32,7 @@ services:
   chronosmcp-backend:
     image: ghcr.io/worph/chronos-mcp:1.0.0
     container_name: chronosmcp-backend
+    hostname: chronosmcp
     user: $PUID:$PGID
     restart: unless-stopped
     expose:

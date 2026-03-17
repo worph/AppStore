@@ -32,6 +32,7 @@ services:
   telegrammcp-backend:
     image: ghcr.io/worph/telegram-mcp:1.1.4
     container_name: telegrammcp-backend
+    hostname: telegrammcp
     user: $PUID:$PGID
     restart: unless-stopped
     expose:
