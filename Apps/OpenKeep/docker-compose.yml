@@ -30,7 +30,7 @@ services:
       - pcs
 
   openkeep-backend:
-    image: ghcr.io/worph/open-keep:latest
+    image: ghcr.io/worph/open-keep:1.0.0
     container_name: openkeep-backend
     restart: unless-stopped
     user: $PUID:$PGID
