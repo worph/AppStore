@@ -38,7 +38,7 @@ services:
       PUID: $PUID
       PGID: $PGID
       TZ: $TZ
-      DATABASE_URL: file:./data/openkeep.db
+      DATABASE_URL: file:/app/data/openkeep.db
     volumes:
       - /DATA/AppData/openkeep/data/:/app/data
     healthcheck:

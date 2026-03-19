@@ -1,0 +1,266 @@
+name: appiummcp
+services:
+  # Nginx-hash-lock provides perimeter authentication for the web UI
+  appiummcp-proxy:
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
+    restart: unless-stopped
+    cpu_shares: 50
+    expose:
+      - 80
+    user: "root"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: appiummcp
+      BACKEND_PORT: "9745"
+      LISTEN_PORT: "80"
+    depends_on:
+      - appiummcp
+    networks:
+      - pcs
+    labels:
+      caddy_0: appiummcp-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: appiummcp-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: appiummcp-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+
+  # noVNC proxy — separate subdomain for the VNC viewer
+  appiummcp-vnc-proxy:
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
+    restart: unless-stopped
+    cpu_shares: 50
+    expose:
+      - 80
+    user: "root"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: appiummcp
+      BACKEND_PORT: "6080"
+      LISTEN_PORT: "80"
+    depends_on:
+      - appiummcp
+    networks:
+      - pcs
+    labels:
+      caddy_0: appiummcp-vnc-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: appiummcp-vnc-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: appiummcp-vnc-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+
+  # Main container — Android emulator + Appium + MCP server
+  appiummcp:
+    image: ghcr.io/worph/appium-mcp:1.0.0
+    container_name: appiummcp
+    hostname: appiummcp
+    privileged: true
+    restart: unless-stopped
+    devices:
+      - /dev/kvm
+    expose:
+      - 9745
+      - 6080
+    environment:
+      - EMULATOR_DEVICE=Samsung Galaxy S10
+      - APPIUM=true
+      - WEB_VNC=true
+      - CONFIG_PATH=/app/config.json
+      - LOG_LEVEL=info
+      - TZ=$TZ
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/config/
+        target: /app/data
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+  main: appiummcp
+  author: Worph
+  category: Developer
+  description:
+    en_us: |
+      **Android emulator in the cloud, controlled by AI via MCP**
+
+      Appium MCP bundles a full Android emulator, Appium automation server, and an MCP (Model Context Protocol) bridge in a single container. It lets LLMs and AI assistants launch apps, tap elements, type text, take screenshots, and navigate an Android device programmatically.
+
+      **What you can do:**
+      - Control a real Android emulator from any MCP-compatible AI assistant
+      - Launch apps, interact with UI elements, and navigate screens
+      - Take screenshots for visual feedback loops (screenshot → decide → act)
+      - View the emulator live via the built-in noVNC web viewer
+      - Access the Web UI dashboard for status monitoring
+
+      **Think of it like:** An Android phone in the cloud that AI can see and control.
+
+      **Perfect if you:** Want to automate Android testing, demo mobile apps remotely, or give your AI assistant the ability to interact with Android applications.
+    zh_cn: |
+      **云端 Android 模拟器，通过 MCP 由 AI 控制**
+
+      Appium MCP 将完整的 Android 模拟器、Appium 自动化服务器和 MCP（模型上下文协议）桥接整合在一个容器中。它允许 LLM 和 AI 助手启动应用、点击元素、输入文本、截屏并以编程方式导航 Android 设备。
+
+      **功能：**
+      - 从任何兼容 MCP 的 AI 助手控制真实的 Android 模拟器
+      - 启动应用、与 UI 元素交互、导航屏幕
+      - 截取屏幕截图用于视觉反馈循环（截图 → 决策 → 操作）
+      - 通过内置 noVNC 网页查看器实时查看模拟器
+      - 访问 Web UI 仪表板进行状态监控
+  developer: Worph
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/AppiumMCP/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/AppiumMCP/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/AppiumMCP/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/AppiumMCP/screenshot-3.png
+  tagline:
+    en_us: AI-controlled Android emulator via MCP
+    zh_cn: 通过 MCP 由 AI 控制的 Android 模拟器
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/AppiumMCP/thumbnail.png
+  title:
+    en_us: Appium MCP
+  index: /?hash=$AUTH_HASH
+  webui_port: 80
+  chips:
+    - key: mcp
+      name:
+        en_us: MCP
+  tips:
+    before_install:
+      en_us: |
+        **Requirements**
+
+        This app requires KVM support on the host machine. It runs a full Android emulator, so it needs:
+        - An **x86_64/amd64** host with KVM enabled (`/dev/kvm` must exist)
+        - At least **4 GB of free RAM** for the emulator
+        - Hardware virtualization enabled in BIOS (Intel VT-x or AMD-V)
+
+        **Getting Started**
+
+        After installation, the Android emulator will boot automatically (this takes 1–2 minutes on first start).
+
+        **Web Interfaces:**
+        - **Main UI** — Dashboard with status and tool information
+        - **noVNC Viewer** — Live view of the Android emulator screen at `appiummcp-vnc-${APP_DOMAIN}`
+
+        **MCP Integration (for AI/LLMs):**
+
+        Connect your AI assistant to control the Android emulator.
+
+        **Option 1: Public URL (with hash auth)**
+        ```json
+        {
+          "mcpServers": {
+            "appium-mcp": {
+              "type": "http",
+              "url": "https://appiummcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+            }
+          }
+        }
+        ```
+
+        **Option 2: Local Docker connection (no auth required)**
+        ```json
+        {
+          "mcpServers": {
+            "appium-mcp": {
+              "type": "http",
+              "url": "http://appiummcp:9745/mcp"
+            }
+          }
+        }
+        ```
+        *Note: Requires the AI assistant to be on the `pcs` Docker network.*
+
+        **Available MCP Tools:**
+        | Tool | Description |
+        |------|-------------|
+        | `screenshot` | Take a screenshot of the current screen |
+        | `tap` | Tap on an element by selector or coordinates |
+        | `type_text` | Type text into a field |
+        | `swipe` | Swipe from one point to another |
+        | `press_key` | Press a hardware key (home, back, enter, etc.) |
+        | `scroll` | Scroll the screen in a direction |
+        | `find_element` | Find an element and return its properties |
+        | `get_page_source` | Get the current UI hierarchy as XML |
+        | `open_url` | Open a URL in Chrome |
+        | `launch_app` | Launch an app by package name |
+        | `install_app` | Install an APK file |
+        | `close_app` | Close a running application |
+        | `list_apps` | List all installed packages |
+        | `create_session` | Create a new Appium session |
+        | `close_session` | Close the current Appium session |
+      zh_cn: |
+        **系统要求**
+
+        此应用需要主机支持 KVM。它运行完整的 Android 模拟器，因此需要：
+        - **x86_64/amd64** 主机并启用 KVM（`/dev/kvm` 必须存在）
+        - 至少 **4 GB 可用内存** 用于模拟器
+        - 在 BIOS 中启用硬件虚拟化（Intel VT-x 或 AMD-V）
+
+        **快速开始**
+
+        安装后，Android 模拟器将自动启动（首次启动需要 1-2 分钟）。
+
+        **Web 界面：**
+        - **主 UI** — 带有状态和工具信息的仪表板
+        - **noVNC 查看器** — 在 `appiummcp-vnc-${APP_DOMAIN}` 实时查看 Android 模拟器屏幕
+
+        **MCP 集成（用于 AI/LLM）：**
+
+        连接您的 AI 助手来控制 Android 模拟器。
+
+        **选项 1：公共 URL（使用 hash 认证）**
+        ```json
+        {
+          "mcpServers": {
+            "appium-mcp": {
+              "type": "http",
+              "url": "https://appiummcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+            }
+          }
+        }
+        ```
+
+        **选项 2：本地 Docker 连接（无需认证）**
+        ```json
+        {
+          "mcpServers": {
+            "appium-mcp": {
+              "type": "http",
+              "url": "http://appiummcp:9745/mcp"
+            }
+          }
+        }
+        ```
+        *注意：需要 AI 助手在 `pcs` Docker 网络上。*
+
+        **可用 MCP 工具：**
+        | 工具 | 描述 |
+        |------|------|
+        | `screenshot` | 截取当前屏幕截图 |
+        | `tap` | 通过选择器或坐标点击元素 |
+        | `type_text` | 在字段中输入文本 |
+        | `swipe` | 从一个点滑动到另一个点 |
+        | `press_key` | 按硬件键（主页、返回、回车等） |
+        | `scroll` | 向某个方向滚动屏幕 |
+        | `find_element` | 查找元素并返回其属性 |
+        | `get_page_source` | 以 XML 格式获取当前 UI 层次结构 |
+        | `open_url` | 在 Chrome 中打开 URL |
+        | `launch_app` | 通过包名启动应用 |
+        | `install_app` | 安装 APK 文件 |
+        | `close_app` | 关闭正在运行的应用 |
+        | `list_apps` | 列出所有已安装的包 |
+        | `create_session` | 创建新的 Appium 会话 |
+        | `close_session` | 关闭当前 Appium 会话 |
