@@ -75,7 +75,7 @@ services:
       - TZ=$TZ
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/config/
+        source: /DATA/AppData/appium-mcp/
         target: /app/data
     networks:
       - pcs
