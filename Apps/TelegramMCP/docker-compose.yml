@@ -53,10 +53,12 @@ networks:
     external: true
 
 x-casaos:
+  index: /?hash=$AUTH_HASH
+  main: telegrammcp
+
   architectures:
     - amd64
     - arm64
-  main: telegrammcp
   author: Worph
   category: Chat
   description:
@@ -88,8 +90,6 @@ x-casaos:
   thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/TelegramMCP/thumbnail.png
   title:
     en_us: Telegram MCP
-  index: /?hash=$AUTH_HASH
-  webui_port: 80
   chips:
     - key: mcp
       name:
