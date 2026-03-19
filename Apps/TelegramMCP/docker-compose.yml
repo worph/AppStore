@@ -29,7 +29,7 @@ services:
 
   # Main MCP server — reachable at telegrammcp:9634 on the pcs network
   telegrammcp:
-    image: ghcr.io/worph/telegram-mcp:1.1.4
+    image: ghcr.io/worph/telegram-mcp:1.1.8
     container_name: telegrammcp
     hostname: telegrammcp
     user: $PUID:$PGID
@@ -61,19 +61,21 @@ x-casaos:
   category: Chat
   description:
     en_us: |
-      Telegram MCP is a bridge between Telegram and the Model Context Protocol (MCP).
-      It allows you to connect your Telegram bot to any MCP-compatible AI server,
-      enabling intelligent responses and tool calling capabilities through Telegram messages.
+      Telegram MCP is a bidirectional bridge between Telegram and the Model Context Protocol (MCP).
+      It acts as both an MCP server (exposing Telegram tools like send_message and send_photo to LLMs)
+      and an MCP client (forwarding Telegram messages to a target MCP server for AI processing).
 
       Features:
-      - Connect Telegram to MCP servers via SSE or stdio transport
-      - Support for tool calling and parameter templating
-      - Built-in MCP server with echo and status tools
-      - Web dashboard for monitoring and configuration
+      - Bidirectional communication: receive Telegram messages and send responses via MCP
+      - Streamable HTTP transport for MCP connectivity
+      - Built-in MCP tools: send_message, send_photo, echo, mcp_info
+      - Permission flow with Telegram inline keyboard or web-based approval
+      - Polling and webhook modes for Telegram bot
+      - Web dashboard for runtime configuration
     zh_cn: |
-      Telegram MCP 是 Telegram 和模型上下文协议 (MCP) 之间的桥梁。
-      它允许您将 Telegram 机器人连接到任何兼容 MCP 的 AI 服务器，
-      通过 Telegram 消息实现智能响应和工具调用功能。
+      Telegram MCP 是 Telegram 和模型上下文协议 (MCP) 之间的双向桥梁。
+      它既是 MCP 服务器（向 LLM 公开 send_message 和 send_photo 等 Telegram 工具），
+      也是 MCP 客户端（将 Telegram 消息转发到目标 MCP 服务器进行 AI 处理）。
   developer: Worph
   icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/TelegramMCP/icon.png
   screenshot_link:
@@ -81,8 +83,8 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/TelegramMCP/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/TelegramMCP/screenshot-3.png
   tagline:
-    en_us: Bridge Telegram to MCP AI servers for intelligent bot interactions
-    zh_cn: 将 Telegram 桥接到 MCP AI 服务器以实现智能机器人交互
+    en_us: Bidirectional Telegram-MCP bridge for AI-powered bot interactions
+    zh_cn: 双向 Telegram-MCP 桥梁，实现 AI 驱动的机器人交互
   thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/TelegramMCP/thumbnail.png
   title:
     en_us: Telegram MCP
