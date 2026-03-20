@@ -29,7 +29,7 @@ services:
 
   # Main MCP server — reachable at telegrammcp:9634 on the pcs network
   telegrammcp:
-    image: ghcr.io/worph/telegram-mcp:1.1.8
+    image: ghcr.io/worph/telegram-mcp:1.1.9
     container_name: telegrammcp
     hostname: telegrammcp
     user: $PUID:$PGID
@@ -40,6 +40,7 @@ services:
       - PUID=$PUID
       - PGID=$PGID
       - TZ=$TZ
+      - PUBLIC_URL=https://telegrammcp-${APP_DOMAIN}
     volumes:
       - type: bind
         source: /DATA/AppData/telegrammcp/
