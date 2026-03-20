@@ -1,0 +1,252 @@
+name: browser-mcp
+services:
+  # Nginx-hash-lock provides perimeter authentication for the web UI
+  browser-mcp-proxy:
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
+    restart: unless-stopped
+    cpu_shares: 50
+    expose:
+      - 80
+    user: "root"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: browser-mcp
+      BACKEND_PORT: "9746"
+      LISTEN_PORT: "80"
+    depends_on:
+      - browser-mcp
+    networks:
+      - pcs
+    labels:
+      caddy_0: browser-mcp-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: browser-mcp-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: browser-mcp-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+
+  # noVNC proxy — separate subdomain for the VNC viewer
+  browser-mcp-vnc-proxy:
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
+    restart: unless-stopped
+    cpu_shares: 50
+    expose:
+      - 80
+    user: "root"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: browser-mcp
+      BACKEND_PORT: "6080"
+      LISTEN_PORT: "80"
+    depends_on:
+      - browser-mcp
+    networks:
+      - pcs
+    labels:
+      caddy_0: browser-mcp-vnc-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: browser-mcp-vnc-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: browser-mcp-vnc-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+
+  # Main container — Chromium browser + MCP server + noVNC
+  browser-mcp:
+    image: ghcr.io/worph/browser-mcp:1.0.0
+    container_name: browser-mcp
+    hostname: browser-mcp
+    restart: unless-stopped
+    shm_size: "2gb"
+    expose:
+      - 9746
+      - 6080
+    environment:
+      - VNC_RESOLUTION=1280x720x24
+      - CONFIG_PATH=/app/config.json
+      - LOG_LEVEL=info
+      - TZ=$TZ
+    volumes:
+      - type: bind
+        source: /DATA/AppData/browser-mcp/
+        target: /app/data
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+  main: browser-mcp
+  author: Worph
+  category: Developer
+  description:
+    en_us: |
+      **A headless Chromium browser in the cloud, controlled by AI via MCP**
+
+      Browser MCP bundles a full Chromium browser, Playwright automation, and an MCP (Model Context Protocol) server in a single container. It lets LLMs and AI assistants navigate websites, click elements, fill forms, take screenshots, and extract content programmatically.
+
+      **What you can do:**
+      - Control a real Chromium browser from any MCP-compatible AI assistant
+      - Navigate websites, click elements, fill forms, and interact with web pages
+      - Take screenshots for visual feedback loops (screenshot → decide → act)
+      - Execute JavaScript in the browser context for advanced automation
+      - View the browser live via the built-in noVNC web viewer
+      - Access the Web UI dashboard for status monitoring
+
+      **Think of it like:** A web browser in the cloud that AI can see and control.
+
+      **Perfect if you:** Want to automate web browsing, scrape websites, test web apps, or give your AI assistant the ability to interact with any website.
+    zh_cn: |
+      **云端无头 Chromium 浏览器，通过 MCP 由 AI 控制**
+
+      Browser MCP 将完整的 Chromium 浏览器、Playwright 自动化和 MCP（模型上下文协议）服务器整合在一个容器中。它允许 LLM 和 AI 助手浏览网站、点击元素、填写表单、截屏并以编程方式提取内容。
+
+      **功能：**
+      - 从任何兼容 MCP 的 AI 助手控制真实的 Chromium 浏览器
+      - 浏览网站、点击元素、填写表单、与网页交互
+      - 截取屏幕截图用于视觉反馈循环（截图 → 决策 → 操作）
+      - 在浏览器上下文中执行 JavaScript 进行高级自动化
+      - 通过内置 noVNC 网页查看器实时查看浏览器
+      - 访问 Web UI 仪表板进行状态监控
+  developer: Worph
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/BrowserMCP/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/BrowserMCP/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/BrowserMCP/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/BrowserMCP/screenshot-3.png
+  tagline:
+    en_us: AI-controlled web browser via MCP
+    zh_cn: 通过 MCP 由 AI 控制的网页浏览器
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/BrowserMCP/thumbnail.png
+  title:
+    en_us: Browser MCP
+  index: /?hash=$AUTH_HASH
+  webui_port: 80
+  chips:
+    - key: mcp
+      name:
+        en_us: MCP
+  tips:
+    before_install:
+      en_us: |
+        **Getting Started**
+
+        After installation, Chromium will launch automatically inside a virtual display.
+
+        **Web Interfaces:**
+        - **Main UI** — Dashboard with status and tool information
+        - **noVNC Viewer** — Live view of the browser screen at `browser-mcp-vnc-${APP_DOMAIN}`
+
+        **MCP Integration (for AI/LLMs):**
+
+        Connect your AI assistant to control the browser.
+
+        **Option 1: Public URL (with hash auth)**
+        ```json
+        {
+          "mcpServers": {
+            "browser-mcp": {
+              "type": "http",
+              "url": "https://browser-mcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+            }
+          }
+        }
+        ```
+
+        **Option 2: Local Docker connection (no auth required)**
+        ```json
+        {
+          "mcpServers": {
+            "browser-mcp": {
+              "type": "http",
+              "url": "http://browser-mcp:9746/mcp"
+            }
+          }
+        }
+        ```
+        *Note: Requires the AI assistant to be on the `pcs` Docker network.*
+
+        **Available MCP Tools:**
+        | Tool | Description |
+        |------|-------------|
+        | `navigate` | Navigate the browser to a URL |
+        | `click` | Click on an element by CSS/text selector |
+        | `type` | Type text into an input element |
+        | `screenshot` | Take a screenshot of the current page |
+        | `evaluate` | Execute JavaScript in the browser context |
+        | `get_text` | Get the text content of an element |
+        | `get_page_content` | Get the full HTML of the current page |
+        | `wait_for` | Wait for an element to reach a specific state |
+        | `go_back` | Navigate back in browser history |
+        | `go_forward` | Navigate forward in browser history |
+        | `set_viewport` | Set the browser viewport size |
+        | `get_console_logs` | Get browser console log entries |
+        | `pdf` | Generate a PDF of the current page |
+        | `get_cookies` | Get browser cookies |
+        | `set_cookies` | Set browser cookies |
+        | `clear_cookies` | Clear all browser cookies |
+      zh_cn: |
+        **快速开始**
+
+        安装后，Chromium 将在虚拟显示中自动启动。
+
+        **Web 界面：**
+        - **主 UI** — 带有状态和工具信息的仪表板
+        - **noVNC 查看器** — 在 `browser-mcp-vnc-${APP_DOMAIN}` 实时查看浏览器屏幕
+
+        **MCP 集成（用于 AI/LLM）：**
+
+        连接您的 AI 助手来控制浏览器。
+
+        **选项 1：公共 URL（使用 hash 认证）**
+        ```json
+        {
+          "mcpServers": {
+            "browser-mcp": {
+              "type": "http",
+              "url": "https://browser-mcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+            }
+          }
+        }
+        ```
+
+        **选项 2：本地 Docker 连接（无需认证）**
+        ```json
+        {
+          "mcpServers": {
+            "browser-mcp": {
+              "type": "http",
+              "url": "http://browser-mcp:9746/mcp"
+            }
+          }
+        }
+        ```
+        *注意：需要 AI 助手在 `pcs` Docker 网络上。*
+
+        **可用 MCP 工具：**
+        | 工具 | 描述 |
+        |------|------|
+        | `navigate` | 将浏览器导航到 URL |
+        | `click` | 通过 CSS/文本选择器点击元素 |
+        | `type` | 在输入元素中输入文本 |
+        | `screenshot` | 截取当前页面截图 |
+        | `evaluate` | 在浏览器上下文中执行 JavaScript |
+        | `get_text` | 获取元素的文本内容 |
+        | `get_page_content` | 获取当前页面的完整 HTML |
+        | `wait_for` | 等待元素达到特定状态 |
+        | `go_back` | 在浏览器历史中后退 |
+        | `go_forward` | 在浏览器历史中前进 |
+        | `set_viewport` | 设置浏览器视口大小 |
+        | `get_console_logs` | 获取浏览器控制台日志 |
+        | `pdf` | 生成当前页面的 PDF |
+        | `get_cookies` | 获取浏览器 cookies |
+        | `set_cookies` | 设置浏览器 cookies |
+        | `clear_cookies` | 清除所有浏览器 cookies |
