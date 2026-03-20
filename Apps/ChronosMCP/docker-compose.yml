@@ -29,7 +29,7 @@ services:
 
   # Main server — reachable at chronosmcp:9054 on the pcs network
   chronosmcp:
-    image: ghcr.io/worph/chronos-mcp:1.0.3
+    image: ghcr.io/worph/chronos-mcp:1.0.4
     container_name: chronosmcp
     hostname: chronosmcp
     user: $PUID:$PGID
@@ -40,7 +40,7 @@ services:
       - PUID=$PUID
       - PGID=$PGID
       - TZ=$TZ
-      - CONFIG_PATH=/app/config.json
+      - CONFIG_PATH=/app/data/config.json
     volumes:
       - type: bind
         source: /DATA/AppData/chronosmcp/
