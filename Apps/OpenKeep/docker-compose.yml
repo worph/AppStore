@@ -1,12 +1,24 @@
 name: openkeep
-
 services:
-  openkeep:
+  # Nginx-hash-lock provides perimeter authentication for the web UI
+  openkeep-proxy:
     image: ghcr.io/yundera/nginx-hash-lock:1.0.5
-    container_name: openkeep
     restart: unless-stopped
+    cpu_shares: 50
     expose:
       - 80
+    user: "root"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: openkeep
+      BACKEND_PORT: "9847"
+      LISTEN_PORT: "80"
+      USER: "ADMIN"
+      PASSWORD: $APP_DEFAULT_PASSWORD
+    depends_on:
+      - openkeep
+    networks:
+      - pcs
     labels:
       caddy_0: openkeep-${APP_DOMAIN}
       caddy_0.import: gateway_tls
@@ -16,31 +28,26 @@ services:
       caddy_1.reverse_proxy: "{{upstreams 80}}"
       caddy_2: openkeep-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
-    user: "root"
-    environment:
-      AUTH_HASH: $AUTH_HASH
-      BACKEND_HOST: "openkeep-backend"
-      BACKEND_PORT: "9847"
-      LISTEN_PORT: "80"
-      USER: "ADMIN"
-      PASSWORD: $APP_DEFAULT_PASSWORD
-    depends_on:
-      - openkeep-backend
-    networks:
-      - pcs
 
-  openkeep-backend:
+  # Main OpenKeep server — reachable at openkeep:9847 on the pcs network
+  openkeep:
     image: ghcr.io/worph/open-keep:1.1.0
-    container_name: openkeep-backend
-    restart: unless-stopped
+    container_name: openkeep
+    hostname: openkeep
     user: $PUID:$PGID
+    restart: unless-stopped
+    expose:
+      - 9847
     environment:
-      PUID: $PUID
-      PGID: $PGID
-      TZ: $TZ
-      DATABASE_URL: file:/app/data/openkeep.db
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - DATABASE_URL=file:/app/data/openkeep.db
+      - PUBLIC_URL=https://openkeep-${APP_DOMAIN}
     volumes:
-      - /DATA/AppData/openkeep/data/:/app/data
+      - type: bind
+        source: /DATA/AppData/openkeep/data/
+        target: /app/data
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:9847/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 30s
@@ -56,9 +63,8 @@ networks:
     external: true
 
 x-casaos:
-  main: openkeep
-  webui_port: 9847
   index: /?hash=$AUTH_HASH
+  main: openkeep-proxy
 
   icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenKeep/icon.png
   screenshot_link:
@@ -180,3 +186,7 @@ x-casaos:
         3. Ajoutez-le comme serveur MCP Streamable HTTP dans votre client IA (Claude Desktop, Claude Code, etc.)
 
         **Ce que votre IA peut faire:** Creer, lire, modifier et supprimer des notes et listes. Gerer les etiquettes. Rechercher des notes. Archiver et mettre a la corbeille - le tout en langage naturel.
+  chips:
+    - key: mcp
+      name:
+        en_us: MCP
