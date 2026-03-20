@@ -1,4 +1,4 @@
-name: telegrammcp
+name: telegram-mcp
 services:
   # Nginx-hash-lock provides perimeter authentication for the web UI
   telegrammcp-proxy:

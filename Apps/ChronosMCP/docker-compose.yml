@@ -1,4 +1,4 @@
-name: chronosmcp
+name: chronos-mcp
 services:
   # Nginx-hash-lock provides perimeter authentication for the web UI
   chronosmcp-proxy:
