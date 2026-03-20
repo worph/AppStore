@@ -1,60 +1,6 @@
 name: browser-mcp
 services:
-  # Nginx-hash-lock provides perimeter authentication for the web UI
-  browser-mcp-proxy:
-    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
-    restart: unless-stopped
-    cpu_shares: 50
-    expose:
-      - 80
-    user: "root"
-    environment:
-      AUTH_HASH: $AUTH_HASH
-      BACKEND_HOST: browser-mcp
-      BACKEND_PORT: "9746"
-      LISTEN_PORT: "80"
-    depends_on:
-      - browser-mcp
-    networks:
-      - pcs
-    labels:
-      caddy_0: browser-mcp-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: browser-mcp-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: browser-mcp-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
-
-  # noVNC proxy — separate subdomain for the VNC viewer
-  browser-mcp-vnc-proxy:
-    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
-    restart: unless-stopped
-    cpu_shares: 50
-    expose:
-      - 80
-    user: "root"
-    environment:
-      AUTH_HASH: $AUTH_HASH
-      BACKEND_HOST: browser-mcp
-      BACKEND_PORT: "6080"
-      LISTEN_PORT: "80"
-    depends_on:
-      - browser-mcp
-    networks:
-      - pcs
-    labels:
-      caddy_0: browser-mcp-vnc-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: browser-mcp-vnc-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: browser-mcp-vnc-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
-
-  # Main container — Chromium browser + MCP server + noVNC
+  # Single container — Chromium + MCP server (hash-lock) + noVNC (VNC password)
   browser-mcp:
     image: ghcr.io/worph/browser-mcp:1.0.0
     container_name: browser-mcp
@@ -65,9 +11,7 @@ services:
       - 9746
       - 6080
     environment:
-      - VNC_RESOLUTION=1280x720x24
-      - CONFIG_PATH=/app/config.json
-      - LOG_LEVEL=info
+      - AUTH_HASH=$AUTH_HASH
       - TZ=$TZ
     volumes:
       - type: bind
@@ -75,6 +19,23 @@ services:
         target: /app/data
     networks:
       - pcs
+    labels:
+      caddy_0: browser-mcp-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 9746}}"
+      caddy_1: browser-mcp-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 9746}}"
+      caddy_2: browser-mcp-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 9746}}"
+      caddy_3: browser-mcp-vnc-${APP_DOMAIN}
+      caddy_3.import: gateway_tls
+      caddy_3.reverse_proxy: "{{upstreams 6080}}"
+      caddy_4: browser-mcp-vnc-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_4.import: gateway_tls
+      caddy_4.reverse_proxy: "{{upstreams 6080}}"
+      caddy_5: browser-mcp-vnc-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_5.reverse_proxy: "{{upstreams 6080}}"
 
 networks:
   pcs:
@@ -129,7 +90,7 @@ x-casaos:
   title:
     en_us: Browser MCP
   index: /?hash=$AUTH_HASH
-  webui_port: 80
+  webui_port: 9746
   chips:
     - key: mcp
       name:

@@ -76,15 +76,15 @@ x-casaos:
   category: Developer
   developer: Worph
   title:
-    en_us: MCP Aggregator
+    en_us: Beacon
   tagline:
-    en_us: Unify multiple MCP servers behind a single endpoint
-    fr_fr: Unifiez plusieurs serveurs MCP derriere un seul endpoint
+    en_us: Discover and unify MCP servers behind a single endpoint
+    fr_fr: Decouvrez et unifiez vos serveurs MCP derriere un seul endpoint
   description:
     en_us: |
-      **A local service that aggregates multiple MCP servers into one endpoint**
+      **A local service that discovers and aggregates multiple MCP servers into one endpoint**
 
-      MCP Aggregator discovers MCP server containers on your Docker network via UDP broadcast, collects their tool manifests, and exposes them as namespaced tools through a single MCP streamable HTTP endpoint.
+      Beacon discovers MCP server containers on your Docker network via UDP broadcast, collects their tool manifests, and exposes them as namespaced tools through a single MCP streamable HTTP endpoint.
 
       **What you can do:**
       - Automatically discover MCP servers on the same Docker network
@@ -97,9 +97,9 @@ x-casaos:
 
       **Perfect if you:** Run multiple MCP-enabled apps and want your AI assistant to access all their tools from a single connection.
     fr_fr: |
-      **Un service local qui agrege plusieurs serveurs MCP en un seul endpoint**
+      **Un service local qui decouvre et agrege plusieurs serveurs MCP en un seul endpoint**
 
-      MCP Aggregator decouvre les conteneurs serveurs MCP sur votre reseau Docker via broadcast UDP, collecte leurs manifestes d'outils et les expose comme outils namespaces a travers un seul endpoint HTTP MCP streamable.
+      Beacon decouvre les conteneurs serveurs MCP sur votre reseau Docker via broadcast UDP, collecte leurs manifestes d'outils et les expose comme outils namespaces a travers un seul endpoint HTTP MCP streamable.
 
       **Ce que vous pouvez faire:**
       - Decouvrir automatiquement les serveurs MCP sur le meme reseau Docker
@@ -114,7 +114,7 @@ x-casaos:
       en_us: |
         **Getting Started**
 
-        MCP Aggregator automatically discovers MCP servers on the `pcs` Docker network.
+        Beacon automatically discovers MCP servers on the `pcs` Docker network.
 
         **Authentication:**
         - **Username:** `ADMIN`
@@ -167,7 +167,7 @@ x-casaos:
       fr_fr: |
         **Pour commencer**
 
-        MCP Aggregator decouvre automatiquement les serveurs MCP sur le reseau Docker `pcs`.
+        Beacon decouvre automatiquement les serveurs MCP sur le reseau Docker `pcs`.
 
         **Authentification:**
         - **Utilisateur:** `ADMIN`
