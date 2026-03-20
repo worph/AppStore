@@ -1,0 +1,59 @@
+name: metamcp
+
+services:
+  metamcp:
+    image: ghcr.io/metatool-ai/metamcp:2.4.22
+    container_name: metamcp
+    environment:
+      NODE_ENV: production
+      POSTGRES_HOST: metamcp-postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: metamcp
+      POSTGRES_PASSWORD: metamcp
+      POSTGRES_DB: metamcp
+      DATABASE_URL: postgresql://metamcp:metamcp@metamcp-postgres:5432/metamcp
+      BETTER_AUTH_SECRET: local-dev-secret
+      APP_URL: http://localhost:12008
+      NEXT_PUBLIC_APP_URL: http://localhost:12008
+      TRANSFORM_LOCALHOST_TO_DOCKER_INTERNAL: "true"
+      LOG_LEVEL: info
+    ports:
+      - "12008:12008"
+    depends_on:
+      metamcp-postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:12008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - metamcp
+
+  metamcp-postgres:
+    image: postgres:16-alpine
+    container_name: metamcp-postgres
+    environment:
+      POSTGRES_USER: metamcp
+      POSTGRES_PASSWORD: metamcp
+      POSTGRES_DB: metamcp
+    volumes:
+      - metamcp-pgdata:/var/lib/postgresql/data/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metamcp -d metamcp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - metamcp
+
+networks:
+  metamcp:
+    name: metamcp
+
+volumes:
+  metamcp-pgdata:

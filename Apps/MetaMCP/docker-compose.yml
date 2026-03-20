@@ -1,0 +1,210 @@
+name: metamcp
+
+services:
+  metamcp:
+    image: ghcr.io/metatool-ai/metamcp:2.4.22
+    container_name: metamcp
+    cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+    environment:
+      NODE_ENV: production
+      POSTGRES_HOST: metamcp-postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: metamcp
+      POSTGRES_PASSWORD: ${APP_DEFAULT_PASSWORD:-metamcp}
+      POSTGRES_DB: metamcp
+      DATABASE_URL: postgresql://metamcp:${APP_DEFAULT_PASSWORD:-metamcp}@metamcp-postgres:5432/metamcp
+      BETTER_AUTH_SECRET: ${APP_DEFAULT_PASSWORD:-change-me-in-production}
+      APP_URL: https://metamcp-${APP_DOMAIN}
+      NEXT_PUBLIC_APP_URL: https://metamcp-${APP_DOMAIN}
+      TRANSFORM_LOCALHOST_TO_DOCKER_INTERNAL: "true"
+      LOG_LEVEL: info
+      TZ: $TZ
+    expose:
+      - 12008
+    depends_on:
+      metamcp-postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:12008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - metamcp
+      - pcs
+    labels:
+      caddy_0: metamcp-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 12008}}"
+      caddy_1: metamcp-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 12008}}"
+      caddy_2: metamcp-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 12008}}"
+
+  metamcp-postgres:
+    image: postgres:16-alpine
+    container_name: metamcp-postgres
+    cpu_shares: 10
+    environment:
+      POSTGRES_USER: metamcp
+      POSTGRES_PASSWORD: ${APP_DEFAULT_PASSWORD:-metamcp}
+      POSTGRES_DB: metamcp
+      TZ: $TZ
+    volumes:
+      - /DATA/AppData/metamcp/pgdata/:/var/lib/postgresql/data/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metamcp -d metamcp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - metamcp
+
+networks:
+  metamcp:
+    name: metamcp
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  main: metamcp
+  webui_port: 12008
+  index: /
+
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaMCP/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaMCP/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaMCP/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaMCP/screenshot-3.png
+
+  architectures:
+    - amd64
+    - arm64
+  store_app_id: metamcp
+  category: Developer
+  author: metatool-ai
+  developer: metatool-ai
+  description:
+    en_us: |
+      MetaMCP is an MCP (Model Context Protocol) proxy and aggregator that consolidates multiple MCP servers into unified endpoints.
+
+      Instead of managing numerous individual MCP server connections across your AI applications, MetaMCP acts as a single gateway that aggregates and exposes tools, resources, and prompts from all your configured MCP servers.
+
+      **Key Features:**
+
+      * **Unified MCP Gateway** - Connect once to MetaMCP and access all your MCP servers through a single endpoint
+      * **Dynamic Configuration** - Add, remove, and configure MCP servers through a web UI without restarting your AI applications
+      * **Built-in Inspector** - Debug and test your MCP tools directly from the interface
+      * **Multi-tenancy** - Support multiple users and namespaces with API key authentication
+      * **Rate Limiting** - Control usage at both endpoint and per-client levels
+      * **SSE & HTTP Streaming** - Compatible with all modern MCP clients
+
+      Perfect for developers and teams who work with multiple AI tools and want a centralized way to manage their MCP server infrastructure on their Yundera Personal Cloud Server.
+    fr_fr: |
+      MetaMCP est un proxy et agrégateur MCP (Model Context Protocol) qui consolide plusieurs serveurs MCP en points d'accès unifiés.
+
+      Au lieu de gérer de nombreuses connexions individuelles de serveurs MCP à travers vos applications IA, MetaMCP agit comme une passerelle unique qui agrège et expose les outils, ressources et prompts de tous vos serveurs MCP configurés.
+
+      **Fonctionnalités clés :**
+
+      * **Passerelle MCP unifiée** - Connectez-vous une seule fois à MetaMCP et accédez à tous vos serveurs MCP via un seul point d'accès
+      * **Configuration dynamique** - Ajoutez, supprimez et configurez les serveurs MCP via une interface web sans redémarrer vos applications IA
+      * **Inspecteur intégré** - Déboguez et testez vos outils MCP directement depuis l'interface
+      * **Multi-locataire** - Prise en charge de plusieurs utilisateurs et espaces de noms avec authentification par clé API
+      * **Limitation de débit** - Contrôlez l'utilisation aux niveaux du point d'accès et par client
+
+      Parfait pour les développeurs et équipes qui travaillent avec plusieurs outils IA et souhaitent un moyen centralisé de gérer leur infrastructure de serveurs MCP sur leur serveur cloud personnel Yundera.
+    de_de: |
+      MetaMCP ist ein MCP (Model Context Protocol) Proxy und Aggregator, der mehrere MCP-Server zu einheitlichen Endpunkten zusammenfasst.
+
+      Anstatt zahlreiche einzelne MCP-Server-Verbindungen in Ihren KI-Anwendungen zu verwalten, fungiert MetaMCP als einzelnes Gateway, das Tools, Ressourcen und Prompts von allen konfigurierten MCP-Servern aggregiert und bereitstellt.
+
+      **Hauptfunktionen:**
+
+      * **Einheitliches MCP-Gateway** - Verbinden Sie sich einmal mit MetaMCP und greifen Sie über einen einzigen Endpunkt auf alle Ihre MCP-Server zu
+      * **Dynamische Konfiguration** - Fügen Sie MCP-Server über eine Web-Oberfläche hinzu, entfernen und konfigurieren Sie sie, ohne Ihre KI-Anwendungen neu zu starten
+      * **Integrierter Inspektor** - Debuggen und testen Sie Ihre MCP-Tools direkt über die Oberfläche
+      * **Multi-Mandantenfähigkeit** - Unterstützung für mehrere Benutzer und Namespaces mit API-Key-Authentifizierung
+
+      Perfekt für Entwickler und Teams, die mit mehreren KI-Tools arbeiten und ihre MCP-Server-Infrastruktur zentral auf ihrem Yundera Personal Cloud Server verwalten möchten.
+    zh_cn: |
+      MetaMCP 是一个 MCP（模型上下文协议）代理和聚合器，将多个 MCP 服务器整合到统一的端点中。
+
+      MetaMCP 作为单一网关，聚合并公开所有已配置 MCP 服务器的工具、资源和提示，无需在 AI 应用程序中管理大量单独的 MCP 服务器连接。
+
+      **主要功能：**
+
+      * **统一 MCP 网关** - 连接一次 MetaMCP，通过单一端点访问所有 MCP 服务器
+      * **动态配置** - 通过 Web 界面添加、删除和配置 MCP 服务器，无需重启 AI 应用
+      * **内置检查器** - 直接从界面调试和测试您的 MCP 工具
+      * **多租户** - 支持多用户和命名空间，使用 API 密钥认证
+      * **速率限制** - 在端点和每客户端级别控制使用量
+
+      非常适合使用多种 AI 工具并希望在 Yundera 个人云服务器上集中管理 MCP 服务器基础设施的开发人员和团队。
+    ko_kr: |
+      MetaMCP는 여러 MCP 서버를 통합 엔드포인트로 통합하는 MCP(Model Context Protocol) 프록시 및 어그리게이터입니다.
+
+      AI 애플리케이션에서 수많은 개별 MCP 서버 연결을 관리하는 대신, MetaMCP는 구성된 모든 MCP 서버의 도구, 리소스 및 프롬프트를 집계하고 노출하는 단일 게이트웨이 역할을 합니다.
+
+      **주요 기능:**
+
+      * **통합 MCP 게이트웨이** - MetaMCP에 한 번 연결하여 단일 엔드포인트를 통해 모든 MCP 서버에 접근
+      * **동적 구성** - AI 애플리케이션을 재시작하지 않고 웹 UI를 통해 MCP 서버 추가, 제거 및 구성
+      * **내장 인스펙터** - 인터페이스에서 직접 MCP 도구를 디버그하고 테스트
+      * **멀티테넌시** - API 키 인증으로 여러 사용자 및 네임스페이스 지원
+
+      여러 AI 도구를 사용하고 Yundera 개인 클라우드 서버에서 MCP 서버 인프라를 중앙 관리하려는 개발자와 팀에 완벽합니다.
+    es_es: |
+      MetaMCP es un proxy y agregador MCP (Model Context Protocol) que consolida múltiples servidores MCP en puntos de acceso unificados.
+
+      En lugar de gestionar numerosas conexiones individuales de servidores MCP en sus aplicaciones de IA, MetaMCP actúa como una puerta de enlace única que agrega y expone herramientas, recursos y prompts de todos sus servidores MCP configurados.
+
+      **Características principales:**
+
+      * **Puerta de enlace MCP unificada** - Conéctese una vez a MetaMCP y acceda a todos sus servidores MCP a través de un único punto de acceso
+      * **Configuración dinámica** - Agregue, elimine y configure servidores MCP a través de una interfaz web sin reiniciar sus aplicaciones de IA
+      * **Inspector integrado** - Depure y pruebe sus herramientas MCP directamente desde la interfaz
+      * **Multi-inquilino** - Soporte para múltiples usuarios y espacios de nombres con autenticación por clave API
+
+      Perfecto para desarrolladores y equipos que trabajan con múltiples herramientas de IA y desean una forma centralizada de gestionar su infraestructura de servidores MCP en su servidor cloud personal Yundera.
+  tagline:
+    en_us: Unified MCP Server Gateway & Aggregator
+    fr_fr: Passerelle et agrégateur de serveurs MCP unifiés
+    de_de: Einheitliches MCP-Server-Gateway und Aggregator
+    zh_cn: 统一的 MCP 服务器网关和聚合器
+    ko_kr: 통합 MCP 서버 게이트웨이 및 어그리게이터
+    es_es: Puerta de enlace y agregador de servidores MCP unificado
+  title:
+    en_us: MetaMCP
+  tips:
+    before_install:
+      en_us: |
+        **Setup Information:**
+
+        MetaMCP is an MCP proxy that aggregates multiple MCP servers into a single endpoint.
+
+        **First Setup:** Create your admin account on first visit to the web interface.
+
+        **Connecting AI Apps:** After setup, configure your AI applications (Claude, Cursor, etc.) to connect to MetaMCP's SSE endpoint at `https://metamcp-YOUR_DOMAIN/api/sse` or the HTTP streaming endpoint.
+
+        **API Keys:** Generate API keys from the web interface for programmatic access and multi-client setups.
+      fr_fr: |
+        **Informations de configuration :**
+
+        MetaMCP est un proxy MCP qui agrège plusieurs serveurs MCP en un seul point d'accès.
+
+        **Première configuration :** Créez votre compte administrateur lors de votre première visite de l'interface web.
+
+        **Connexion des applications IA :** Après la configuration, configurez vos applications IA (Claude, Cursor, etc.) pour se connecter au point d'accès SSE de MetaMCP.
+
+        **Clés API :** Générez des clés API depuis l'interface web pour l'accès programmatique.

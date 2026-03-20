@@ -6,22 +6,22 @@ services:
     container_name: openkeep
     restart: unless-stopped
     expose:
-      - 9847
+      - 80
     labels:
       caddy_0: openkeep-${APP_DOMAIN}
       caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 9847}}"
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
       caddy_1: openkeep-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 9847}}"
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
       caddy_2: openkeep-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 9847}}"
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
     user: "root"
     environment:
       AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: "openkeep-backend"
       BACKEND_PORT: "9847"
-      LISTEN_PORT: "9847"
+      LISTEN_PORT: "80"
       USER: "ADMIN"
       PASSWORD: $APP_DEFAULT_PASSWORD
     depends_on:
