@@ -1,31 +1,31 @@
-name: mcp-aggregator
+name: beacon
 
 services:
-  mcp-aggregator:
+  beacon-proxy:
     image: ghcr.io/yundera/nginx-hash-lock:1.0.5
-    container_name: mcp-aggregator
+    container_name: beacon-proxy
     restart: unless-stopped
     expose:
       - 80
     labels:
-      caddy_0: mcp-aggregator-${APP_DOMAIN}
+      caddy_0: beacon-${APP_DOMAIN}
       caddy_0.import: gateway_tls
       caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: mcp-aggregator-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1: beacon-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: mcp-aggregator-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2: beacon-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     user: 0:0
     environment:
       AUTH_HASH: $AUTH_HASH
-      BACKEND_HOST: "mcp-aggregator-backend"
+      BACKEND_HOST: "beacon"
       BACKEND_PORT: "9300"
       LISTEN_PORT: "80"
       USER: "ADMIN"
       PASSWORD: $APP_DEFAULT_PASSWORD
     depends_on:
-      - mcp-aggregator-backend
+      - beacon
     networks:
       - pcs
     deploy:
@@ -34,10 +34,10 @@ services:
           cpus: "0.5"
           memory: 256M
 
-  mcp-aggregator-backend:
-    image: ghcr.io/worph/mcp-aggregator:1.0.2
-    container_name: mcp-aggregator-backend
-    hostname: mcp-aggregator-backend
+  beacon:
+    image: ghcr.io/worph/beacon:1.0.2
+    container_name: beacon
+    hostname: beacon
     restart: unless-stopped
     environment:
       DISCOVERY_INTERVAL: "60"
@@ -63,12 +63,11 @@ networks:
     external: true
 
 x-casaos:
-  main: mcp-aggregator
-  webui_port: 80
+  main: beacon
   index: /
 
-  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MCPAggregator/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MCPAggregator/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Beacon/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Beacon/icon.png
 
   architectures:
     - amd64
@@ -134,9 +133,9 @@ x-casaos:
         ```json
         {
           "mcpServers": {
-            "mcp-aggregator": {
+            "beacon": {
               "type": "http",
-              "url": "https://mcp-aggregator-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+              "url": "https://beacon-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
             }
           }
         }
@@ -148,9 +147,9 @@ x-casaos:
         ```json
         {
           "mcpServers": {
-            "mcp-aggregator": {
+            "beacon": {
               "type": "http",
-              "url": "http://mcp-aggregator-backend:9099/mcp"
+              "url": "http://beacon:9099/mcp"
             }
           }
         }
@@ -187,9 +186,9 @@ x-casaos:
         ```json
         {
           "mcpServers": {
-            "mcp-aggregator": {
+            "beacon": {
               "type": "http",
-              "url": "https://mcp-aggregator-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+              "url": "https://beacon-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
             }
           }
         }
@@ -199,9 +198,9 @@ x-casaos:
         ```json
         {
           "mcpServers": {
-            "mcp-aggregator": {
+            "beacon": {
               "type": "http",
-              "url": "http://mcp-aggregator-backend:9099/mcp"
+              "url": "http://beacon:9099/mcp"
             }
           }
         }
