@@ -1,4 +1,4 @@
-name: telegram-mcp
+name: telegrammcp
 services:
   # Nginx-hash-lock provides perimeter authentication for the web UI
   telegrammcp-proxy:
@@ -42,7 +42,7 @@ services:
       - TZ=$TZ
     volumes:
       - type: bind
-        source: /DATA/AppData/telegram-mcp/
+        source: /DATA/AppData/telegrammcp/
         target: /app/data
     networks:
       - pcs

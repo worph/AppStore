@@ -1,7 +1,7 @@
-name: appiummcp
+name: appium
 services:
   # Nginx-hash-lock provides perimeter authentication for the web UI
-  appiummcp-proxy:
+  appium-proxy:
     image: ghcr.io/yundera/nginx-hash-lock:1.0.5
     restart: unless-stopped
     cpu_shares: 50
@@ -10,25 +10,25 @@ services:
     user: "root"
     environment:
       AUTH_HASH: $AUTH_HASH
-      BACKEND_HOST: appiummcp
+      BACKEND_HOST: appium
       BACKEND_PORT: "9745"
       LISTEN_PORT: "80"
     depends_on:
-      - appiummcp
+      - appium
     networks:
       - pcs
     labels:
-      caddy_0: appiummcp-${APP_DOMAIN}
+      caddy_0: appium-${APP_DOMAIN}
       caddy_0.import: gateway_tls
       caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: appiummcp-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1: appium-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: appiummcp-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2: appium-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
 
   # noVNC proxy — separate subdomain for the VNC viewer
-  appiummcp-vnc-proxy:
+  appium-vnc-proxy:
     image: ghcr.io/yundera/nginx-hash-lock:1.0.5
     restart: unless-stopped
     cpu_shares: 50
@@ -37,28 +37,28 @@ services:
     user: "root"
     environment:
       AUTH_HASH: $AUTH_HASH
-      BACKEND_HOST: appiummcp
+      BACKEND_HOST: appium
       BACKEND_PORT: "6080"
       LISTEN_PORT: "80"
     depends_on:
-      - appiummcp
+      - appium
     networks:
       - pcs
     labels:
-      caddy_0: appiummcp-vnc-${APP_DOMAIN}
+      caddy_0: appium-vnc-${APP_DOMAIN}
       caddy_0.import: gateway_tls
       caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: appiummcp-vnc-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1: appium-vnc-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: appiummcp-vnc-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2: appium-vnc-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
 
   # Main container — Android emulator + Appium + MCP server
-  appiummcp:
-    image: ghcr.io/worph/appium-mcp:1.0.0
-    container_name: appiummcp
-    hostname: appiummcp
+  appium:
+    image: ghcr.io/worph/appium:1.0.0
+    container_name: appium
+    hostname: appium
     privileged: true
     restart: unless-stopped
     devices:
@@ -75,7 +75,7 @@ services:
       - TZ=$TZ
     volumes:
       - type: bind
-        source: /DATA/AppData/appium-mcp/
+        source: /DATA/AppData/appium/
         target: /app/data
     networks:
       - pcs
@@ -88,14 +88,14 @@ networks:
 x-casaos:
   architectures:
     - amd64
-  main: appiummcp
+  main: appium
   author: Worph
   category: Developer
   description:
     en_us: |
       **Android emulator in the cloud, controlled by AI via MCP**
 
-      Appium MCP bundles a full Android emulator, Appium automation server, and an MCP (Model Context Protocol) bridge in a single container. It lets LLMs and AI assistants launch apps, tap elements, type text, take screenshots, and navigate an Android device programmatically.
+      Appium bundles a full Android emulator, Appium automation server, and an MCP (Model Context Protocol) bridge in a single container. It lets LLMs and AI assistants launch apps, tap elements, type text, take screenshots, and navigate an Android device programmatically.
 
       **What you can do:**
       - Control a real Android emulator from any MCP-compatible AI assistant
@@ -110,7 +110,7 @@ x-casaos:
     zh_cn: |
       **云端 Android 模拟器，通过 MCP 由 AI 控制**
 
-      Appium MCP 将完整的 Android 模拟器、Appium 自动化服务器和 MCP（模型上下文协议）桥接整合在一个容器中。它允许 LLM 和 AI 助手启动应用、点击元素、输入文本、截屏并以编程方式导航 Android 设备。
+      Appium 将完整的 Android 模拟器、Appium 自动化服务器和 MCP（模型上下文协议）桥接整合在一个容器中。它允许 LLM 和 AI 助手启动应用、点击元素、输入文本、截屏并以编程方式导航 Android 设备。
 
       **功能：**
       - 从任何兼容 MCP 的 AI 助手控制真实的 Android 模拟器
@@ -119,17 +119,17 @@ x-casaos:
       - 通过内置 noVNC 网页查看器实时查看模拟器
       - 访问 Web UI 仪表板进行状态监控
   developer: Worph
-  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/AppiumMCP/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Appium/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/AppiumMCP/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/AppiumMCP/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/AppiumMCP/screenshot-3.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Appium/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Appium/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Appium/screenshot-3.png
   tagline:
     en_us: AI-controlled Android emulator via MCP
     zh_cn: 通过 MCP 由 AI 控制的 Android 模拟器
-  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/AppiumMCP/thumbnail.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Appium/thumbnail.png
   title:
-    en_us: Appium MCP
+    en_us: Appium
   index: /?hash=$AUTH_HASH
   webui_port: 80
   chips:
@@ -152,7 +152,7 @@ x-casaos:
 
         **Web Interfaces:**
         - **Main UI** — Dashboard with status and tool information
-        - **noVNC Viewer** — Live view of the Android emulator screen at `appiummcp-vnc-${APP_DOMAIN}`
+        - **noVNC Viewer** — Live view of the Android emulator screen at `appium-vnc-${APP_DOMAIN}`
 
         **MCP Integration (for AI/LLMs):**
 
@@ -162,9 +162,9 @@ x-casaos:
         ```json
         {
           "mcpServers": {
-            "appium-mcp": {
+            "appium": {
               "type": "http",
-              "url": "https://appiummcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+              "url": "https://appium-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
             }
           }
         }
@@ -174,9 +174,9 @@ x-casaos:
         ```json
         {
           "mcpServers": {
-            "appium-mcp": {
+            "appium": {
               "type": "http",
-              "url": "http://appiummcp:9745/mcp"
+              "url": "http://appium:9745/mcp"
             }
           }
         }
@@ -215,7 +215,7 @@ x-casaos:
 
         **Web 界面：**
         - **主 UI** — 带有状态和工具信息的仪表板
-        - **noVNC 查看器** — 在 `appiummcp-vnc-${APP_DOMAIN}` 实时查看 Android 模拟器屏幕
+        - **noVNC 查看器** — 在 `appium-vnc-${APP_DOMAIN}` 实时查看 Android 模拟器屏幕
 
         **MCP 集成（用于 AI/LLM）：**
 
@@ -225,9 +225,9 @@ x-casaos:
         ```json
         {
           "mcpServers": {
-            "appium-mcp": {
+            "appium": {
               "type": "http",
-              "url": "https://appiummcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+              "url": "https://appium-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
             }
           }
         }
@@ -237,9 +237,9 @@ x-casaos:
         ```json
         {
           "mcpServers": {
-            "appium-mcp": {
+            "appium": {
               "type": "http",
-              "url": "http://appiummcp:9745/mcp"
+              "url": "http://appium:9745/mcp"
             }
           }
         }

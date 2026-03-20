@@ -1,4 +1,4 @@
-name: chronos-mcp
+name: chronosmcp
 services:
   # Nginx-hash-lock provides perimeter authentication for the web UI
   chronosmcp-proxy:
@@ -43,7 +43,7 @@ services:
       - CONFIG_PATH=/app/config.json
     volumes:
       - type: bind
-        source: /DATA/AppData/chronos-mcp/
+        source: /DATA/AppData/chronosmcp/
         target: /app/data
     networks:
       - pcs
