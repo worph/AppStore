@@ -29,7 +29,7 @@ services:
 
   # Main server — reachable at chronosmcp:9054 on the pcs network
   chronosmcp:
-    image: ghcr.io/worph/chronos-mcp:1.0.0
+    image: ghcr.io/worph/chronos-mcp:1.0.3
     container_name: chronosmcp
     hostname: chronosmcp
     user: $PUID:$PGID

@@ -20,7 +20,7 @@ services:
     environment:
       AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: "mcp-aggregator-backend"
-      BACKEND_PORT: "3000"
+      BACKEND_PORT: "9300"
       LISTEN_PORT: "80"
       USER: "ADMIN"
       PASSWORD: $APP_DEFAULT_PASSWORD
@@ -35,7 +35,7 @@ services:
           memory: 256M
 
   mcp-aggregator-backend:
-    image: ghcr.io/worph/mcp-aggregator:0.1.0
+    image: ghcr.io/worph/mcp-aggregator:1.0.2
     container_name: mcp-aggregator-backend
     hostname: mcp-aggregator-backend
     restart: unless-stopped
@@ -43,11 +43,11 @@ services:
       DISCOVERY_INTERVAL: "60"
       DISCOVERY_PORT: "9099"
       MCP_PORT: "9099"
-      WEB_PORT: "3000"
+      WEB_PORT: "9300"
       LOG_LEVEL: info
       TZ: $TZ
     expose:
-      - 3000
+      - 9300
       - 9099
     networks:
       - pcs
