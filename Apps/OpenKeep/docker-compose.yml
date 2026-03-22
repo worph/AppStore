@@ -31,7 +31,7 @@ services:
 
   # Main OpenKeep server — reachable at openkeep:9847 on the pcs network
   openkeep:
-    image: ghcr.io/worph/open-keep:1.1.1
+    image: ghcr.io/worph/open-keep:1.1.2
     container_name: openkeep
     hostname: openkeep
     user: $PUID:$PGID
@@ -64,7 +64,7 @@ networks:
 
 x-casaos:
   index: /?hash=$AUTH_HASH
-  main: openkeep-proxy
+  main: openkeep
 
   icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/OpenKeep/icon.png
   screenshot_link:

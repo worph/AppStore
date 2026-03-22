@@ -13,6 +13,8 @@ services:
       BACKEND_HOST: chronosmcp
       BACKEND_PORT: "9054"
       LISTEN_PORT: "80"
+      USER: "ADMIN"
+      PASSWORD: $APP_DEFAULT_PASSWORD
     depends_on:
       - chronosmcp
     networks:
@@ -29,7 +31,7 @@ services:
 
   # Main server — reachable at chronosmcp:9054 on the pcs network
   chronosmcp:
-    image: ghcr.io/worph/chronos-mcp:1.0.4
+    image: ghcr.io/worph/chronos-mcp:1.0.5
     container_name: chronosmcp
     hostname: chronosmcp
     user: $PUID:$PGID
@@ -98,7 +100,6 @@ x-casaos:
   title:
     en_us: Chronos MCP
   index: /?hash=$AUTH_HASH
-  webui_port: 80
   chips:
     - key: mcp
       name:

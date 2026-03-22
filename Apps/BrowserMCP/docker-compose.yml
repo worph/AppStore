@@ -1,4 +1,4 @@
-name: browser-mcp
+name: browsermcp
 services:
   # Single container — Chromium + MCP server (hash-lock) + noVNC (VNC password)
   browser-mcp:
@@ -20,21 +20,21 @@ services:
     networks:
       - pcs
     labels:
-      caddy_0: browser-mcp-${APP_DOMAIN}
+      caddy_0: browsermcp-${APP_DOMAIN}
       caddy_0.import: gateway_tls
       caddy_0.reverse_proxy: "{{upstreams 9746}}"
-      caddy_1: browser-mcp-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1: browsermcp-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.reverse_proxy: "{{upstreams 9746}}"
-      caddy_2: browser-mcp-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2: browsermcp-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 9746}}"
-      caddy_3: browser-mcp-vnc-${APP_DOMAIN}
+      caddy_3: browsermcp-vnc-${APP_DOMAIN}
       caddy_3.import: gateway_tls
       caddy_3.reverse_proxy: "{{upstreams 6080}}"
-      caddy_4: browser-mcp-vnc-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_4: browsermcp-vnc-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_4.import: gateway_tls
       caddy_4.reverse_proxy: "{{upstreams 6080}}"
-      caddy_5: browser-mcp-vnc-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_5: browsermcp-vnc-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_5.reverse_proxy: "{{upstreams 6080}}"
 
 networks:
@@ -45,7 +45,7 @@ networks:
 x-casaos:
   architectures:
     - amd64
-  main: browser-mcp
+  main: browsermcp
   author: Worph
   category: Developer
   description:

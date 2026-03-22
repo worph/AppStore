@@ -1,12 +1,25 @@
 name: lystik
 
 services:
-  lystik:
+  # Nginx-hash-lock provides perimeter authentication for the web UI
+  lystik-proxy:
     image: ghcr.io/yundera/nginx-hash-lock:1.0.5
-    container_name: lystik
     restart: unless-stopped
+    cpu_shares: 50
     expose:
       - 80
+    user: "root"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: lystik
+      BACKEND_PORT: "80"
+      LISTEN_PORT: "80"
+      USER: "ADMIN"
+      PASSWORD: $APP_DEFAULT_PASSWORD
+    depends_on:
+      - lystik
+    networks:
+      - pcs
     labels:
       caddy_0: lystik-${APP_DOMAIN}
       caddy_0.import: gateway_tls
@@ -16,29 +29,14 @@ services:
       caddy_1.reverse_proxy: "{{upstreams 80}}"
       caddy_2: lystik-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
-    user: 0:0
-    environment:
-      AUTH_HASH: $AUTH_HASH
-      BACKEND_HOST: "lystik-backend"
-      BACKEND_PORT: "80"
-      LISTEN_PORT: "80"
-      USER: "ADMIN"
-      PASSWORD: $APP_DEFAULT_PASSWORD
-    depends_on:
-      - lystik-backend
-    networks:
-      - pcs
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 256M
 
-  lystik-backend:
-    image: ghcr.io/worph/lystik:1.2.3
-    container_name: lystik-backend
-    restart: unless-stopped
+  # Main Lystik server — reachable at lystik:80 on the pcs network
+  lystik:
+    image: ghcr.io/worph/lystik:1.2.4
+    container_name: lystik
+    hostname: lystik
     user: $PUID:$PGID
+    restart: unless-stopped
     environment:
       PUID: $PUID
       PGID: $PGID
@@ -55,11 +53,6 @@ services:
       start_period: 40s
     networks:
       - pcs
-    deploy:
-      resources:
-        limits:
-          cpus: "1"
-          memory: 512M
 
 networks:
   pcs:
@@ -67,9 +60,8 @@ networks:
     external: true
 
 x-casaos:
+  index: /?hash=$AUTH_HASH
   main: lystik
-  webui_port: 80
-  index: /
 
   icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Lystik/icon.png
   screenshot_link:
@@ -167,7 +159,7 @@ x-casaos:
           "mcpServers": {
             "lystik": {
               "type": "sse",
-              "url": "http://lystik-backend:80/mcp"
+              "url": "http://lystik:80/mcp"
             }
           }
         }
@@ -225,7 +217,7 @@ x-casaos:
           "mcpServers": {
             "lystik": {
               "type": "sse",
-              "url": "http://lystik-backend:80/mcp"
+              "url": "http://lystik:80/mcp"
             }
           }
         }
