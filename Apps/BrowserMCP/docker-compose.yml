@@ -2,14 +2,13 @@ name: browsermcp
 services:
   # Single container — Chromium + MCP server (hash-lock) + noVNC (VNC password)
   browser-mcp:
-    image: ghcr.io/worph/browser-mcp:1.1.0
+    image: ghcr.io/worph/browser-mcp:1.1.2
     container_name: browser-mcp
     hostname: browser-mcp
     restart: unless-stopped
     shm_size: "2gb"
     expose:
       - 9746
-      - 6080
     environment:
       - AUTH_HASH=$AUTH_HASH
       - TZ=$TZ
@@ -28,14 +27,6 @@ services:
       caddy_1.reverse_proxy: "{{upstreams 9746}}"
       caddy_2: browsermcp-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 9746}}"
-      caddy_3: browsermcp-vnc-${APP_DOMAIN}
-      caddy_3.import: gateway_tls
-      caddy_3.reverse_proxy: "{{upstreams 6080}}"
-      caddy_4: browsermcp-vnc-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_4.import: gateway_tls
-      caddy_4.reverse_proxy: "{{upstreams 6080}}"
-      caddy_5: browsermcp-vnc-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_5.reverse_proxy: "{{upstreams 6080}}"
 
 networks:
   pcs:
@@ -102,9 +93,8 @@ x-casaos:
 
         After installation, Chromium will launch automatically inside a virtual display.
 
-        **Web Interfaces:**
-        - **Main UI** — Dashboard with status and tool information
-        - **noVNC Viewer** — Live view of the browser screen at `browser-mcp-vnc-${APP_DOMAIN}`
+        **Web Interface:**
+        - **Main UI** — Dashboard with live noVNC browser view, status, and tool information
 
         **MCP Integration (for AI/LLMs):**
 
@@ -160,8 +150,7 @@ x-casaos:
         安装后，Chromium 将在虚拟显示中自动启动。
 
         **Web 界面：**
-        - **主 UI** — 带有状态和工具信息的仪表板
-        - **noVNC 查看器** — 在 `browser-mcp-vnc-${APP_DOMAIN}` 实时查看浏览器屏幕
+        - **主 UI** — 带有实时 noVNC 浏览器视图、状态和工具信息的仪表板
 
         **MCP 集成（用于 AI/LLM）：**
 

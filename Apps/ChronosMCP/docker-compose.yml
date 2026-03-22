@@ -60,6 +60,7 @@ x-casaos:
     - amd64
     - arm64
   main: chronosmcp
+  index: /?hash=$AUTH_HASH
   author: Worph
   category: Utilities
   description:
@@ -99,7 +100,6 @@ x-casaos:
   thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/ChronosMCP/thumbnail.png
   title:
     en_us: Chronos MCP
-  index: /?hash=$AUTH_HASH
   chips:
     - key: mcp
       name:
