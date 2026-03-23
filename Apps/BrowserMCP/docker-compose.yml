@@ -7,6 +7,7 @@ services:
     hostname: browser-mcp
     restart: unless-stopped
     shm_size: "2gb"
+    user: 0:0
     expose:
       - 9746
     environment:
