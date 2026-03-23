@@ -9,6 +9,7 @@ services:
       - 80
     user: "root"
     environment:
+      ALLOWED_PATHS: "webhook"
       AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: telegrammcp
       BACKEND_PORT: "9634"

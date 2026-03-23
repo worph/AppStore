@@ -35,13 +35,14 @@ services:
           memory: 256M
 
   beacon:
-    image: ghcr.io/worph/beacon:1.0.4
+    image: ghcr.io/worph/beacon:1.0.5
     container_name: beacon
     hostname: beacon
     restart: unless-stopped
     environment:
       DISCOVERY_INTERVAL: "60"
       DISCOVERY_PORT: "9099"
+      MCP_CLIENT_TIMEOUT : 300
       MCP_PORT: "9099"
       WEB_PORT: "9300"
       LOG_LEVEL: info
