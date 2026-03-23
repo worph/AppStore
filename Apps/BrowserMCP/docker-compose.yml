@@ -1,10 +1,10 @@
 name: browsermcp
 services:
   # Single container — Chromium + MCP server (hash-lock) + noVNC (VNC password)
-  browser-mcp:
+  browsermcp:
     image: ghcr.io/worph/browser-mcp:1.1.2
-    container_name: browser-mcp
-    hostname: browser-mcp
+    container_name: browsermcp
+    hostname: browsermcp
     restart: unless-stopped
     shm_size: "2gb"
     user: 0:0
@@ -37,7 +37,7 @@ networks:
 x-casaos:
   architectures:
     - amd64
-  main: browser-mcp
+  main: browsermcp
   author: Worph
   category: Developer
   description:
@@ -82,7 +82,6 @@ x-casaos:
   title:
     en_us: Browser MCP
   index: /?hash=$AUTH_HASH
-  webui_port: 9746
   chips:
     - key: mcp
       name:
