@@ -31,7 +31,7 @@ services:
 
   # Main OpenKeep server — reachable at openkeep:9847 on the pcs network
   openkeep:
-    image: ghcr.io/worph/open-keep:1.1.2
+    image: ghcr.io/worph/open-keep:1.1.4
     container_name: openkeep
     hostname: openkeep
     user: $PUID:$PGID
