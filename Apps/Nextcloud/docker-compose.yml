@@ -2,7 +2,7 @@ name: nextcloud
 
 services:
   nextcloud:
-    image: nextcloud:31.0.9
+    image: nextcloud:32.0.3
     container_name: nextcloud
     restart: unless-stopped
     user: $PUID:$PGID
@@ -54,7 +54,7 @@ services:
       - pcs
 
   db:
-    image: mariadb:11.2
+    image: mariadb:11.8
     container_name: nextcloud_db
     user: $PUID:$PGID
     cpu_shares: 70
@@ -77,7 +77,7 @@ services:
       - nextcloud-network
 
   redis:
-    image: redis:7.2-alpine
+    image: redis:7.4-alpine
     container_name: nextcloud_redis
     cpu_shares: 10
     command: redis-server --requirepass $APP_DEFAULT_PASSWORD
@@ -95,7 +95,7 @@ services:
       - nextcloud-network
 
   cron:
-    image: nextcloud:31.0.9
+    image: nextcloud:32.0.3
     restart: unless-stopped
     volumes:
       - /DATA/AppData/nextcloud/root/:/var/www/html:z
@@ -451,6 +451,8 @@ x-casaos:
         **Quick Setup Guide**
         - Create your account and complete the setup
         - When asked about storage options, choose the **recommended setting** (already configured for you)
+
+        **Note:** After clicking "Install", the page may show a "Gateway time-out" error. This is normal - the installation takes longer than expected. Simply **refresh the page** after a minute and you'll see the login screen.
         
         
         **Security and setup tips:**

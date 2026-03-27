@@ -19,7 +19,7 @@ This Seafile deployment uses root containers for several services due to technic
 ### RClone FUSE Mount Service
 - **Reason**: FUSE mounting requires root privileges and system capabilities:
   - `privileged: true` for FUSE operations
-  - `SYS_ADMIN` capability for mount operations  
+  - `SYS_ADMIN` capability for mount operations
   - `/dev/fuse` device access
 - **Mitigation**: File ownership is properly managed via `--uid $PUID --gid $PGID` flags, ensuring mounted files at `/DATA/Seafile` have correct user permissions
 

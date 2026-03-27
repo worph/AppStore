@@ -1,21 +1,13 @@
 name: segment
 
 services:
-  segment:
-    image: ghcr.io/worph/segmentplayer:latest
-    volumes:
-      - /DATA/Downloads:/data/media/Downloads:ro
-      - /DATA/Media:/data/media/Media:ro
-    expose:
-      - 80
-    environment:
-      - SEGMENT_DURATION=10
-      - NGINX_PORT=80
+  segmentplayer:
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
+    container_name: segmentplayer
     restart: unless-stopped
-    user: 0:0
-    cpu_shares: 90
-    networks:
-      - pcs
+    user: "0:0"
+    expose:
+      - "80"
     labels:
       caddy_0: segment-${APP_DOMAIN}
       caddy_0.import: gateway_tls
@@ -25,16 +17,50 @@ services:
       caddy_1.reverse_proxy: "{{upstreams 80}}"
       caddy_2: segment-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      USER: "segment"
+      PASSWORD: $APP_DEFAULT_PASSWORD
+      BACKEND_HOST: "segmentplayer-backend"
+      BACKEND_PORT: "80"
+      LISTEN_PORT: "80"
+    depends_on:
+      - segmentplayer-backend
+    networks:
+      - segment-internal
+      - pcs
+    cpu_shares: 50
+
+  segmentplayer-backend:
+    image: ghcr.io/worph/segmentplayer:1.3.2
+    container_name: segmentplayer-backend
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    volumes:
+      - /DATA/Downloads:/data/media/Downloads:ro
+      - /DATA/Media:/data/media/Media:ro
+    environment:
+      - SEGMENT_DURATION=10
+      - NGINX_PORT=80
+    restart: unless-stopped
+    user: 0:0
+    cpu_shares: 70
+    networks:
+      - segment-internal
 
 networks:
+  segment-internal:
+    driver: bridge
   pcs:
     name: pcs
     external: true
 
 x-casaos:
-  index: /
+  index: /?hash=$AUTH_HASH
   webui_port: 80
-  main: segment
+  main: segmentplayer
 
   architectures:
     - amd64
@@ -77,13 +103,13 @@ x-casaos:
 
       Déposez simplement vos fichiers vidéo dans votre dossier Downloads et ils deviennent instantanément streamables!
   developer: Worph
-  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/SegmentPlayer/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SegmentPlayer/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/SegmentPlayer/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SegmentPlayer/screenshot-1.png
   tagline:
     en_us: Stream any video file as HLS on-the-fly with live transcoding
     fr_fr: Diffusez n'importe quel fichier vidéo en HLS à la volée avec transcodage live
-  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/SegmentPlayer/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SegmentPlayer/icon.png
   tips:
     before_install:
       en_us: |
