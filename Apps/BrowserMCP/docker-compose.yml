@@ -15,7 +15,7 @@ services:
       - TZ=$TZ
     volumes:
       - type: bind
-        source: /DATA/AppData/browser-mcp/
+        source: /DATA/AppData/browsermcp/
         target: /app/data
     networks:
       - pcs

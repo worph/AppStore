@@ -44,7 +44,7 @@ services:
       - TZ=$TZ
     volumes:
       - type: bind
-        source: /DATA/AppData/trello-mcp/
+        source: /DATA/AppData/trellomcp/
         target: /data
     networks:
       - pcs
