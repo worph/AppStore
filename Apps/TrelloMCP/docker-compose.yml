@@ -7,7 +7,7 @@ services:
     cpu_shares: 50
     expose:
       - 80
-    user: "root"
+    user: "0:0"
     environment:
       ALLOWED_PATHS: "callback"
       AUTH_HASH: $AUTH_HASH
@@ -33,10 +33,13 @@ services:
     image: ghcr.io/worph/trello-mcp:1.0.0
     container_name: trellomcp
     hostname: trellomcp
+    user: $PUID:$PGID
     restart: unless-stopped
     expose:
       - 9100
     environment:
+      - PUID=$PUID
+      - PGID=$PGID
       - BASE_URL=https://trellomcp-${APP_DOMAIN}
       - WEB_PORT=9100
       - DISCOVERY_PORT=9099

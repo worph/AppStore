@@ -8,11 +8,14 @@ services:
     image: ghcr.io/worph/ntfy:1.1.0
     container_name: ntfy
     hostname: ntfy
+    user: "0:0"
     restart: unless-stopped
     expose:
       - 80
       - 9099
     environment:
+      - PUID=$PUID
+      - PGID=$PGID
       - TZ=$TZ
       - NTFY_ADMIN_PASSWORD=$APP_DEFAULT_PASSWORD
       - NTFY_DEFAULT_TOPIC=general

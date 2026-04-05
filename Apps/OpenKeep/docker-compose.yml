@@ -35,7 +35,7 @@ services:
     cpu_shares: 50
     expose:
       - 80
-    user: "root"
+    user: "0:0"
     environment:
       AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: openkeep
