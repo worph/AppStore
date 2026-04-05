@@ -1,8 +1,11 @@
 name: ntfy
 services:
-  # ntfy server + MCP sidecar — reachable at ntfy:80 (ntfy) and ntfy:9099 (MCP) on the pcs network
+  # ntfy server + nginx auth proxy + MCP sidecar
+  # nginx on :80 (web UI with login page + API passthrough)
+  # ntfy on :8080 internal (native auth)
+  # MCP sidecar on :9099 (Beacon discovery)
   ntfy:
-    image: ghcr.io/worph/ntfy:1.0.0
+    image: ghcr.io/worph/ntfy:1.1.0
     container_name: ntfy
     hostname: ntfy
     restart: unless-stopped
@@ -11,34 +14,13 @@ services:
       - 9099
     environment:
       - TZ=$TZ
-      - NTFY_BASE_URL=http://localhost:80
+      - NTFY_ADMIN_PASSWORD=$APP_DEFAULT_PASSWORD
       - NTFY_DEFAULT_TOPIC=general
       - PUBLIC_URL=https://ntfy-${APP_DOMAIN}
-      - MCP_PORT=9099
     volumes:
       - type: bind
         source: /DATA/AppData/ntfy/cache/
         target: /var/cache/ntfy
-    networks:
-      - pcs
-
-  # Nginx-hash-lock provides perimeter authentication for the web UI
-  ntfy-proxy:
-    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
-    restart: unless-stopped
-    cpu_shares: 50
-    expose:
-      - 80
-    user: "root"
-    environment:
-      AUTH_HASH: $AUTH_HASH
-      BACKEND_HOST: ntfy
-      BACKEND_PORT: "80"
-      LISTEN_PORT: "80"
-      USER: "ADMIN"
-      PASSWORD: $APP_DEFAULT_PASSWORD
-    depends_on:
-      - ntfy
     networks:
       - pcs
     labels:
@@ -61,7 +43,7 @@ x-casaos:
     - amd64
     - arm64
   main: ntfy
-  index: /?hash=$AUTH_HASH
+  index: /
   author: Worph
   category: Utilities
   description:
@@ -111,34 +93,22 @@ x-casaos:
 
         ntfy is ready to use immediately after installation.
 
-        **Mobile App Login:**
-        To access ntfy from the mobile app, use these credentials:
-        - **Username:** `ADMIN`
+        **Web & Mobile App Login:**
+        Use these credentials for both the web UI and the ntfy mobile app:
+        - **Username:** `admin`
         - **Password:** `${APP_DEFAULT_PASSWORD}`
         - **Server URL:** `https://ntfy-${APP_DOMAIN}`
 
         **How to receive notifications:**
-        1. Open the ntfy web UI from the app dashboard
+        1. Open the ntfy web UI from the app dashboard and sign in
         2. Subscribe to a topic (e.g. `general`, `alerts`)
-        3. Or install the [ntfy phone app](https://ntfy.sh) and add this server with the credentials above
+        3. Or install the [ntfy phone app](https://ntfy.sh), add this server with the credentials above, and subscribe to the same topic
 
         **MCP Integration (for AI/LLMs):**
 
         The MCP sidecar exposes tools that AI assistants can use to send notifications.
 
-        **Option 1: Public URL (with hash auth)**
-        ```json
-        {
-          "mcpServers": {
-            "ntfy-mcp": {
-              "type": "http",
-              "url": "https://ntfy-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
-            }
-          }
-        }
-        ```
-
-        **Option 2: Local Docker connection (no auth required)**
+        **Local Docker connection (no auth required):**
 
         For AI assistants running on the same server, connect directly via the Docker network:
         ```json
@@ -165,34 +135,22 @@ x-casaos:
 
         ntfy 安装后即可立即使用。
 
-        **手机应用登录：**
-        要从手机应用访问 ntfy，请使用以下凭据：
-        - **用户名：** `ADMIN`
+        **网页和手机应用登录：**
+        网页界面和 ntfy 手机应用使用相同的凭据：
+        - **用户名：** `admin`
         - **密码：** `${APP_DEFAULT_PASSWORD}`
         - **服务器 URL：** `https://ntfy-${APP_DOMAIN}`
 
         **如何接收通知：**
-        1. 从应用仪表板打开 ntfy 网页界面
+        1. 从应用仪表板打开 ntfy 网页界面并登录
         2. 订阅一个主题（例如 `general`、`alerts`）
-        3. 或安装 [ntfy 手机应用](https://ntfy.sh) 并使用上述凭据添加此服务器
+        3. 或安装 [ntfy 手机应用](https://ntfy.sh)，使用上述凭据添加此服务器，并订阅相同的主题
 
         **MCP 集成（用于 AI/LLM）：**
 
         MCP 边车暴露工具，AI 助手可以使用这些工具发送通知。
 
-        **选项 1：公共 URL（使用 hash 认证）**
-        ```json
-        {
-          "mcpServers": {
-            "ntfy-mcp": {
-              "type": "http",
-              "url": "https://ntfy-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
-            }
-          }
-        }
-        ```
-
-        **选项 2：本地 Docker 连接（无需认证）**
+        **本地 Docker 连接（无需认证）：**
 
         对于在同一服务器上运行的 AI 助手，通过 Docker 网络直接连接：
         ```json
