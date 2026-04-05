@@ -1,0 +1,169 @@
+name: trellomcp
+services:
+  trellomcp:
+    image: ghcr.io/worph/trello-mcp:1.0.0
+    container_name: trellomcp
+    hostname: trellomcp
+    restart: unless-stopped
+    expose:
+      - 9100
+    environment:
+      - BASE_URL=https://trellomcp-${APP_DOMAIN}
+      - WEB_PORT=9100
+      - DISCOVERY_PORT=9099
+      - AUTH_HASH=$AUTH_HASH
+      - TZ=$TZ
+    volumes:
+      - type: bind
+        source: /DATA/AppData/trello-mcp/
+        target: /data
+    networks:
+      - pcs
+    labels:
+      caddy_0: trellomcp-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 9100}}"
+      caddy_1: trellomcp-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 9100}}"
+      caddy_2: trellomcp-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 9100}}"
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: trellomcp
+  author: Worph
+  category: Developer
+  description:
+    en_us: |
+      **Trello board management for AI assistants via MCP**
+
+      Trello MCP provides a full Trello REST API integration as an MCP (Model Context Protocol) server. It lets LLMs and AI assistants manage Trello boards, cards, lists, checklists, comments, labels, and members programmatically.
+
+      **What you can do:**
+      - Manage boards, lists, and cards from any MCP-compatible AI assistant
+      - Create, update, move, and archive cards
+      - Add comments, checklists, labels, and attachments
+      - Assign members to cards and track activity
+      - View board activity and card history
+      - Configure credentials via the built-in web UI
+
+      **Think of it like:** A Trello assistant that AI can control directly.
+
+      **Perfect if you:** Want your AI assistant to manage your Trello boards, automate project management tasks, or integrate Trello into AI-driven workflows.
+    zh_cn: |
+      **通过 MCP 为 AI 助手提供 Trello 看板管理**
+
+      Trello MCP 提供完整的 Trello REST API 集成，作为 MCP（模型上下文协议）服务器。它允许 LLM 和 AI 助手以编程方式管理 Trello 看板、卡片、列表、清单、评论、标签和成员。
+
+      **功能：**
+      - 从任何兼容 MCP 的 AI 助手管理看板、列表和卡片
+      - 创建、更新、移动和归档卡片
+      - 添加评论、清单、标签和附件
+      - 将成员分配到卡片并跟踪活动
+      - 查看看板活动和卡片历史
+      - 通过内置 Web UI 配置凭据
+  developer: Worph
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/TrelloMCP/icon.png
+  tagline:
+    en_us: AI-powered Trello board management via MCP
+    zh_cn: 通过 MCP 由 AI 驱动的 Trello 看板管理
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/TrelloMCP/thumbnail.png
+  title:
+    en_us: Trello MCP
+  index: /
+  chips:
+    - key: mcp
+      name:
+        en_us: MCP
+  tips:
+    before_install:
+      en_us: |
+        **Getting Started**
+
+        After installation, open the Web UI to configure your Trello credentials.
+
+        **Setup (2 steps):**
+        1. Go to [Trello Power-Ups Admin](https://trello.com/power-ups/admin), create a Power-Up, and copy your **API Key**
+        2. Click **Authorize with Trello** in the Web UI — the token is captured automatically
+
+        **MCP Integration (for AI/LLMs):**
+
+        Connect your AI assistant to manage Trello boards.
+
+        **Option 1: Via Beacon (recommended)**
+        If Beacon is installed, Trello MCP is auto-discovered. All tools are available as `trello-mcp__<tool_name>`.
+
+        **Option 2: Direct connection**
+        ```json
+        {
+          "mcpServers": {
+            "trello-mcp": {
+              "type": "http",
+              "url": "http://trellomcp:9100/mcp"
+            }
+          }
+        }
+        ```
+        *Note: Requires the AI assistant to be on the `pcs` Docker network.*
+
+        **Available MCP Tools (40+):**
+        | Category | Tools |
+        |----------|-------|
+        | Boards | `list_boards`, `set_active_board`, `create_board`, `get_active_board_info` |
+        | Lists | `get_lists`, `add_list_to_board`, `archive_list` |
+        | Cards | `get_card`, `get_cards_by_list_id`, `add_card_to_list`, `update_card_details`, `archive_card`, `move_card`, `get_my_cards` |
+        | Comments | `add_comment`, `update_comment`, `delete_comment`, `get_card_comments` |
+        | Checklists | `create_checklist`, `get_checklist_items`, `add_checklist_item`, `update_checklist_item` |
+        | Attachments | `attach_image_to_card`, `attach_file_to_card`, `attach_image_data_to_card` |
+        | Members | `get_board_members`, `assign_member_to_card`, `remove_member_from_card` |
+        | Labels | `get_board_labels`, `create_label`, `update_label`, `delete_label` |
+        | Activity | `get_recent_activity`, `get_card_history` |
+      zh_cn: |
+        **快速开始**
+
+        安装后，打开 Web UI 配置您的 Trello 凭据。
+
+        **设置（2 步）：**
+        1. 前往 [Trello Power-Ups 管理](https://trello.com/power-ups/admin)，创建一个 Power-Up，复制您的 **API Key**
+        2. 在 Web UI 中点击 **Authorize with Trello** — 令牌会自动获取
+
+        **MCP 集成（用于 AI/LLM）：**
+
+        连接您的 AI 助手来管理 Trello 看板。
+
+        **选项 1：通过 Beacon（推荐）**
+        如果已安装 Beacon，Trello MCP 会自动发现。所有工具均以 `trello-mcp__<tool_name>` 形式可用。
+
+        **选项 2：直接连接**
+        ```json
+        {
+          "mcpServers": {
+            "trello-mcp": {
+              "type": "http",
+              "url": "http://trellomcp:9100/mcp"
+            }
+          }
+        }
+        ```
+        *注意：需要 AI 助手在 `pcs` Docker 网络上。*
+
+        **可用 MCP 工具（40+）：**
+        | 类别 | 工具 |
+        |------|------|
+        | 看板 | `list_boards`, `set_active_board`, `create_board`, `get_active_board_info` |
+        | 列表 | `get_lists`, `add_list_to_board`, `archive_list` |
+        | 卡片 | `get_card`, `get_cards_by_list_id`, `add_card_to_list`, `update_card_details`, `archive_card`, `move_card`, `get_my_cards` |
+        | 评论 | `add_comment`, `update_comment`, `delete_comment`, `get_card_comments` |
+        | 清单 | `create_checklist`, `get_checklist_items`, `add_checklist_item`, `update_checklist_item` |
+        | 附件 | `attach_image_to_card`, `attach_file_to_card`, `attach_image_data_to_card` |
+        | 成员 | `get_board_members`, `assign_member_to_card`, `remove_member_from_card` |
+        | 标签 | `get_board_labels`, `create_label`, `update_label`, `delete_label` |
+        | 活动 | `get_recent_activity`, `get_card_history` |
