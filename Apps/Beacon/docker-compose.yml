@@ -1,6 +1,30 @@
 name: beacon
 
 services:
+  beacon:
+    image: ghcr.io/worph/beacon:1.0.7
+    container_name: beacon
+    hostname: beacon
+    restart: unless-stopped
+    environment:
+      DISCOVERY_INTERVAL: "60"
+      DISCOVERY_PORT: "9099"
+      MCP_CLIENT_TIMEOUT : 300
+      MCP_PORT: "9099"
+      WEB_PORT: "9300"
+      LOG_LEVEL: info
+      TZ: $TZ
+    expose:
+      - 9300
+      - 9099
+    networks:
+      - pcs
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+
   beacon-proxy:
     image: ghcr.io/yundera/nginx-hash-lock:1.0.5
     container_name: beacon-proxy
@@ -33,30 +57,6 @@ services:
         limits:
           cpus: "0.5"
           memory: 256M
-
-  beacon:
-    image: ghcr.io/worph/beacon:1.0.5
-    container_name: beacon
-    hostname: beacon
-    restart: unless-stopped
-    environment:
-      DISCOVERY_INTERVAL: "60"
-      DISCOVERY_PORT: "9099"
-      MCP_CLIENT_TIMEOUT : 300
-      MCP_PORT: "9099"
-      WEB_PORT: "9300"
-      LOG_LEVEL: info
-      TZ: $TZ
-    expose:
-      - 9300
-      - 9099
-    networks:
-      - pcs
-    deploy:
-      resources:
-        limits:
-          cpus: "1"
-          memory: 512M
 
 networks:
   pcs:

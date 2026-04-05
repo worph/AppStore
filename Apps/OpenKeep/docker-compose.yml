@@ -1,5 +1,33 @@
 name: openkeep
 services:
+  # Main OpenKeep server — reachable at openkeep:9847 on the pcs network
+  openkeep:
+    image: ghcr.io/worph/open-keep:1.1.5
+    container_name: openkeep
+    hostname: openkeep
+    user: $PUID:$PGID
+    restart: unless-stopped
+    expose:
+      - 9847
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - DATABASE_URL=file:/app/data/openkeep.db
+      - PUBLIC_URL=https://openkeep-${APP_DOMAIN}
+    volumes:
+      - type: bind
+        source: /DATA/AppData/openkeep/data/
+        target: /app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:9847/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - pcs
+
   # Nginx-hash-lock provides perimeter authentication for the web UI
   openkeep-proxy:
     image: ghcr.io/yundera/nginx-hash-lock:1.0.5
@@ -28,34 +56,6 @@ services:
       caddy_1.reverse_proxy: "{{upstreams 80}}"
       caddy_2: openkeep-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
-
-  # Main OpenKeep server — reachable at openkeep:9847 on the pcs network
-  openkeep:
-    image: ghcr.io/worph/open-keep:1.1.4
-    container_name: openkeep
-    hostname: openkeep
-    user: $PUID:$PGID
-    restart: unless-stopped
-    expose:
-      - 9847
-    environment:
-      - PUID=$PUID
-      - PGID=$PGID
-      - TZ=$TZ
-      - DATABASE_URL=file:/app/data/openkeep.db
-      - PUBLIC_URL=https://openkeep-${APP_DOMAIN}
-    volumes:
-      - type: bind
-        source: /DATA/AppData/openkeep/data/
-        target: /app/data
-    healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:9847/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    networks:
-      - pcs
 
 networks:
   pcs:

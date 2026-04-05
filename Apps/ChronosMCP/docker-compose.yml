@@ -1,5 +1,26 @@
 name: chronosmcp
 services:
+  # Main server — reachable at chronosmcp:9054 on the pcs network
+  chronosmcp:
+    image: ghcr.io/worph/chronos-mcp:1.0.6
+    container_name: chronosmcp
+    hostname: chronosmcp
+    user: $PUID:$PGID
+    restart: unless-stopped
+    expose:
+      - 9054
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - CONFIG_PATH=/app/data/config.json
+    volumes:
+      - type: bind
+        source: /DATA/AppData/chronosmcp/
+        target: /app/data
+    networks:
+      - pcs
+      
   # Nginx-hash-lock provides perimeter authentication for the web UI
   chronosmcp-proxy:
     image: ghcr.io/yundera/nginx-hash-lock:1.0.5
@@ -28,28 +49,7 @@ services:
       caddy_1.reverse_proxy: "{{upstreams 80}}"
       caddy_2: chronosmcp-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
-
-  # Main server — reachable at chronosmcp:9054 on the pcs network
-  chronosmcp:
-    image: ghcr.io/worph/chronos-mcp:1.0.5
-    container_name: chronosmcp
-    hostname: chronosmcp
-    user: $PUID:$PGID
-    restart: unless-stopped
-    expose:
-      - 9054
-    environment:
-      - PUID=$PUID
-      - PGID=$PGID
-      - TZ=$TZ
-      - CONFIG_PATH=/app/data/config.json
-    volumes:
-      - type: bind
-        source: /DATA/AppData/chronosmcp/
-        target: /app/data
-    networks:
-      - pcs
-
+      
 networks:
   pcs:
     name: pcs
