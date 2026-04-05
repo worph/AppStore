@@ -35,6 +35,8 @@ services:
       BACKEND_HOST: ntfy
       BACKEND_PORT: "80"
       LISTEN_PORT: "80"
+      USER: "ADMIN"
+      PASSWORD: $APP_DEFAULT_PASSWORD
     depends_on:
       - ntfy
     networks:
@@ -109,10 +111,16 @@ x-casaos:
 
         ntfy is ready to use immediately after installation.
 
+        **Mobile App Login:**
+        To access ntfy from the mobile app, use these credentials:
+        - **Username:** `ADMIN`
+        - **Password:** `${APP_DEFAULT_PASSWORD}`
+        - **Server URL:** `https://ntfy-${APP_DOMAIN}`
+
         **How to receive notifications:**
         1. Open the ntfy web UI from the app dashboard
         2. Subscribe to a topic (e.g. `general`, `alerts`)
-        3. Or install the [ntfy phone app](https://ntfy.sh) and add this server
+        3. Or install the [ntfy phone app](https://ntfy.sh) and add this server with the credentials above
 
         **MCP Integration (for AI/LLMs):**
 
@@ -157,10 +165,16 @@ x-casaos:
 
         ntfy 安装后即可立即使用。
 
+        **手机应用登录：**
+        要从手机应用访问 ntfy，请使用以下凭据：
+        - **用户名：** `ADMIN`
+        - **密码：** `${APP_DEFAULT_PASSWORD}`
+        - **服务器 URL：** `https://ntfy-${APP_DOMAIN}`
+
         **如何接收通知：**
         1. 从应用仪表板打开 ntfy 网页界面
         2. 订阅一个主题（例如 `general`、`alerts`）
-        3. 或安装 [ntfy 手机应用](https://ntfy.sh) 并添加此服务器
+        3. 或安装 [ntfy 手机应用](https://ntfy.sh) 并使用上述凭据添加此服务器
 
         **MCP 集成（用于 AI/LLM）：**
 
