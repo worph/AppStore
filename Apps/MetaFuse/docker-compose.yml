@@ -46,7 +46,6 @@ services:
       - META_CORE_PATH=/meta-core
       - FILES_PATH=/files
       - CONFIG_DIR=/meta-fuse/config
-      - REDIS_URL=redis://metasort:6379
       - SERVICE_NAME=meta-fuse
       - SERVICE_VERSION=1.0.0
       - BASE_URL=https://metafuse-$APP_DOMAIN
@@ -56,14 +55,53 @@ services:
     user: 0:0
 
     labels:
+      # ---- metafuse-${APP_DOMAIN} (gateway TLS) ----
       caddy_0: metafuse-${APP_DOMAIN}
       caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.0_handle: "/health"
+      caddy_0.0_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.1_handle: "/webdav*"
+      caddy_0.1_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.2_handle: ""
+      caddy_0.2_handle.forward_auth: "meta-authelia:9091"
+      caddy_0.2_handle.forward_auth.uri: "/api/authz/forward-auth"
+      caddy_0.2_handle.forward_auth.copy_headers: "Remote-User,Remote-Groups,Remote-Email,Remote-Name"
+      caddy_0.2_handle.forward_auth.@unauthorized.status: "401"
+      caddy_0.2_handle.forward_auth.handle_response: "@unauthorized"
+      caddy_0.2_handle.forward_auth.handle_response.redir: "* https://auth-${APP_DOMAIN}"
+      caddy_0.2_handle.reverse_proxy: "{{upstreams 80}}"
+
+      # ---- metafuse-IP.nip.io (gateway TLS) ----
       caddy_1: metafuse-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.0_handle: "/health"
+      caddy_1.0_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.1_handle: "/webdav*"
+      caddy_1.1_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.2_handle: ""
+      caddy_1.2_handle.forward_auth: "meta-authelia:9091"
+      caddy_1.2_handle.forward_auth.uri: "/api/authz/forward-auth"
+      caddy_1.2_handle.forward_auth.copy_headers: "Remote-User,Remote-Groups,Remote-Email,Remote-Name"
+      caddy_1.2_handle.forward_auth.@unauthorized.status: "401"
+      caddy_1.2_handle.forward_auth.handle_response: "@unauthorized"
+      caddy_1.2_handle.forward_auth.handle_response.redir: "* https://auth-${APP_DOMAIN}"
+      caddy_1.2_handle.reverse_proxy: "{{upstreams 80}}"
+
+      # ---- metafuse-IP.sslip.io (Let's Encrypt) ----
       caddy_2: metafuse-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.0_handle: "/health"
+      caddy_2.0_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.1_handle: "/webdav*"
+      caddy_2.1_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.2_handle: ""
+      caddy_2.2_handle.forward_auth: "meta-authelia:9091"
+      caddy_2.2_handle.forward_auth.uri: "/api/authz/forward-auth"
+      caddy_2.2_handle.forward_auth.copy_headers: "Remote-User,Remote-Groups,Remote-Email,Remote-Name"
+      caddy_2.2_handle.forward_auth.@unauthorized.status: "401"
+      caddy_2.2_handle.forward_auth.handle_response: "@unauthorized"
+      caddy_2.2_handle.forward_auth.handle_response.redir: "* https://auth-${APP_DOMAIN}"
+      caddy_2.2_handle.reverse_proxy: "{{upstreams 80}}"
+
     networks:
       - metamesh
       - pcs
@@ -101,27 +139,27 @@ x-casaos:
       - **Real-time Updates** - Virtual filesystem updates instantly when MetaSort processes new files
       - **Plex/Jellyfin Ready** - Point your media server to the organized virtual library
 
-      **Requires:** MetaSort (for metadata extraction and Redis)
+      **Requires:** MetaCore (install first)
 
       **Perfect for:** Plex/Jellyfin users, media archivists, or anyone wanting an organized view without reorganizing files
 
     fr_fr: |
-      **Accédez à votre bibliothèque multimédia via un système de fichiers virtuel magnifiquement organisé.**
+      **Accedez a votre bibliotheque multimedia via un systeme de fichiers virtuel magnifiquement organise.**
 
-      MetaFuse crée une vue virtuelle de vos médias (Films, Séries TV, Anime) organisée par métadonnées - pendant que vos fichiers restent exactement où ils sont. Accès via montage FUSE ou partage réseau WebDAV.
+      MetaFuse cree une vue virtuelle de vos medias (Films, Series TV, Anime) organisee par metadonnees - pendant que vos fichiers restent exactement ou ils sont. Acces via montage FUSE ou partage reseau WebDAV.
 
-      **Fonctionnalités Clés:**
-      - **Zéro Déplacement de Fichiers** - Vos fichiers restent en place, MetaFuse crée une vue virtuelle organisée
-      - **Système de Fichiers Virtuel FUSE** - Montez comme un répertoire local sur votre système
-      - **Accès Réseau WebDAV** - Accédez à votre bibliothèque organisée comme un lecteur réseau
-      - **Organisation Intelligente** - Fichiers organisés par titre, année, saison, épisode automatiquement
-      - **Mises à Jour Temps Réel** - Le système virtuel se met à jour instantanément
+      **Fonctionnalites Cles:**
+      - **Zero Deplacement de Fichiers** - Vos fichiers restent en place, MetaFuse cree une vue virtuelle organisee
+      - **Systeme de Fichiers Virtuel FUSE** - Montez comme un repertoire local sur votre systeme
+      - **Acces Reseau WebDAV** - Accedez a votre bibliotheque organisee comme un lecteur reseau
+      - **Organisation Intelligente** - Fichiers organises par titre, annee, saison, episode automatiquement
+      - **Mises a Jour Temps Reel** - Le systeme virtuel se met a jour instantanement
 
-      **Nécessite:** MetaSort (pour l'extraction de métadonnées et Redis)
+      **Necessite:** MetaCore (installer en premier)
 
   tagline:
     en_us: Virtual filesystem for organized media access - FUSE mount and WebDAV without moving files
-    fr_fr: Système de fichiers virtuel pour accès média organisé - Montage FUSE et WebDAV sans déplacer de fichiers
+    fr_fr: Systeme de fichiers virtuel pour acces media organise - Montage FUSE et WebDAV sans deplacer de fichiers
 
   title:
     en_us: MetaFuse
@@ -138,3 +176,12 @@ x-casaos:
   main: metafuse
   is_uncontrolled: false
   webui_port: 80
+
+  tips:
+    before_install:
+      en_us: |
+        **Requires MetaCore** - Install MetaCore first for Redis and authentication.
+
+        MetaFuse will automatically connect to MetaCore for metadata and Authelia for dashboard protection.
+
+        **FUSE Mount:** Your organized virtual library will be available at `/DATA/MetaFuse/Library/`

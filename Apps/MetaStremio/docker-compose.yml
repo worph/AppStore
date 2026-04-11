@@ -26,8 +26,6 @@ services:
       - /DATA/AppData/metastremio/cache:/data/cache
 
     environment:
-      - STORAGE_MODE=redis
-      - REDIS_URL=redis://metasort:6379
       - META_CORE_PATH=/meta-core
       - FILES_PATH=/files
       - MEDIA_DIR=/files/watch
@@ -38,9 +36,12 @@ services:
       - SERVICE_NAME=meta-stremio
       - SERVICE_VERSION=1.0.0
       - BASE_URL=https://metastremio-$APP_DOMAIN
+      # Use direct connection - discovers Redis via meta-core leader info
+      - STORAGE_MODE=direct
       - TZ=$TZ
 
     labels:
+      # No auth - public Stremio addon
       caddy_0: metastremio-${APP_DOMAIN}
       caddy_0.import: gateway_tls
       caddy_0.reverse_proxy: "{{upstreams 7000}}"
@@ -76,7 +77,7 @@ x-casaos:
     en_us: |
       **Stream your media library directly to Stremio with automatic transcoding.**
 
-      MetaStremio is a Stremio addon that connects to your MetaSort-indexed media library. Browse movies and TV shows with rich metadata, stream with HLS transcoding, and enjoy your personal collection in Stremio.
+      MetaStremio is a Stremio addon that connects to your MetaMesh-indexed media library. Browse movies and TV shows with rich metadata, stream with HLS transcoding, and enjoy your personal collection in Stremio.
 
       **Key Features:**
       - **Stremio Integration** - Native addon for the Stremio media center
@@ -87,28 +88,28 @@ x-casaos:
       - **Episode Browser** - Full TV series support with season/episode navigation
       - **Direct Play** - Stream original files when transcoding isn't needed
 
-      **Requires:** MetaSort (for metadata and Redis)
+      **Requires:** MetaCore (install first)
 
       **How to use:** Install the addon in Stremio using the manifest URL from the dashboard
 
     fr_fr: |
-      **Diffusez votre bibliothèque multimédia directement vers Stremio avec transcodage automatique.**
+      **Diffusez votre bibliotheque multimedia directement vers Stremio avec transcodage automatique.**
 
-      MetaStremio est un addon Stremio qui se connecte à votre bibliothèque indexée par MetaSort. Parcourez films et séries TV avec métadonnées riches, streamez avec transcodage HLS.
+      MetaStremio est un addon Stremio qui se connecte a votre bibliotheque indexee par MetaMesh. Parcourez films et series TV avec metadonnees riches, streamez avec transcodage HLS.
 
-      **Fonctionnalités Clés:**
-      - **Intégration Stremio** - Addon natif pour le centre multimédia Stremio
-      - **Transcodage HLS** - Transcodage à la volée pour compatibilité tous appareils
-      - **Métadonnées Riches** - Infos films/TV, affiches, descriptions depuis TMDB
+      **Fonctionnalites Cles:**
+      - **Integration Stremio** - Addon natif pour le centre multimedia Stremio
+      - **Transcodage HLS** - Transcodage a la volee pour compatibilite tous appareils
+      - **Metadonnees Riches** - Infos films/TV, affiches, descriptions depuis TMDB
       - **Recherche IMDB** - Recherchez par ID IMDB pour trouver les fichiers locaux correspondants
-      - **Streaming Adaptatif** - Ajustement automatique de la qualité selon la bande passante
-      - **Navigateur d'Épisodes** - Support complet des séries TV avec navigation saison/épisode
+      - **Streaming Adaptatif** - Ajustement automatique de la qualite selon la bande passante
+      - **Navigateur d'Episodes** - Support complet des series TV avec navigation saison/episode
 
-      **Nécessite:** MetaSort (pour les métadonnées et Redis)
+      **Necessite:** MetaCore (installer en premier)
 
   tagline:
     en_us: Stremio addon for your personal media library - HLS transcoding and TMDB metadata
-    fr_fr: Addon Stremio pour votre bibliothèque personnelle - Transcodage HLS et métadonnées TMDB
+    fr_fr: Addon Stremio pour votre bibliotheque personnelle - Transcodage HLS et metadonnees TMDB
 
   title:
     en_us: MetaStremio
@@ -125,3 +126,15 @@ x-casaos:
   main: metastremio
   is_uncontrolled: false
   webui_port: 7000
+
+  tips:
+    before_install:
+      en_us: |
+        **Requires MetaCore** - Install MetaCore first for Redis and metadata storage.
+
+        MetaStremio is a public Stremio addon (no authentication required).
+
+        **After installation:**
+        1. Open the dashboard at `https://metastremio-$APP_DOMAIN/`
+        2. Copy the manifest URL
+        3. Add it as an addon in Stremio

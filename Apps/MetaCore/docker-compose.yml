@@ -1,0 +1,263 @@
+name: metacore
+
+services:
+  metacore:
+    image: ghcr.io/worph/meta-core:latest
+    container_name: metacore
+    hostname: metacore
+    restart: unless-stopped
+    privileged: true
+    cpu_shares: 50
+
+    expose:
+      - 80
+
+    volumes:
+      # Shared infrastructure volume (leader election, service discovery, Redis)
+      - /DATA/Apps/MetaCore:/meta-core:rw
+
+      # Shared files volume (root for all file access)
+      - metamesh-files:/files:rw
+
+      # User's media directories mounted into the files volume
+      - /DATA/Downloads:/files/watch/downloads:ro
+      - /DATA/Media:/files/watch/media:ro
+
+      # Application cache storage
+      - /DATA/AppData/metacore/cache:/data/cache
+
+    environment:
+      - META_CORE_PATH=/meta-core
+      - FILES_PATH=/files
+      - SERVICE_NAME=meta-core
+      - SERVICE_VERSION=1.0.0
+      - META_CORE_HTTP_PORT=9000
+      - META_CORE_HTTP_HOST=0.0.0.0
+      - REDIS_PORT=6379
+      - BASE_URL=https://metacore-$APP_DOMAIN
+      - ENABLE_FILE_WATCHER=true
+      - WATCH_INTERVAL_MS=1000
+      - TZ=$TZ
+
+    # Runs as root for nginx, Redis, rclone mounts
+    user: 0:0
+
+    labels:
+      # ---- metacore-${APP_DOMAIN} (gateway TLS) ----
+      caddy_0: metacore-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.0_handle: "/health"
+      caddy_0.0_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.1_handle: "/webdav/*"
+      caddy_0.1_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.2_handle: "/meta/*"
+      caddy_0.2_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.3_handle: "/file/cid"
+      caddy_0.3_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.4_handle: ""
+      caddy_0.4_handle.forward_auth: "meta-authelia:9091"
+      caddy_0.4_handle.forward_auth.uri: "/api/authz/forward-auth"
+      caddy_0.4_handle.forward_auth.copy_headers: "Remote-User,Remote-Groups,Remote-Email,Remote-Name"
+      caddy_0.4_handle.forward_auth.@unauthorized.status: "401"
+      caddy_0.4_handle.forward_auth.handle_response: "@unauthorized"
+      caddy_0.4_handle.forward_auth.handle_response.redir: "* https://auth-${APP_DOMAIN}"
+      caddy_0.4_handle.reverse_proxy: "{{upstreams 80}}"
+
+      # ---- metacore-IP.nip.io (gateway TLS) ----
+      caddy_1: metacore-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.0_handle: "/health"
+      caddy_1.0_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.1_handle: "/webdav/*"
+      caddy_1.1_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.2_handle: "/meta/*"
+      caddy_1.2_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.3_handle: "/file/cid"
+      caddy_1.3_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.4_handle: ""
+      caddy_1.4_handle.forward_auth: "meta-authelia:9091"
+      caddy_1.4_handle.forward_auth.uri: "/api/authz/forward-auth"
+      caddy_1.4_handle.forward_auth.copy_headers: "Remote-User,Remote-Groups,Remote-Email,Remote-Name"
+      caddy_1.4_handle.forward_auth.@unauthorized.status: "401"
+      caddy_1.4_handle.forward_auth.handle_response: "@unauthorized"
+      caddy_1.4_handle.forward_auth.handle_response.redir: "* https://auth-${APP_DOMAIN}"
+      caddy_1.4_handle.reverse_proxy: "{{upstreams 80}}"
+
+      # ---- metacore-IP.sslip.io (Let's Encrypt) ----
+      caddy_2: metacore-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.0_handle: "/health"
+      caddy_2.0_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.1_handle: "/webdav/*"
+      caddy_2.1_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.2_handle: "/meta/*"
+      caddy_2.2_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.3_handle: "/file/cid"
+      caddy_2.3_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.4_handle: ""
+      caddy_2.4_handle.forward_auth: "meta-authelia:9091"
+      caddy_2.4_handle.forward_auth.uri: "/api/authz/forward-auth"
+      caddy_2.4_handle.forward_auth.copy_headers: "Remote-User,Remote-Groups,Remote-Email,Remote-Name"
+      caddy_2.4_handle.forward_auth.@unauthorized.status: "401"
+      caddy_2.4_handle.forward_auth.handle_response: "@unauthorized"
+      caddy_2.4_handle.forward_auth.handle_response.redir: "* https://auth-${APP_DOMAIN}"
+      caddy_2.4_handle.reverse_proxy: "{{upstreams 80}}"
+
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+    networks:
+      - metamesh
+      - pcs
+
+  meta-authelia:
+    image: authelia/authelia:latest
+    container_name: meta-authelia
+    hostname: meta-authelia
+    restart: unless-stopped
+
+    expose:
+      - 9091
+
+    volumes:
+      - /DATA/AppData/metacore/authelia:/config
+
+    environment:
+      AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE: /config/secrets/jwt
+      AUTHELIA_SESSION_SECRET_FILE: /config/secrets/session
+      AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE: /config/secrets/encryption
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9091/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+    labels:
+      # Authelia portal UI
+      caddy_0: auth-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 9091}}"
+      caddy_1: auth-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 9091}}"
+      caddy_2: auth-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 9091}}"
+
+    networks:
+      - metamesh
+      - pcs
+
+volumes:
+  metamesh-files:
+    name: metamesh-files
+    driver: local
+
+networks:
+  metamesh:
+    name: metamesh
+    driver: bridge
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  author: Worph Team
+  category: Media
+  developer: Aptero Team
+
+  description:
+    en_us: |
+      **The infrastructure foundation for the MetaMesh media management ecosystem.**
+
+      MetaCore provides the shared services that power all MetaMesh applications: distributed leader election, Redis database, WebDAV file serving, remote mount management, and Authelia authentication.
+
+      **Key Features:**
+      - **Leader Election** - Automatic flock-based leader election with failover support
+      - **Redis Database** - Centralized metadata storage for all MetaMesh services
+      - **WebDAV File Serving** - Cached file access for all services via HTTP
+      - **Mount Management** - Add NFS, SMB, and rclone remote mounts from the dashboard
+      - **File Watcher** - Monitors folders and notifies services of new files
+      - **Metadata Editor** - Browse and edit file metadata stored in Redis
+      - **Service Discovery** - Automatic registration and discovery of MetaMesh services
+      - **Authelia Authentication** - Single sign-on portal protecting all MetaMesh dashboards
+
+      **Install this FIRST** before MetaSort, MetaFuse, or MetaStremio.
+
+      **Dashboard Features:** Service health, file watchers, mount management, metadata editor, KV browser
+
+    fr_fr: |
+      **La fondation d'infrastructure pour l'ecosysteme de gestion de medias MetaMesh.**
+
+      MetaCore fournit les services partages qui alimentent toutes les applications MetaMesh : election de leader distribuee, base de donnees Redis, service de fichiers WebDAV, gestion de montages distants et authentification Authelia.
+
+      **Fonctionnalites Cles:**
+      - **Election de Leader** - Election automatique basee sur flock avec support de basculement
+      - **Base de Donnees Redis** - Stockage centralise des metadonnees pour tous les services
+      - **Service de Fichiers WebDAV** - Acces aux fichiers en cache via HTTP
+      - **Gestion des Montages** - Ajout de montages NFS, SMB et rclone depuis le tableau de bord
+      - **Surveillance de Fichiers** - Surveille les dossiers et notifie les services des nouveaux fichiers
+      - **Editeur de Metadonnees** - Parcourir et editer les metadonnees stockees dans Redis
+      - **Decouverte de Services** - Enregistrement et decouverte automatiques des services
+      - **Authentification Authelia** - Portail SSO protégeant tous les tableaux de bord MetaMesh
+
+      **Installez ceci EN PREMIER** avant MetaSort, MetaFuse ou MetaStremio.
+
+  tagline:
+    en_us: MetaMesh infrastructure - Leader election, Redis, WebDAV, authentication, and service discovery
+    fr_fr: Infrastructure MetaMesh - Election de leader, Redis, WebDAV, authentification et decouverte de services
+
+  title:
+    en_us: MetaCore
+
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaCore/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaCore/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaCore/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaCore/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaCore/thumbnail.png
+
+  index: /
+  store_app_id: metacore
+  main: metacore
+  is_uncontrolled: false
+  webui_port: 80
+
+  tips:
+    before_install:
+      en_us: |
+        **MetaCore is the foundation for the MetaMesh ecosystem.**
+
+        Install this FIRST before MetaSort, MetaFuse, or MetaStremio.
+
+        **Default login:** admin / `$APP_DEFAULT_PASSWORD`
+
+        **Authentication Portal:** `https://auth-$APP_DOMAIN/`
+
+        **After installation:**
+        1. Access the dashboard at `https://metacore-$APP_DOMAIN/`
+        2. Log in with the default credentials above
+        3. Install MetaSort, MetaFuse, or MetaStremio as needed
+
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/metacore/authelia/secrets /DATA/Apps/MetaCore &&
+    if [ ! -f /DATA/AppData/metacore/authelia/secrets/jwt ]; then
+      openssl rand -hex 32 > /DATA/AppData/metacore/authelia/secrets/jwt &&
+      openssl rand -hex 32 > /DATA/AppData/metacore/authelia/secrets/session &&
+      openssl rand -hex 32 > /DATA/AppData/metacore/authelia/secrets/encryption
+    fi &&
+    if [ ! -f /DATA/AppData/metacore/authelia/configuration.yml ]; then
+      wget -q https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaCore/pre-install/configuration.yml -O /DATA/AppData/metacore/authelia/configuration.yml &&
+      wget -q https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaCore/pre-install/users_database.yml -O /DATA/AppData/metacore/authelia/users_database.yml &&
+      sed -i "s|__AUTH_DOMAIN__|${APP_DOMAIN}|g" /DATA/AppData/metacore/authelia/configuration.yml &&
+      sed -i "s|__AUTHELIA_URL__|https://auth-${APP_DOMAIN}|g" /DATA/AppData/metacore/authelia/configuration.yml &&
+      HASH=$(docker run --rm authelia/authelia:latest authelia crypto hash generate argon2 --password "$APP_DEFAULT_PASSWORD" 2>/dev/null | grep 'Digest:' | awk '{print $2}') &&
+      awk -v hash="$HASH" '{gsub(/__PASSWORD_HASH__/, hash); print}' /DATA/AppData/metacore/authelia/users_database.yml > /tmp/users_db.tmp &&
+      mv /tmp/users_db.tmp /DATA/AppData/metacore/authelia/users_database.yml
+    fi

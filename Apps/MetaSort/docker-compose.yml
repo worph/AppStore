@@ -41,37 +41,96 @@ services:
       - TMDB_API_KEY=
       - TMDB_LANGUAGE=en-US
       - TZ=$TZ
+      # Container plugin configuration
+      - CONTAINER_CALLBACK_URL=http://metasort/api/plugins/callback
+      - CONTAINER_NETWORK=metamesh
 
     # Note: Runs as root for nginx, Redis, and file management
     user: 0:0
 
     labels:
+      # ---- metasort-${APP_DOMAIN} (gateway TLS) ----
       caddy_0: metasort-${APP_DOMAIN}
       caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.0_handle: "/health"
+      caddy_0.0_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.1_handle: "/webdav/*"
+      caddy_0.1_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.2_handle: "/meta/*"
+      caddy_0.2_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.3_handle: "/meta-health"
+      caddy_0.3_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.4_handle: "/file/cid"
+      caddy_0.4_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.5_handle: "/api/plugins/callback*"
+      caddy_0.5_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.6_handle: ""
+      caddy_0.6_handle.forward_auth: "meta-authelia:9091"
+      caddy_0.6_handle.forward_auth.uri: "/api/authz/forward-auth"
+      caddy_0.6_handle.forward_auth.copy_headers: "Remote-User,Remote-Groups,Remote-Email,Remote-Name"
+      caddy_0.6_handle.forward_auth.@unauthorized.status: "401"
+      caddy_0.6_handle.forward_auth.handle_response: "@unauthorized"
+      caddy_0.6_handle.forward_auth.handle_response.redir: "* https://auth-${APP_DOMAIN}"
+      caddy_0.6_handle.reverse_proxy: "{{upstreams 80}}"
+
+      # ---- metasort-IP.nip.io (gateway TLS) ----
       caddy_1: metasort-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.0_handle: "/health"
+      caddy_1.0_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.1_handle: "/webdav/*"
+      caddy_1.1_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.2_handle: "/meta/*"
+      caddy_1.2_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.3_handle: "/meta-health"
+      caddy_1.3_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.4_handle: "/file/cid"
+      caddy_1.4_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.5_handle: "/api/plugins/callback*"
+      caddy_1.5_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.6_handle: ""
+      caddy_1.6_handle.forward_auth: "meta-authelia:9091"
+      caddy_1.6_handle.forward_auth.uri: "/api/authz/forward-auth"
+      caddy_1.6_handle.forward_auth.copy_headers: "Remote-User,Remote-Groups,Remote-Email,Remote-Name"
+      caddy_1.6_handle.forward_auth.@unauthorized.status: "401"
+      caddy_1.6_handle.forward_auth.handle_response: "@unauthorized"
+      caddy_1.6_handle.forward_auth.handle_response.redir: "* https://auth-${APP_DOMAIN}"
+      caddy_1.6_handle.reverse_proxy: "{{upstreams 80}}"
+
+      # ---- metasort-IP.sslip.io (Let's Encrypt) ----
       caddy_2: metasort-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.0_handle: "/health"
+      caddy_2.0_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.1_handle: "/webdav/*"
+      caddy_2.1_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.2_handle: "/meta/*"
+      caddy_2.2_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.3_handle: "/meta-health"
+      caddy_2.3_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.4_handle: "/file/cid"
+      caddy_2.4_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.5_handle: "/api/plugins/callback*"
+      caddy_2.5_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.6_handle: ""
+      caddy_2.6_handle.forward_auth: "meta-authelia:9091"
+      caddy_2.6_handle.forward_auth.uri: "/api/authz/forward-auth"
+      caddy_2.6_handle.forward_auth.copy_headers: "Remote-User,Remote-Groups,Remote-Email,Remote-Name"
+      caddy_2.6_handle.forward_auth.@unauthorized.status: "401"
+      caddy_2.6_handle.forward_auth.handle_response: "@unauthorized"
+      caddy_2.6_handle.forward_auth.handle_response.redir: "* https://auth-${APP_DOMAIN}"
+      caddy_2.6_handle.reverse_proxy: "{{upstreams 80}}"
+
     networks:
       - metamesh
       - pcs
 
 volumes:
-  # Shared files volume structure:
-  # /files/watch/* = user media (bind mounts)
-  # /files/plugin/* = plugin output data
-  # /files/poster = poster storage
-  # /files/<remote> = rclone remote mounts
   metamesh-files:
-    name: metamesh-files
-    driver: local
+    external: true
 
 networks:
   metamesh:
-    name: metamesh
-    driver: bridge
+    external: true
   pcs:
     name: pcs
     external: true
@@ -98,27 +157,31 @@ x-casaos:
       - **Built for Scale** - Handles collections up to 900k+ files and 100TB+
       - **Leader Election** - Distributed architecture with automatic failover
 
+      **Requires:** MetaCore (install first)
+
       **Works with:** MetaFuse (virtual filesystem), MetaStremio (streaming)
 
       **Dashboard Features:** File monitoring, plugin status, duplicate detection, metadata browser, processing queue
 
     fr_fr: |
-      **Extraction intelligente de métadonnées et indexation de fichiers pour d'immenses bibliothèques multimédia.**
+      **Extraction intelligente de metadonnees et indexation de fichiers pour d'immenses bibliotheques multimedia.**
 
-      MetaSort est le cerveau de l'écosystème MetaMesh. Il surveille vos dossiers multimédia, extrait les métadonnées à l'aide de plugins intelligents et stocke tout dans une base de données distribuée.
+      MetaSort est le cerveau de l'ecosysteme MetaMesh. Il surveille vos dossiers multimedia, extrait les metadonnees a l'aide de plugins intelligents et stocke tout dans une base de donnees distribuee.
 
-      **Fonctionnalités Clés:**
-      - **Traitement par Plugins** - Plugins conteneurisés pour analyse FFmpeg, enrichissement TMDB, parsing de noms de fichiers
-      - **Extraction Intelligente** - Extrait automatiquement titres, saisons, épisodes, qualité, langue, codecs
-      - **Détection de Doublons** - Trouve les doublons exacts et différentes versions de qualité
-      - **Surveillance Temps Réel** - Surveille les dossiers et traite instantanément les nouveaux fichiers
-      - **Conçu pour l'Échelle** - Gère des collections jusqu'à 900k+ fichiers et 100TB+
+      **Fonctionnalites Cles:**
+      - **Traitement par Plugins** - Plugins conteneurises pour analyse FFmpeg, enrichissement TMDB, parsing de noms de fichiers
+      - **Extraction Intelligente** - Extrait automatiquement titres, saisons, episodes, qualite, langue, codecs
+      - **Detection de Doublons** - Trouve les doublons exacts et differentes versions de qualite
+      - **Surveillance Temps Reel** - Surveille les dossiers et traite instantanement les nouveaux fichiers
+      - **Concu pour l'Echelle** - Gere des collections jusqu'a 900k+ fichiers et 100TB+
 
-      **Fonctionne avec:** MetaFuse (système de fichiers virtuel), MetaStremio (streaming)
+      **Necessite:** MetaCore (installer en premier)
+
+      **Fonctionne avec:** MetaFuse (systeme de fichiers virtuel), MetaStremio (streaming)
 
   tagline:
     en_us: Smart metadata extraction engine - Index and organize massive media libraries with intelligent plugins
-    fr_fr: Moteur d'extraction de métadonnées - Indexez et organisez d'immenses bibliothèques avec des plugins intelligents
+    fr_fr: Moteur d'extraction de metadonnees - Indexez et organisez d'immenses bibliotheques avec des plugins intelligents
 
   title:
     en_us: MetaSort
@@ -135,3 +198,10 @@ x-casaos:
   main: metasort
   is_uncontrolled: false
   webui_port: 80
+
+  tips:
+    before_install:
+      en_us: |
+        **Requires MetaCore** - Install MetaCore first for Redis and authentication.
+
+        MetaSort will automatically connect to MetaCore for metadata storage and Authelia for dashboard protection.

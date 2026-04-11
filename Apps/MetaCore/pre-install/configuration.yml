@@ -1,0 +1,49 @@
+# =============================================================================
+# Authelia Configuration for MetaMesh
+#
+# Template file - pre-install-cmd substitutes __AUTH_DOMAIN__ and __AUTHELIA_URL__
+# =============================================================================
+
+# Server settings (plain HTTP - Caddy edge proxy handles TLS)
+server:
+  address: 'tcp://0.0.0.0:9091'
+
+# Logging
+log:
+  level: info
+
+# Authentication backend (file-based, single user)
+authentication_backend:
+  file:
+    path: /config/users_database.yml
+
+# Session configuration
+session:
+  cookies:
+    - domain: '__AUTH_DOMAIN__'
+      authelia_url: '__AUTHELIA_URL__'
+      name: 'authelia_session'
+      same_site: 'lax'
+      inactivity: '5m'
+      expiration: '1h'
+      remember_me: '1M'
+
+# Storage (SQLite for single-user deployment)
+storage:
+  local:
+    path: /config/db.sqlite
+
+# Access control
+access_control:
+  default_policy: one_factor
+
+# TOTP configuration (for 2FA)
+totp:
+  issuer: 'MetaMesh'
+  period: 30
+  skew: 1
+
+# Notification (filesystem-based, no SMTP needed)
+notifier:
+  filesystem:
+    filename: /config/notifications.txt
