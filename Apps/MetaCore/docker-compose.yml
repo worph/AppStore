@@ -2,7 +2,7 @@ name: metacore
 
 services:
   metacore:
-    image: ghcr.io/worph/meta-core:latest
+    image: ghcr.io/worph/meta-core:1.0.0
     container_name: metacore
     hostname: metacore
     restart: unless-stopped
