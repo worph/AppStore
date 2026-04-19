@@ -1,12 +1,21 @@
 # =============================================================================
-# Authelia Configuration for MetaMesh
+# Authelia Configuration for MetaMesh (OIDC provider mode)
 #
-# Template file - pre-install-cmd substitutes __AUTH_DOMAIN__ and __AUTHELIA_URL__
+# Template — MetaCore/pre-install-cmd substitutes the placeholders below at
+# install time: APP_DOMAIN, APP_PUBLIC_IP_DASH, HMAC secret, RSA JWKS private
+# key, and one argon2id hash per OIDC client.
+#
+# Protected apps reach Authelia via OIDC (not forward_auth) so each app's
+# session cookie can be host-scoped to its own <app>-__AUTH_DOMAIN__ host.
 # =============================================================================
 
-# Server settings (plain HTTP - Caddy edge proxy handles TLS)
+# Server settings (plain HTTP - Caddy edge proxy handles TLS).
+# Buffers bumped to cope with large OIDC requests (long state + cookies).
 server:
   address: 'tcp://0.0.0.0:9091'
+  buffers:
+    read: 16384
+    write: 16384
 
 # Logging
 log:
@@ -17,11 +26,14 @@ authentication_backend:
   file:
     path: /config/users_database.yml
 
-# Session configuration
+# Session configuration — scoped to Authelia's own portal only.
+# Host-exact scope: cookie is set on 'auth-<domain>' and authelia_url is
+# 'https://auth-<domain>' — exact host match, valid cookie scope.
+# Protected apps get their own host-scoped sessions via oauth2-proxy sidecars.
 session:
   cookies:
-    - domain: '__AUTH_DOMAIN__'
-      authelia_url: '__AUTHELIA_URL__'
+    - domain: 'auth-__AUTH_DOMAIN__'
+      authelia_url: 'https://auth-__AUTH_DOMAIN__'
       name: 'authelia_session'
       same_site: 'lax'
       inactivity: '5m'
@@ -37,13 +49,94 @@ storage:
 access_control:
   default_policy: one_factor
 
-# TOTP configuration (for 2FA)
+# TOTP (for 2FA)
 totp:
   issuer: 'MetaMesh'
   period: 30
   skew: 1
 
-# Notification (filesystem-based, no SMTP needed)
+# Filesystem notifier (no SMTP needed for single-user)
 notifier:
   filesystem:
     filename: /config/notifications.txt
+
+# OIDC Identity Provider — each MetaMesh app registers as a client and
+# delegates auth to Authelia via the standard Authorization Code flow.
+identity_providers:
+  oidc:
+    hmac_secret: '__OIDC_HMAC__'
+    jwks:
+      - key_id: 'metamesh-default'
+        algorithm: 'RS256'
+        use: 'sig'
+        key: |
+__OIDC_JWKS_KEY__
+    clients:
+      - client_id: 'metacore'
+        client_name: 'MetaCore Dashboard'
+        client_secret: '__CLIENT_METACORE_HASH__'
+        public: false
+        authorization_policy: 'one_factor'
+        consent_mode: 'implicit'
+        require_pkce: false
+        redirect_uris:
+          - 'https://metacore-__AUTH_DOMAIN__/oauth2/callback'
+          - 'https://metacore-__APP_PUBLIC_IP_DASH__.nip.io/oauth2/callback'
+          - 'https://metacore-__APP_PUBLIC_IP_DASH__.sslip.io/oauth2/callback'
+        scopes:
+          - 'openid'
+          - 'profile'
+          - 'email'
+          - 'groups'
+        response_types:
+          - 'code'
+        grant_types:
+          - 'authorization_code'
+          - 'refresh_token'
+        token_endpoint_auth_method: 'client_secret_basic'
+
+      - client_id: 'metasort'
+        client_name: 'MetaSort Dashboard'
+        client_secret: '__CLIENT_METASORT_HASH__'
+        public: false
+        authorization_policy: 'one_factor'
+        consent_mode: 'implicit'
+        require_pkce: false
+        redirect_uris:
+          - 'https://metasort-__AUTH_DOMAIN__/oauth2/callback'
+          - 'https://metasort-__APP_PUBLIC_IP_DASH__.nip.io/oauth2/callback'
+          - 'https://metasort-__APP_PUBLIC_IP_DASH__.sslip.io/oauth2/callback'
+        scopes:
+          - 'openid'
+          - 'profile'
+          - 'email'
+          - 'groups'
+        response_types:
+          - 'code'
+        grant_types:
+          - 'authorization_code'
+          - 'refresh_token'
+        token_endpoint_auth_method: 'client_secret_basic'
+
+      - client_id: 'metafuse'
+        client_name: 'MetaFuse Dashboard'
+        client_secret: '__CLIENT_METAFUSE_HASH__'
+        public: false
+        authorization_policy: 'one_factor'
+        consent_mode: 'implicit'
+        require_pkce: false
+        redirect_uris:
+          - 'https://metafuse-__AUTH_DOMAIN__/oauth2/callback'
+          - 'https://metafuse-__APP_PUBLIC_IP_DASH__.nip.io/oauth2/callback'
+          - 'https://metafuse-__APP_PUBLIC_IP_DASH__.sslip.io/oauth2/callback'
+        scopes:
+          - 'openid'
+          - 'profile'
+          - 'email'
+          - 'groups'
+        response_types:
+          - 'code'
+        grant_types:
+          - 'authorization_code'
+          - 'refresh_token'
+        token_endpoint_auth_method: 'client_secret_basic'

@@ -65,13 +65,7 @@ services:
       caddy_0.5_handle: "/api/plugins/callback*"
       caddy_0.5_handle.reverse_proxy: "{{upstreams 80}}"
       caddy_0.6_handle: ""
-      caddy_0.6_handle.forward_auth: "meta-authelia:9091"
-      caddy_0.6_handle.forward_auth.uri: "/api/authz/forward-auth"
-      caddy_0.6_handle.forward_auth.copy_headers: "Remote-User,Remote-Groups,Remote-Email,Remote-Name"
-      caddy_0.6_handle.forward_auth.@unauthorized.status: "401"
-      caddy_0.6_handle.forward_auth.handle_response: "@unauthorized"
-      caddy_0.6_handle.forward_auth.handle_response.redir: "* https://auth-${APP_DOMAIN}"
-      caddy_0.6_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.6_handle.reverse_proxy: "metasort-oauth:4180"
 
       # ---- metasort-IP.nip.io (gateway TLS) ----
       caddy_1: metasort-${APP_PUBLIC_IP_DASH}.nip.io
@@ -89,13 +83,7 @@ services:
       caddy_1.5_handle: "/api/plugins/callback*"
       caddy_1.5_handle.reverse_proxy: "{{upstreams 80}}"
       caddy_1.6_handle: ""
-      caddy_1.6_handle.forward_auth: "meta-authelia:9091"
-      caddy_1.6_handle.forward_auth.uri: "/api/authz/forward-auth"
-      caddy_1.6_handle.forward_auth.copy_headers: "Remote-User,Remote-Groups,Remote-Email,Remote-Name"
-      caddy_1.6_handle.forward_auth.@unauthorized.status: "401"
-      caddy_1.6_handle.forward_auth.handle_response: "@unauthorized"
-      caddy_1.6_handle.forward_auth.handle_response.redir: "* https://auth-${APP_DOMAIN}"
-      caddy_1.6_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.6_handle.reverse_proxy: "metasort-oauth:4180"
 
       # ---- metasort-IP.sslip.io (Let's Encrypt) ----
       caddy_2: metasort-${APP_PUBLIC_IP_DASH}.sslip.io
@@ -112,13 +100,50 @@ services:
       caddy_2.5_handle: "/api/plugins/callback*"
       caddy_2.5_handle.reverse_proxy: "{{upstreams 80}}"
       caddy_2.6_handle: ""
-      caddy_2.6_handle.forward_auth: "meta-authelia:9091"
-      caddy_2.6_handle.forward_auth.uri: "/api/authz/forward-auth"
-      caddy_2.6_handle.forward_auth.copy_headers: "Remote-User,Remote-Groups,Remote-Email,Remote-Name"
-      caddy_2.6_handle.forward_auth.@unauthorized.status: "401"
-      caddy_2.6_handle.forward_auth.handle_response: "@unauthorized"
-      caddy_2.6_handle.forward_auth.handle_response.redir: "* https://auth-${APP_DOMAIN}"
-      caddy_2.6_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.6_handle.reverse_proxy: "metasort-oauth:4180"
+
+    networks:
+      - metamesh
+      - pcs
+
+  # OIDC sidecar — terminates Authorization Code flow for the MetaSort dashboard.
+  # Reads its client + cookie secrets from MetaCore's shared secrets dir.
+  # MetaCore must be installed first (pre-install-cmd enforces this).
+  metasort-oauth:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.11.0
+    container_name: metasort-oauth
+    hostname: metasort-oauth
+    restart: unless-stopped
+
+    expose:
+      - 4180
+
+    volumes:
+      - /DATA/AppData/metacore/authelia/secrets:/secrets:ro
+
+    command:
+      - --provider=oidc
+      - --oidc-issuer-url=https://auth-${APP_DOMAIN}
+      - --client-id=metasort
+      - --client-secret-file=/secrets/client-metasort.plain
+      - --cookie-secret-file=/secrets/cookie-metasort.secret
+      - --cookie-domain=metasort-${APP_DOMAIN}
+      - --whitelist-domain=metasort-${APP_DOMAIN}
+      - --redirect-url=https://metasort-${APP_DOMAIN}/oauth2/callback
+      - --upstream=http://metasort:80
+      - --http-address=0.0.0.0:4180
+      - --email-domain=*
+      - --reverse-proxy=true
+      - --pass-access-token=true
+      - --set-xauthrequest=true
+      - --skip-provider-button=true
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4180/ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
     networks:
       - metamesh
@@ -205,3 +230,10 @@ x-casaos:
         **Requires MetaCore** - Install MetaCore first for Redis and authentication.
 
         MetaSort will automatically connect to MetaCore for metadata storage and Authelia for dashboard protection.
+
+  pre-install-cmd: |
+    if [ ! -f /DATA/AppData/metacore/authelia/secrets/client-metasort.plain ]; then
+      echo "ERROR: MetaCore must be installed before MetaSort." >&2 &&
+      echo "Missing: /DATA/AppData/metacore/authelia/secrets/client-metasort.plain" >&2 &&
+      exit 1;
+    fi
