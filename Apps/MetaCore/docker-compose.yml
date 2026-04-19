@@ -256,7 +256,6 @@ x-casaos:
   store_app_id: metacore
   main: metacore
   is_uncontrolled: false
-  webui_port: 80
 
   tips:
     before_install:

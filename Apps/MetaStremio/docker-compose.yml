@@ -6,6 +6,10 @@ services:
     container_name: metastremio
     restart: unless-stopped
 
+    # Runs as root so it can write its service registration file into
+    # /meta-core/services/ (the shared volume is root-owned by meta-core).
+    user: "0:0"
+
     # Stremio addon port
     expose:
       - 7000
@@ -125,7 +129,6 @@ x-casaos:
   store_app_id: metastremio
   main: metastremio
   is_uncontrolled: false
-  webui_port: 7000
 
   tips:
     before_install:

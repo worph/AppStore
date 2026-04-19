@@ -222,7 +222,6 @@ x-casaos:
   store_app_id: metasort
   main: metasort
   is_uncontrolled: false
-  webui_port: 80
 
   tips:
     before_install:

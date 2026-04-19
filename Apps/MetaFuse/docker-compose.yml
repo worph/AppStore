@@ -200,7 +200,6 @@ x-casaos:
   store_app_id: metafuse
   main: metafuse
   is_uncontrolled: false
-  webui_port: 80
 
   tips:
     before_install:
