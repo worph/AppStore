@@ -2,7 +2,7 @@ name: metasort
 
 services:
   metasort:
-    image: ghcr.io/worph/meta-sort:latest
+    image: ghcr.io/worph/meta-sort:1.0.0
     container_name: metasort
     restart: unless-stopped
     cpu_shares: 20

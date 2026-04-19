@@ -2,7 +2,7 @@ name: metafuse
 
 services:
   metafuse:
-    image: ghcr.io/worph/meta-fuse:latest
+    image: ghcr.io/worph/meta-fuse:1.0.0
     container_name: metafuse
     restart: unless-stopped
     privileged: true

@@ -2,7 +2,7 @@ name: metastremio
 
 services:
   metastremio:
-    image: ghcr.io/worph/meta-stremio:latest
+    image: ghcr.io/worph/meta-stremio:1.0.0
     container_name: metastremio
     restart: unless-stopped
 
