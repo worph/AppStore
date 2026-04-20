@@ -15,24 +15,18 @@ services:
       - 7000
 
     volumes:
-      # Shared files volume (same as MetaSort - contains watch, plugin, poster, remotes)
-      - metamesh-files:/files:ro
-
-      # User's media directories (same paths as MetaSort)
-      - /DATA/Downloads:/files/watch/downloads:ro
-      - /DATA/Media:/files/watch/media:ro
-
-      # Shared infrastructure volume (leader election, service discovery, Redis)
-      # Mounted at fixed path so all MetaMesh apps share the same data
-      - /DATA/Apps/MetaCore:/meta-core:rw
+      # Shared infrastructure state (leader election, Redis dump, service discovery)
+      # Owned by MetaCore; mounted rw here for service registration + leader reads.
+      - /DATA/AppData/metacore/meta-core:/meta-core:rw
 
       # Transcoding cache
       - /DATA/AppData/metastremio/cache:/data/cache
 
+    # Note: no /files mounts — files are accessed via WebDAV from MetaCore
+    # (Architecture V3). MetaCore is the single source of truth for media files.
+
     environment:
       - META_CORE_PATH=/meta-core
-      - FILES_PATH=/files
-      - MEDIA_DIR=/files/watch
       - CACHE_DIR=/data/cache
       - SEGMENT_DURATION=4
       - PREFETCH_SEGMENTS=4
@@ -55,16 +49,9 @@ services:
       caddy_2: metastremio-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 7000}}"
     networks:
-      - metamesh
       - pcs
 
-volumes:
-  metamesh-files:
-    external: true
-
 networks:
-  metamesh:
-    external: true
   pcs:
     name: pcs
     external: true

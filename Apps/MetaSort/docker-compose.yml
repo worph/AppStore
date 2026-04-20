@@ -12,16 +12,9 @@ services:
       - 80
 
     volumes:
-      # Shared files volume (root for all file access)
-      - metamesh-files:/files:rw
-
-      # User's media directories mounted into the files volume
-      - /DATA/Downloads:/files/watch/downloads:ro
-      - /DATA/Media:/files/watch/media:ro
-
-      # Shared infrastructure volume (leader election, service discovery, Redis)
-      # Mounted at fixed path so all MetaMesh apps share the same data
-      - /DATA/Apps/MetaCore:/meta-core:rw
+      # Shared infrastructure state (leader election, Redis dump, service discovery)
+      # Owned by MetaCore; mounted rw here for service registration + leader reads.
+      - /DATA/AppData/metacore/meta-core:/meta-core:rw
 
       # Application cache storage
       - /DATA/AppData/metasort/cache:/data/cache
@@ -29,11 +22,12 @@ services:
       # Docker socket for container plugin management
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
+    # Note: no /files mounts — files are accessed via WebDAV from MetaCore
+    # (Architecture V3). MetaCore is the single source of truth for media files.
+
     environment:
       - NODE_ENV=production
       - META_CORE_PATH=/meta-core
-      - FILES_PATH=/files
-      - WATCH_FOLDER_LIST=/files/watch
       - CACHE_FOLDER_PATH=/data/cache
       - SERVICE_NAME=meta-sort
       - SERVICE_VERSION=1.0.0
@@ -43,7 +37,7 @@ services:
       - TZ=$TZ
       # Container plugin configuration
       - CONTAINER_CALLBACK_URL=http://metasort/api/plugins/callback
-      - CONTAINER_NETWORK=metamesh
+      - CONTAINER_NETWORK=pcs
 
     # Note: Runs as root for nginx, Redis, and file management
     user: 0:0
@@ -103,7 +97,6 @@ services:
       caddy_2.6_handle.reverse_proxy: "metasort-oauth:4180"
 
     networks:
-      - metamesh
       - pcs
 
   # OIDC sidecar — terminates Authorization Code flow for the MetaSort dashboard.
@@ -146,16 +139,9 @@ services:
       start_period: 10s
 
     networks:
-      - metamesh
       - pcs
 
-volumes:
-  metamesh-files:
-    external: true
-
 networks:
-  metamesh:
-    external: true
   pcs:
     name: pcs
     external: true

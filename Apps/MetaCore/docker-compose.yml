@@ -13,13 +13,12 @@ services:
       - 80
 
     volumes:
-      # Shared infrastructure volume (leader election, service discovery, Redis)
-      - /DATA/Apps/MetaCore:/meta-core:rw
+      # Shared infrastructure state (leader election, Redis dump, service discovery).
+      # Lives inside /DATA/AppData/metacore/ so CasaOS archives it on uninstall.
+      - /DATA/AppData/metacore/meta-core:/meta-core:rw
 
-      # Shared files volume (root for all file access)
-      - metamesh-files:/files:rw
-
-      # User's media directories mounted into the files volume
+      # User's media directories — bind-mounted directly (no parent named volume,
+      # so `docker volume rm` cannot recurse into these and wipe host data).
       - /DATA/Downloads:/files/watch/downloads:ro
       - /DATA/Media:/files/watch/media:ro
 
@@ -91,7 +90,6 @@ services:
       retries: 30
       start_period: 30s
     networks:
-      - metamesh
       - pcs
 
   meta-authelia:
@@ -130,7 +128,6 @@ services:
       caddy_2.reverse_proxy: "{{upstreams 9091}}"
 
     networks:
-      - metamesh
       - pcs
 
   # OIDC sidecar — terminates Authorization Code flow for the MetaCore dashboard.
@@ -177,18 +174,9 @@ services:
       start_period: 10s
 
     networks:
-      - metamesh
       - pcs
 
-volumes:
-  metamesh-files:
-    name: metamesh-files
-    driver: local
-
 networks:
-  metamesh:
-    name: metamesh
-    driver: bridge
   pcs:
     name: pcs
     external: true
@@ -274,7 +262,7 @@ x-casaos:
         3. Install MetaSort, MetaFuse, or MetaStremio as needed
 
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/metacore/authelia/secrets /DATA/Apps/MetaCore &&
+    mkdir -p /DATA/AppData/metacore/authelia/secrets /DATA/AppData/metacore/meta-core &&
     SECRETS=/DATA/AppData/metacore/authelia/secrets &&
     CFG=/DATA/AppData/metacore/authelia/configuration.yml &&
     USERS=/DATA/AppData/metacore/authelia/users_database.yml &&

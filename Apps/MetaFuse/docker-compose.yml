@@ -24,16 +24,9 @@ services:
       - apparmor:unconfined
 
     volumes:
-      # Shared files volume (same as MetaSort - contains watch, plugin, poster, remotes)
-      - metamesh-files:/files:ro
-
-      # User's media directories (same paths as MetaSort)
-      - /DATA/Downloads:/files/watch/downloads:ro
-      - /DATA/Media:/files/watch/media:ro
-
-      # Shared infrastructure volume (leader election, service discovery, Redis)
-      # Mounted at fixed path so all MetaMesh apps share the same data
-      - /DATA/Apps/MetaCore:/meta-core:rw
+      # Shared infrastructure state (leader election, Redis dump, service discovery)
+      # Owned by MetaCore; mounted rw here for service registration + leader reads.
+      - /DATA/AppData/metacore/meta-core:/meta-core:rw
 
       # FUSE virtual filesystem mount point
       - /DATA/MetaFuse/Library:/mnt/virtual:shared
@@ -41,10 +34,12 @@ services:
       # Configuration storage
       - /DATA/AppData/metafuse/config:/meta-fuse/config:rw
 
+    # Note: no /files mounts — files are accessed via WebDAV from MetaCore
+    # (Architecture V3). MetaCore is the single source of truth for media files.
+
     environment:
       - NODE_ENV=production
       - META_CORE_PATH=/meta-core
-      - FILES_PATH=/files
       - CONFIG_DIR=/meta-fuse/config
       - SERVICE_NAME=meta-fuse
       - SERVICE_VERSION=1.0.0
@@ -85,7 +80,6 @@ services:
       caddy_2.2_handle.reverse_proxy: "metafuse-oauth:4180"
 
     networks:
-      - metamesh
       - pcs
 
   # OIDC sidecar — terminates Authorization Code flow for the MetaFuse dashboard.
@@ -128,16 +122,9 @@ services:
       start_period: 10s
 
     networks:
-      - metamesh
       - pcs
 
-volumes:
-  metamesh-files:
-    external: true
-
 networks:
-  metamesh:
-    external: true
   pcs:
     name: pcs
     external: true
