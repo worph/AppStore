@@ -5,7 +5,11 @@ services:
     image: ghcr.io/worph/n8nmcp:1.0.0
     container_name: n8nmcp
     hostname: n8nmcp
-    user: $PUID:$PGID
+    # supervisord is PID 1 and MUST start as root so it can drop privileges for
+    # each child program. Running as a non-root uid fails with "Can't drop
+    # privilege as nonroot user". Child processes drop to their own uid as
+    # configured in /etc/supervisord.conf.
+    user: "0:0"
     restart: unless-stopped
     expose:
       - 9640
@@ -17,14 +21,17 @@ services:
       - PORT=9640
       - UPSTREAM_PORT=3000
       - DISCOVERY_PORT=9099
-      - CONFIG_PATH=/app/data/config.json
       # Pre-seed the companion n8n app's in-network hostname.
       # The API key is left blank — paste it in the Web UI on first launch.
       - N8N_BASE_URL=http://n8n:80
     volumes:
+      # The image's supervisord.conf hard-codes CONFIG_PATH=/app/wrapper-data/config.json
+      # for the wrapper program, so the persistent bind MUST land there — a container-
+      # level CONFIG_PATH env is ignored because supervisord's program `environment=`
+      # block wins.
       - type: bind
         source: /DATA/AppData/n8nmcp/
-        target: /app/data
+        target: /app/wrapper-data
     networks:
       - pcs
 
