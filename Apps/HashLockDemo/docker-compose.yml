@@ -1,0 +1,75 @@
+name: hashlockdemo
+
+services:
+  hashlockdemo:
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.7
+    container_name: hashlockdemo
+    restart: unless-stopped
+    expose:
+      - "80"
+    labels:
+      caddy_0: hashlockdemo-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: hashlockdemo-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: hashlockdemo-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    environment:
+      # Setting OIDC_REGISTRAR_URL enables OIDC mode — the sidecar self-registers with
+      # the PCS's auth-registrar on first login. No AUTH_HASH / USER / PASSWORD needed.
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      BACKEND_HOST: "whoami"
+      BACKEND_PORT: "80"
+      LISTEN_PORT: "80"
+    depends_on:
+      - whoami
+    networks:
+      - pcs
+
+  whoami:
+    image: traefik/whoami:v1.10
+    container_name: hashlockdemo-whoami
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: hashlockdemo
+  author: yundera
+  developer: yundera
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/HashLockDemo/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/HashLockDemo/screenshot-1.png
+  tagline:
+    en_us: "Demo: protect any app with Yundera OIDC in 5 lines of compose"
+  category: Developer
+  description:
+    en_us: |
+      A reference deployment showing how to protect any HTTP backend with OIDC authentication
+      using nginx-hash-lock v1.0.7 and Yundera's built-in Authelia.
+
+      The backend is traefik/whoami, which simply echoes the incoming request. After logging
+      in via Authelia, you'll see the request headers that hash-lock forwarded to the backend
+      — proof that authentication succeeded and the session cookie was accepted.
+
+      Zero secrets to configure: the hash-lock sidecar auto-registers as an OIDC client
+      with the auth-registrar service on first login. Open the compose file to see the
+      minimal setup — OIDC_REGISTRAR_URL is the only auth configuration needed.
+  title:
+    en_us: "Hash Lock OIDC Demo"
+  store_app_id: hashlockdemo
+  is_uncontrolled: false
+  index: /
+  webui_port: 80
