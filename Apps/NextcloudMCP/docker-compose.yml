@@ -8,6 +8,11 @@ services:
     image: ghcr.io/worph/nextcloud-mcp:1.0.0
     container_name: nextcloudmcp
     hostname: nextcloudmcp
+    # supervisord is PID 1 and MUST start as root so it can drop privileges for
+    # each child program. Running as a non-root uid fails with "Can't drop
+    # privilege as nonroot user". Child processes drop to their own uid as
+    # configured in /etc/supervisord.conf.
+    user: "0:0"
     restart: unless-stopped
     expose:
       - 9650
