@@ -4,6 +4,7 @@ services:
   hashlockdemo:
     image: ghcr.io/yundera/nginx-hash-lock:1.0.7
     container_name: hashlockdemo
+    user: "0:0"
     restart: unless-stopped
     expose:
       - "80"
