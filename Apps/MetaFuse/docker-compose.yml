@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     privileged: true
 
-    # Web UI, API, and WebDAV port
+    # Internal-only — public access goes through metafuse-proxy.
     expose:
       - 80
 
@@ -49,77 +49,62 @@ services:
     # Note: Runs as root for FUSE mount operations
     user: 0:0
 
+    networks:
+      - pcs
+
+  # OIDC perimeter for the MetaFuse dashboard. Self-registers as an OIDC client
+  # with the platform's auth-registrar on first login (no secrets to manage).
+  # Public Caddy ingress attaches HERE; backend `metafuse` stays on the internal
+  # pcs network only.
+  metafuse-proxy:
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.7
+    container_name: metafuse-proxy
+    hostname: metafuse-proxy
+    restart: unless-stopped
+    user: "0:0"
+
+    expose:
+      - 80
+
+    environment:
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      BACKEND_HOST: "metafuse"
+      BACKEND_PORT: "80"
+      LISTEN_PORT: "80"
+
+    depends_on:
+      - metafuse
+
     labels:
       # ---- metafuse-${APP_DOMAIN} (gateway TLS) ----
       caddy_0: metafuse-${APP_DOMAIN}
       caddy_0.import: gateway_tls
+      # Unauthenticated paths bypass the hash-lock proxy and hit the backend directly.
       caddy_0.0_handle: "/health"
-      caddy_0.0_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.0_handle.reverse_proxy: "metafuse:80"
       caddy_0.1_handle: "/webdav*"
-      caddy_0.1_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.1_handle.reverse_proxy: "metafuse:80"
       caddy_0.2_handle: ""
-      caddy_0.2_handle.reverse_proxy: "metafuse-oauth:4180"
+      caddy_0.2_handle.reverse_proxy: "{{upstreams 80}}"
 
       # ---- metafuse-IP.nip.io (gateway TLS) ----
       caddy_1: metafuse-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.0_handle: "/health"
-      caddy_1.0_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.0_handle.reverse_proxy: "metafuse:80"
       caddy_1.1_handle: "/webdav*"
-      caddy_1.1_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.1_handle.reverse_proxy: "metafuse:80"
       caddy_1.2_handle: ""
-      caddy_1.2_handle.reverse_proxy: "metafuse-oauth:4180"
+      caddy_1.2_handle.reverse_proxy: "{{upstreams 80}}"
 
       # ---- metafuse-IP.sslip.io (Let's Encrypt) ----
       caddy_2: metafuse-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.0_handle: "/health"
-      caddy_2.0_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.0_handle.reverse_proxy: "metafuse:80"
       caddy_2.1_handle: "/webdav*"
-      caddy_2.1_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.1_handle.reverse_proxy: "metafuse:80"
       caddy_2.2_handle: ""
-      caddy_2.2_handle.reverse_proxy: "metafuse-oauth:4180"
-
-    networks:
-      - pcs
-
-  # OIDC sidecar — terminates Authorization Code flow for the MetaFuse dashboard.
-  # Reads its client + cookie secrets from MetaCore's shared secrets dir.
-  # MetaCore must be installed first (pre-install-cmd enforces this).
-  metafuse-oauth:
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.11.0
-    container_name: metafuse-oauth
-    hostname: metafuse-oauth
-    restart: unless-stopped
-
-    expose:
-      - 4180
-
-    volumes:
-      - /DATA/AppData/metacore/authelia/secrets:/secrets:ro
-
-    command:
-      - --provider=oidc
-      - --oidc-issuer-url=https://auth-${APP_DOMAIN}
-      - --client-id=metafuse
-      - --client-secret-file=/secrets/client-metafuse.plain
-      - --cookie-secret-file=/secrets/cookie-metafuse.secret
-      - --cookie-domain=metafuse-${APP_DOMAIN}
-      - --whitelist-domain=metafuse-${APP_DOMAIN}
-      - --redirect-url=https://metafuse-${APP_DOMAIN}/oauth2/callback
-      - --upstream=http://metafuse:80
-      - --http-address=0.0.0.0:4180
-      - --email-domain=*
-      - --reverse-proxy=true
-      - --pass-access-token=true
-      - --set-xauthrequest=true
-      - --skip-provider-button=true
-
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:4180/ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-      start_period: 10s
+      caddy_2.2_handle.reverse_proxy: "{{upstreams 80}}"
 
     networks:
       - pcs
@@ -185,21 +170,22 @@ x-casaos:
 
   index: /
   store_app_id: metafuse
-  main: metafuse
+  main: metafuse-proxy
   is_uncontrolled: false
 
   tips:
     before_install:
       en_us: |
-        **Requires MetaCore** - Install MetaCore first for Redis and authentication.
+        **Requires MetaCore** - Install MetaCore first.
 
-        MetaFuse will automatically connect to MetaCore for metadata and Authelia for dashboard protection.
+        MetaFuse connects to MetaCore for metadata. The dashboard is protected by
+        Yundera's built-in Authelia via OIDC — sign in with your existing Yundera account.
 
         **FUSE Mount:** Your organized virtual library will be available at `/DATA/MetaFuse/Library/`
 
   pre-install-cmd: |
-    if [ ! -f /DATA/AppData/metacore/authelia/secrets/client-metafuse.plain ]; then
+    if [ ! -d /DATA/AppData/metacore/meta-core ]; then
       echo "ERROR: MetaCore must be installed before MetaFuse." >&2 &&
-      echo "Missing: /DATA/AppData/metacore/authelia/secrets/client-metafuse.plain" >&2 &&
+      echo "Missing: /DATA/AppData/metacore/meta-core (install MetaCore first)" >&2 &&
       exit 1;
     fi
