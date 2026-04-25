@@ -170,7 +170,7 @@ x-casaos:
 
   index: /
   store_app_id: metafuse
-  main: metafuse-proxy
+  main: metafuse
   is_uncontrolled: false
 
   tips:

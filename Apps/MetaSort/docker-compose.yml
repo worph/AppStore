@@ -191,7 +191,7 @@ x-casaos:
 
   index: /
   store_app_id: metasort
-  main: metasort-proxy
+  main: metasort
   is_uncontrolled: false
 
   tips:
