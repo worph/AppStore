@@ -1,13 +1,15 @@
 name: metafuse
 
 services:
-  metafuse:
+  # Backend service. Reachable on the pcs network as `metafuse-app`.
+  # Public ingress goes through the `metafuse` hash-lock proxy below.
+  metafuse-app:
     image: ghcr.io/worph/meta-fuse:1.0.0
-    container_name: metafuse
+    container_name: metafuse-app
+    hostname: metafuse-app
     restart: unless-stopped
     privileged: true
 
-    # Internal-only — public access goes through metafuse-proxy.
     expose:
       - 80
 
@@ -54,12 +56,13 @@ services:
 
   # OIDC perimeter for the MetaFuse dashboard. Self-registers as an OIDC client
   # with the platform's auth-registrar on first login (no secrets to manage).
-  # Public Caddy ingress attaches HERE; backend `metafuse` stays on the internal
-  # pcs network only.
-  metafuse-proxy:
+  #
+  # Naming: container_name MUST equal the URL-prefix of the public hostname so
+  # the registrar's redirect-URI allowlist accepts `metafuse-<user>.<domain>`.
+  metafuse:
     image: ghcr.io/yundera/nginx-hash-lock:1.0.7
-    container_name: metafuse-proxy
-    hostname: metafuse-proxy
+    container_name: metafuse
+    hostname: metafuse
     restart: unless-stopped
     user: "0:0"
 
@@ -68,12 +71,12 @@ services:
 
     environment:
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      BACKEND_HOST: "metafuse"
+      BACKEND_HOST: "metafuse-app"
       BACKEND_PORT: "80"
       LISTEN_PORT: "80"
 
     depends_on:
-      - metafuse
+      - metafuse-app
 
     labels:
       # ---- metafuse-${APP_DOMAIN} (gateway TLS) ----
@@ -81,9 +84,9 @@ services:
       caddy_0.import: gateway_tls
       # Unauthenticated paths bypass the hash-lock proxy and hit the backend directly.
       caddy_0.0_handle: "/health"
-      caddy_0.0_handle.reverse_proxy: "metafuse:80"
+      caddy_0.0_handle.reverse_proxy: "metafuse-app:80"
       caddy_0.1_handle: "/webdav*"
-      caddy_0.1_handle.reverse_proxy: "metafuse:80"
+      caddy_0.1_handle.reverse_proxy: "metafuse-app:80"
       caddy_0.2_handle: ""
       caddy_0.2_handle.reverse_proxy: "{{upstreams 80}}"
 
@@ -91,18 +94,18 @@ services:
       caddy_1: metafuse-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.0_handle: "/health"
-      caddy_1.0_handle.reverse_proxy: "metafuse:80"
+      caddy_1.0_handle.reverse_proxy: "metafuse-app:80"
       caddy_1.1_handle: "/webdav*"
-      caddy_1.1_handle.reverse_proxy: "metafuse:80"
+      caddy_1.1_handle.reverse_proxy: "metafuse-app:80"
       caddy_1.2_handle: ""
       caddy_1.2_handle.reverse_proxy: "{{upstreams 80}}"
 
       # ---- metafuse-IP.sslip.io (Let's Encrypt) ----
       caddy_2: metafuse-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.0_handle: "/health"
-      caddy_2.0_handle.reverse_proxy: "metafuse:80"
+      caddy_2.0_handle.reverse_proxy: "metafuse-app:80"
       caddy_2.1_handle: "/webdav*"
-      caddy_2.1_handle.reverse_proxy: "metafuse:80"
+      caddy_2.1_handle.reverse_proxy: "metafuse-app:80"
       caddy_2.2_handle: ""
       caddy_2.2_handle.reverse_proxy: "{{upstreams 80}}"
 
