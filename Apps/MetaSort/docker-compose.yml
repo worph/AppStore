@@ -72,59 +72,33 @@ services:
       - metasort-app
 
     labels:
+      # Only /health bypasses hash-lock — internal cluster traffic (plugin
+      # callbacks, /meta/*, /webdav/*, /file/cid) reaches metasort-app via
+      # the pcs network and never traverses the public proxy, so no public
+      # bypass is required for those paths.
+
       # ---- metasort-${APP_DOMAIN} (gateway TLS) ----
       caddy_0: metasort-${APP_DOMAIN}
       caddy_0.import: gateway_tls
-      # Unauthenticated paths bypass the hash-lock proxy and hit the backend directly.
       caddy_0.0_handle: "/health"
       caddy_0.0_handle.reverse_proxy: "metasort-app:80"
-      caddy_0.1_handle: "/webdav/*"
-      caddy_0.1_handle.reverse_proxy: "metasort-app:80"
-      caddy_0.2_handle: "/meta/*"
-      caddy_0.2_handle.reverse_proxy: "metasort-app:80"
-      caddy_0.3_handle: "/meta-health"
-      caddy_0.3_handle.reverse_proxy: "metasort-app:80"
-      caddy_0.4_handle: "/file/cid"
-      caddy_0.4_handle.reverse_proxy: "metasort-app:80"
-      caddy_0.5_handle: "/api/plugins/callback*"
-      caddy_0.5_handle.reverse_proxy: "metasort-app:80"
-      caddy_0.6_handle: ""
-      caddy_0.6_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.1_handle: ""
+      caddy_0.1_handle.reverse_proxy: "{{upstreams 80}}"
 
       # ---- metasort-IP.nip.io (gateway TLS) ----
       caddy_1: metasort-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.0_handle: "/health"
       caddy_1.0_handle.reverse_proxy: "metasort-app:80"
-      caddy_1.1_handle: "/webdav/*"
-      caddy_1.1_handle.reverse_proxy: "metasort-app:80"
-      caddy_1.2_handle: "/meta/*"
-      caddy_1.2_handle.reverse_proxy: "metasort-app:80"
-      caddy_1.3_handle: "/meta-health"
-      caddy_1.3_handle.reverse_proxy: "metasort-app:80"
-      caddy_1.4_handle: "/file/cid"
-      caddy_1.4_handle.reverse_proxy: "metasort-app:80"
-      caddy_1.5_handle: "/api/plugins/callback*"
-      caddy_1.5_handle.reverse_proxy: "metasort-app:80"
-      caddy_1.6_handle: ""
-      caddy_1.6_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.1_handle: ""
+      caddy_1.1_handle.reverse_proxy: "{{upstreams 80}}"
 
       # ---- metasort-IP.sslip.io (Let's Encrypt) ----
       caddy_2: metasort-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.0_handle: "/health"
       caddy_2.0_handle.reverse_proxy: "metasort-app:80"
-      caddy_2.1_handle: "/webdav/*"
-      caddy_2.1_handle.reverse_proxy: "metasort-app:80"
-      caddy_2.2_handle: "/meta/*"
-      caddy_2.2_handle.reverse_proxy: "metasort-app:80"
-      caddy_2.3_handle: "/meta-health"
-      caddy_2.3_handle.reverse_proxy: "metasort-app:80"
-      caddy_2.4_handle: "/file/cid"
-      caddy_2.4_handle.reverse_proxy: "metasort-app:80"
-      caddy_2.5_handle: "/api/plugins/callback*"
-      caddy_2.5_handle.reverse_proxy: "metasort-app:80"
-      caddy_2.6_handle: ""
-      caddy_2.6_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.1_handle: ""
+      caddy_2.1_handle.reverse_proxy: "{{upstreams 80}}"
 
     networks:
       - pcs

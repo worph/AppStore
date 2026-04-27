@@ -81,47 +81,33 @@ services:
       - metacore-app
 
     labels:
+      # Only /health bypasses hash-lock — inter-service traffic (/meta/*,
+      # /webdav/*, /file/cid) flows over the pcs network from sibling apps
+      # (metasort-app, metafuse-app, metastremio) directly to metacore-app
+      # and never traverses the public proxy.
+
       # ---- metacore-${APP_DOMAIN} (gateway TLS) ----
       caddy_0: metacore-${APP_DOMAIN}
       caddy_0.import: gateway_tls
-      # Unauthenticated paths bypass the hash-lock proxy and hit the backend directly.
       caddy_0.0_handle: "/health"
       caddy_0.0_handle.reverse_proxy: "metacore-app:80"
-      caddy_0.1_handle: "/webdav/*"
-      caddy_0.1_handle.reverse_proxy: "metacore-app:80"
-      caddy_0.2_handle: "/meta/*"
-      caddy_0.2_handle.reverse_proxy: "metacore-app:80"
-      caddy_0.3_handle: "/file/cid"
-      caddy_0.3_handle.reverse_proxy: "metacore-app:80"
-      caddy_0.4_handle: ""
-      caddy_0.4_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.1_handle: ""
+      caddy_0.1_handle.reverse_proxy: "{{upstreams 80}}"
 
       # ---- metacore-IP.nip.io (gateway TLS) ----
       caddy_1: metacore-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.0_handle: "/health"
       caddy_1.0_handle.reverse_proxy: "metacore-app:80"
-      caddy_1.1_handle: "/webdav/*"
-      caddy_1.1_handle.reverse_proxy: "metacore-app:80"
-      caddy_1.2_handle: "/meta/*"
-      caddy_1.2_handle.reverse_proxy: "metacore-app:80"
-      caddy_1.3_handle: "/file/cid"
-      caddy_1.3_handle.reverse_proxy: "metacore-app:80"
-      caddy_1.4_handle: ""
-      caddy_1.4_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.1_handle: ""
+      caddy_1.1_handle.reverse_proxy: "{{upstreams 80}}"
 
       # ---- metacore-IP.sslip.io (Let's Encrypt) ----
       caddy_2: metacore-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.0_handle: "/health"
       caddy_2.0_handle.reverse_proxy: "metacore-app:80"
-      caddy_2.1_handle: "/webdav/*"
-      caddy_2.1_handle.reverse_proxy: "metacore-app:80"
-      caddy_2.2_handle: "/meta/*"
-      caddy_2.2_handle.reverse_proxy: "metacore-app:80"
-      caddy_2.3_handle: "/file/cid"
-      caddy_2.3_handle.reverse_proxy: "metacore-app:80"
-      caddy_2.4_handle: ""
-      caddy_2.4_handle.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.1_handle: ""
+      caddy_2.1_handle.reverse_proxy: "{{upstreams 80}}"
 
     networks:
       - pcs
