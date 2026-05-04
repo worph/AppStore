@@ -39,12 +39,17 @@ services:
       turkeyCfg_HUB_DOMAIN: "hubs-${APP_DOMAIN}"
       turkeyCfg_DOMAIN: "hubs-${APP_DOMAIN}"
       turkeyCfg_RET_HOST: "hubs-${APP_DOMAIN}"
+      turkeyCfg_LINK_HOST: "hubslink-${APP_DOMAIN}"
       turkeyCfg_ASSETS_HOST: "hubsassets-${APP_DOMAIN}"
       turkeyCfg_DIALOG_HOST: "hubsdialog-${APP_DOMAIN}"
       turkeyCfg_NEARSPARK_HOST: "hubsnearspark-${APP_DOMAIN}"
+      turkeyCfg_SPOKE_HOST: "hubsspoke-${APP_DOMAIN}"
       turkeyCfg_DB_HOST: "db"
       turkeyCfg_DB_HOST_T: "db"
-      turkeyCfg_ADM_EMAIL: "${APP_EMAIL}"
+      turkeyCfg_APP_EMAIL: "${APP_EMAIL}"
+      turkeyCfg_MAILER_RELAY: "smtp"
+      turkeyCfg_MAILER_PORT: "587"
+      turkeyCfg_MAILER_TLS: "never"
       PUID: $PUID
       PGID: $PGID
       TZ: $TZ
@@ -69,6 +74,14 @@ services:
       caddy_1.reverse_proxy: "{{upstreams 4001}}"
       caddy_2: hubs-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 4001}}"
+      caddy_3: hubslink-${APP_DOMAIN}
+      caddy_3.import: gateway_tls
+      caddy_3.reverse_proxy: "{{upstreams 4001}}"
+      caddy_4: hubslink-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_4.import: gateway_tls
+      caddy_4.reverse_proxy: "{{upstreams 4001}}"
+      caddy_5: hubslink-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_5.reverse_proxy: "{{upstreams 4001}}"
 
   postgrest:
     image: mozillareality/postgrest:8
@@ -138,8 +151,8 @@ services:
       DOMAIN: "${APP_DOMAIN}"
       SUB_DOMAIN: "hubsspoke"
       turkeyCfg_thumbnail_server: "hubsnearspark-${APP_DOMAIN}"
-      turkeyCfg_base_assets_path: "https://hubsassets-${APP_DOMAIN}/spoke/"
-      turkeyCfg_non_cors_proxy_domains: "hubs-${APP_DOMAIN},hubsassets-${APP_DOMAIN}"
+      turkeyCfg_base_assets_path: "https://hubsspoke-${APP_DOMAIN}/spoke/"
+      turkeyCfg_non_cors_proxy_domains: "hubs-${APP_DOMAIN},hubsspoke-${APP_DOMAIN}"
       turkeyCfg_reticulum_server: "hubs-${APP_DOMAIN}"
       turkeyCfg_cors_proxy_server: "hubs-${APP_DOMAIN}"
       turkeyCfg_shortlink_domain: "hubs-${APP_DOMAIN}"
@@ -178,7 +191,7 @@ services:
       INTERACTIVE: "false"
       MEDIASOUP_MIN_PORT: 40000
       MEDIASOUP_MAX_PORT: 40050
-      MEDIASOUP_ANNOUNCED_IP: "${APP_PUBLIC_IP}"
+      MEDIASOUP_ANNOUNCED_IP: "${APP_PUBLIC_IPV4}"
       DEBUG: "*INFO* *WARN* *ERROR*"
       PUID: $PUID
       PGID: $PGID
@@ -255,6 +268,7 @@ x-casaos:
   architectures:
     - amd64
   main: reticulum
+  is_uncontrolled: false
   webui_port: 4001
   port_map: "4001"
   index: "/"
@@ -294,12 +308,52 @@ x-casaos:
       touch /DATA/AppData/hubs/.initialized
     fi
 
+  post-install-cmd: |
+    set -e
+    if [ -f /DATA/AppData/hubs/.seeded ]; then
+      echo "[hubs-seed] already seeded, skipping"
+      exit 0
+    fi
+    echo "[hubs-seed] waiting for reticulum HTTPS..."
+    for i in $(seq 1 90); do
+      if curl -sk -o /dev/null -w '%{http_code}' "https://hubs-${APP_DOMAIN}/health" | grep -q '^200$'; then break; fi
+      sleep 2
+    done
+    DASHBOARD_KEY=$(grep '^DASHBOARD_ACCESS_KEY=' /DATA/AppData/hubs/secrets.env | cut -d= -f2-)
+    if [ -z "$DASHBOARD_KEY" ]; then
+      echo "[hubs-seed] DASHBOARD_ACCESS_KEY missing from secrets.env; aborting (install still successful)"
+      exit 0
+    fi
+    echo "[hubs-seed] minting admin token..."
+    TOKEN=$(curl -sk -X POST \
+      -H "x-ret-dashboard-access-key: $DASHBOARD_KEY" \
+      -H 'Content-Type: application/json' \
+      -d "{\"email\":\"${APP_EMAIL}\"}" \
+      "https://hubs-${APP_DOMAIN}/api-internal/v1/make_auth_token_for_email")
+    if ! echo "$TOKEN" | grep -qE '^ey[A-Za-z0-9_-]+\.ey[A-Za-z0-9_-]+\.'; then
+      echo "[hubs-seed] token mint failed; response: $TOKEN"
+      exit 0
+    fi
+    echo "[hubs-seed] running seeder..."
+    docker run --rm \
+      --network hubs-net \
+      -e RET_INTERNAL_URL=https://hubs-reticulum:4000 \
+      -e ADMIN_TOKEN="$TOKEN" \
+      -e SCENE_GLB_URL="https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Hubs/default-scene/scene.glb" \
+      -e SCENE_SCREENSHOT_URL="https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Hubs/default-scene/scene.png" \
+      -e SCENE_NAME="Outdoor Market" \
+      -e SCENE_DESCRIPTION="Open-air meetup plaza — a friendly default to land in. Replace via the admin panel any time." \
+      -e SCENE_ATTRIBUTIONS="Quaternius (CC0)" \
+      ghcr.io/yundera/hubs-seed:0.1.0
+    touch /DATA/AppData/hubs/.seeded
+
   tips:
     before_install:
       en_us: |
-        Hubs is a multi-service stack. It exposes five public hostnames:
+        Hubs is a multi-service stack. It exposes six public hostnames:
 
         - hubs-${APP_DOMAIN} — main app, room URLs, login (Reticulum)
+        - hubslink-${APP_DOMAIN} — short-link redirect host (must differ from hubs- to avoid Reticulum's /link redirect loop)
         - hubsassets-${APP_DOMAIN} — static assets (3D models, JS bundles)
         - hubsspoke-${APP_DOMAIN} — Spoke scene editor
         - hubsdialog-${APP_DOMAIN} — WebRTC signaling (WSS, port 4443)

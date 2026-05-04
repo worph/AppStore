@@ -40,7 +40,7 @@ host = "<ASSETS_HOST>"
 port = 443
 
 [ret."Elixir.RetWeb.Endpoint".link_url]
-host = "<RET_HOST>"
+host = "<LINK_HOST>"
 port = 443
 
 [ret."Elixir.RetWeb.Endpoint".url]
@@ -123,30 +123,35 @@ quota_gb = "100"
 from = "noreply@<RET_HOST>"
 
 [ret."Elixir.Ret.Mailer"]
-relay = ""
-port = ""
+relay = "<MAILER_RELAY>"
+port = "<MAILER_PORT>"
 username = ""
 password = ""
 server = ""
+tls = "<MAILER_TLS>"
+auth = "never"
 
 [ret."Elixir.Ret.Support"]
 slack_webhook_url = ""
 
 [ret."Elixir.RetWeb.Plugs.AddCSP"]
 child_src = ""
-connect_src = "<RET_HOST> <ASSETS_HOST> <DIALOG_HOST> wss://<DIALOG_HOST>"
-font_src = ""
+connect_src = "<RET_HOST> <ASSETS_HOST> <SPOKE_HOST> <DIALOG_HOST> wss://<DIALOG_HOST>"
+font_src = "<SPOKE_HOST>"
 form_action = ""
 frame_src = ""
-img_src = "<RET_HOST> <ASSETS_HOST> <NEARSPARK_HOST>"
+img_src = "<RET_HOST> <ASSETS_HOST> <SPOKE_HOST> <NEARSPARK_HOST>"
 manifest_src = ""
-media_src = "<RET_HOST> <ASSETS_HOST>"
-script_src = ""
-style_src = ""
-worker_src = ""
+media_src = "<RET_HOST> <ASSETS_HOST> <SPOKE_HOST>"
+script_src = "<SPOKE_HOST>"
+style_src = "<SPOKE_HOST>"
+worker_src = "<SPOKE_HOST>"
 
 [ret."Ret.Repo.Migrations.AdminSchemaInit"]
 postgrest_password = "<POSTGREST_PASSWORD>"
+
+[ret."Elixir.RetWeb.Plugs.PostgrestProxy"]
+hostname = "postgrest"
 
 [ret."Elixir.Ret.StatsJob"]
 
@@ -168,7 +173,7 @@ extra_room_script = ""
 extra_scene_script = ""
 
 [ret."Elixir.Ret.Account"]
-admin_email = "<ADM_EMAIL>"
+admin_email = "<APP_EMAIL>"
 
 [ret."Elixir.Ret.Coturn"]
 realm = "turkey"
