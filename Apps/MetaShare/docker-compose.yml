@@ -1,0 +1,283 @@
+name: metashare
+
+services:
+  # Backend service. Reachable on the pcs network as `metashare-app`.
+  # Public ingress goes through the `metashare` hash-lock proxy below.
+  #
+  # Unlike the other meta apps, this container is a self-contained Rust
+  # binary serving Axum on :3000 directly (no nginx wrapper, no supervisord).
+  # Ports 3000 and 4001 are split:
+  #  - 3000  HTTP API + dashboard (proxied through the hash-lock + Caddy)
+  #  - 4001  libp2p TCP listener — must be reachable on the public IP so
+  #          other archivists' peers can dial in via kad-DHT provider records.
+  metashare-app:
+    image: ghcr.io/worph/meta-share:1.0.0
+    container_name: metashare-app
+    hostname: metashare-app
+    restart: unless-stopped
+    cpu_shares: 20
+
+    expose:
+      - 3000   # HTTP API (Axum)
+
+    # libp2p TCP must be host-published. Caddy can't proxy it (not HTTP)
+    # and other peers' kad-DHT lookups dial the public multiaddr directly.
+    ports:
+      - "4001:4001"
+
+    volumes:
+      # Shared infrastructure state (leader election, Redis dump, service discovery)
+      # Owned by MetaCore; mounted rw here so meta-share registers under services/.
+      - /DATA/AppData/metacore/meta-core:/meta-core:rw
+
+    # Note: no /files mounts — meta-share resolves file paths through MetaCore's
+    # WebDAV URL (Architecture V3). META_SHARE_FILES_PATH is only used as the
+    # prefix for translating absolute filePaths back to WebDAV-relative paths.
+
+    environment:
+      - HTTP_LISTEN=0.0.0.0:3000
+      - P2P_LISTEN=/ip4/0.0.0.0/tcp/4001
+      - RUST_LOG=info,meta_share=info,kamilata=info
+
+      # Service registration into /meta-core/services/
+      - META_CORE_PATH=/meta-core
+      - SERVICE_NAME=meta-share
+      - SERVICE_VERSION=1.0.0
+      - BASE_URL=https://metashare-$APP_DOMAIN
+
+      # meta-core ingestion — the local archivist's library. This peer pulls
+      # records from MetaCore and announces them on the Kamilata swarm.
+      - META_CORE_URL=http://metacore-app:80
+      - META_CORE_POLL_SECS=30
+      - META_CORE_MAX_RECORDS=5000
+
+      # Inter-peer fetch URL — where another archivist's meta-share reaches
+      # this peer's HTTP API. Same as BASE_URL for prod (other peers fetch
+      # via the public Caddy URL, which routes back through this hash-lock
+      # proxy with /api/peer/* and /api/file/* on the bypass list).
+      - META_SHARE_PEER_API_URL=https://metashare-$APP_DOMAIN
+
+      # Kad-DHT discovery — public IPFS bootstraps so each Yundera node finds
+      # the others through the public DHT. KAD_NAMESPACE scopes the cohort:
+      # change it to share a private cohort across a known group of operators
+      # (any non-default value isolates that group from the global default).
+      - KAD_NAMESPACE=metamesh-share-default
+
+      # Connection floor. Below this, kad ticks at KAD_FAST_DISCOVERY_SECS
+      # (default 60s) to find more peers; at or above, it backs off to
+      # KAD_DISCOVERY_SECS (default 5min). 8 is a reasonable archivist
+      # default — bump for larger cohorts.
+      - TARGET_PEER_COUNT=8
+
+      # mDNS finds peers on the same LAN; in a single-archivist Yundera box
+      # this is mostly irrelevant (kad-DHT does the cross-network work) but
+      # leave it on by default — costs nothing and helps if multiple peers
+      # ever share a network.
+      - ENABLE_MDNS=true
+
+      - TZ=$TZ
+
+    # Runs as root because the meta-core volume is provisioned mode 0755 by
+    # MetaCore (root). Same convention as the other meta apps.
+    user: 0:0
+
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+
+    networks:
+      - pcs
+
+  # OIDC perimeter for the MetaShare dashboard. Self-registers as an OIDC client
+  # with the platform's auth-registrar on first login (no secrets to manage).
+  #
+  # Naming: container_name MUST equal the URL-prefix of the public hostname so
+  # the registrar's redirect-URI allowlist accepts `metashare-<user>.<domain>`.
+  metashare:
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.7
+    container_name: metashare
+    hostname: metashare
+    restart: unless-stopped
+    user: "0:0"
+
+    expose:
+      - 80
+
+    environment:
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      BACKEND_HOST: "metashare-app"
+      BACKEND_PORT: "3000"
+      LISTEN_PORT: "80"
+
+    depends_on:
+      - metashare-app
+
+    labels:
+      # Peer-to-peer surface bypasses the hash-lock so other archivists'
+      # meta-share peers can reach /api/peers, /api/peer/*, /api/file/*,
+      # /api/search* and /api/services without an OIDC session. The
+      # dashboard (everything else) sits behind hash-lock as usual.
+
+      # ---- metashare-${APP_DOMAIN} (gateway TLS) ----
+      caddy_0: metashare-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.0_handle: "/health"
+      caddy_0.0_handle.reverse_proxy: "metashare-app:3000"
+      caddy_0.1_handle: "/api/peers*"
+      caddy_0.1_handle.reverse_proxy: "metashare-app:3000"
+      caddy_0.2_handle: "/api/peer/*"
+      caddy_0.2_handle.reverse_proxy: "metashare-app:3000"
+      caddy_0.3_handle: "/api/file/*"
+      caddy_0.3_handle.reverse_proxy: "metashare-app:3000"
+      caddy_0.4_handle: "/api/search*"
+      caddy_0.4_handle.reverse_proxy: "metashare-app:3000"
+      caddy_0.5_handle: "/api/services"
+      caddy_0.5_handle.reverse_proxy: "metashare-app:3000"
+      caddy_0.6_handle: ""
+      caddy_0.6_handle.reverse_proxy: "{{upstreams 80}}"
+
+      # ---- metashare-IP.nip.io (gateway TLS) ----
+      caddy_1: metashare-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.0_handle: "/health"
+      caddy_1.0_handle.reverse_proxy: "metashare-app:3000"
+      caddy_1.1_handle: "/api/peers*"
+      caddy_1.1_handle.reverse_proxy: "metashare-app:3000"
+      caddy_1.2_handle: "/api/peer/*"
+      caddy_1.2_handle.reverse_proxy: "metashare-app:3000"
+      caddy_1.3_handle: "/api/file/*"
+      caddy_1.3_handle.reverse_proxy: "metashare-app:3000"
+      caddy_1.4_handle: "/api/search*"
+      caddy_1.4_handle.reverse_proxy: "metashare-app:3000"
+      caddy_1.5_handle: "/api/services"
+      caddy_1.5_handle.reverse_proxy: "metashare-app:3000"
+      caddy_1.6_handle: ""
+      caddy_1.6_handle.reverse_proxy: "{{upstreams 80}}"
+
+      # ---- metashare-IP.sslip.io (Let's Encrypt) ----
+      caddy_2: metashare-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.0_handle: "/health"
+      caddy_2.0_handle.reverse_proxy: "metashare-app:3000"
+      caddy_2.1_handle: "/api/peers*"
+      caddy_2.1_handle.reverse_proxy: "metashare-app:3000"
+      caddy_2.2_handle: "/api/peer/*"
+      caddy_2.2_handle.reverse_proxy: "metashare-app:3000"
+      caddy_2.3_handle: "/api/file/*"
+      caddy_2.3_handle.reverse_proxy: "metashare-app:3000"
+      caddy_2.4_handle: "/api/search*"
+      caddy_2.4_handle.reverse_proxy: "metashare-app:3000"
+      caddy_2.5_handle: "/api/services"
+      caddy_2.5_handle.reverse_proxy: "metashare-app:3000"
+      caddy_2.6_handle: ""
+      caddy_2.6_handle.reverse_proxy: "{{upstreams 80}}"
+
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  author: Worph Team
+  category: Media
+  developer: Aptero Team
+
+  description:
+    en_us: |
+      **Decentralized metadata sharing across MetaMesh archivists.**
+
+      MetaShare turns your local MetaMesh library into a peer in a federated discovery network. Archivists running their own Yundera nodes can search across each other's libraries without surrendering control of their files — discovery returns pointers (peer + CID), and any retrieval is an explicit HTTP fetch from the source peer.
+
+      **Key Features:**
+      - **Federated Search** - Type-once, query-many across the cohort using the Kamilata routing primitive
+      - **Pointer-Only Discovery** - Search returns `(peer, cid)`; data never leaves the source until you ask for it
+      - **Automatic Peer Discovery** - Public IPFS DHT (kad) finds other archivists; mDNS handles same-LAN cohorts; no designated bootstrap node
+      - **Cohort Scoping** - `KAD_NAMESPACE` lets a private group of archivists isolate their swarm from the public default
+      - **Built on libp2p** - QUIC + TCP transport, Noise-encrypted, peer-id authenticated
+      - **MetaCore-Backed** - Ingests from your local MetaCore Redis and re-publishes records on the swarm
+
+      **Requires:** MetaCore (install first; MetaShare reads its metadata from MetaCore's API)
+
+      **Works with:** MetaSort (so MetaCore has records to share), MetaFuse, MetaStremio
+
+      **Status:** v0.2 POC. In-memory record store (rebuilt from MetaCore on each start), no persistent peer-id, no announcement signing yet. Production-grade hardening lands in v0.2.1.
+
+      **Dashboard Features:** Peer list with live connection status, federated search, per-record source attribution, swarm health diagnostics
+
+    fr_fr: |
+      **Partage de metadonnees decentralise entre archivistes MetaMesh.**
+
+      MetaShare transforme votre bibliotheque MetaMesh locale en pair d'un reseau de decouverte federe. Les archivistes faisant tourner leur propre serveur Yundera peuvent chercher dans les bibliotheques des autres sans abandonner le controle de leurs fichiers — la decouverte renvoie des pointeurs (pair + CID), et toute recuperation est une requete HTTP explicite vers le pair source.
+
+      **Fonctionnalites Cles:**
+      - **Recherche Federee** - Une seule requete interroge tout le cohorte via la primitive de routage Kamilata
+      - **Decouverte par Pointeurs** - La recherche renvoie `(pair, cid)` ; les donnees ne quittent le pair source que sur demande explicite
+      - **Decouverte Automatique des Pairs** - Le DHT IPFS public (kad) trouve les autres archivistes ; mDNS gere les cohortes sur le meme LAN ; aucun noeud bootstrap designe
+      - **Isolation par Cohorte** - `KAD_NAMESPACE` permet a un groupe prive d'archivistes d'isoler leur swarm du namespace public
+      - **Construit sur libp2p** - Transport QUIC + TCP, chiffrement Noise, authentification par peer-id
+      - **Adosse a MetaCore** - Ingere depuis votre Redis MetaCore local et republie les enregistrements sur le swarm
+
+      **Necessite:** MetaCore (installer en premier ; MetaShare lit ses metadonnees depuis l'API MetaCore)
+
+      **Fonctionne avec:** MetaSort (pour que MetaCore ait des enregistrements a partager), MetaFuse, MetaStremio
+
+      **Statut:** POC v0.2. Stockage des enregistrements en memoire (reconstruit depuis MetaCore a chaque demarrage), pas de peer-id persistant, pas encore de signature des annonces. Le durcissement de niveau production arrive en v0.2.1.
+
+  tagline:
+    en_us: Decentralized metadata sharing - Federated search across archivists without surrendering your files
+    fr_fr: Partage de metadonnees decentralise - Recherche federee entre archivistes sans abandonner vos fichiers
+
+  title:
+    en_us: MetaShare
+
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaShare/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaShare/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaShare/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaShare/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaShare/thumbnail.png
+
+  index: /
+  store_app_id: metashare
+  main: metashare
+  is_uncontrolled: false
+
+  tips:
+    before_install:
+      en_us: |
+        **Requires MetaCore** - Install MetaCore first.
+
+        **Port 4001 must be reachable from the public internet.** MetaShare's libp2p
+        TCP listener is host-published on port 4001 so other archivists' peers
+        (and the public IPFS kad-DHT) can dial this node directly. If your Yundera
+        host is behind a strict firewall, open TCP/4001 inbound — without it, this
+        peer can still *find* others but won't be findable by them.
+
+        **Cohort scoping (optional).** Out of the box, MetaShare joins the global
+        `metamesh-share-default` cohort. To run a private group of archivists,
+        change `KAD_NAMESPACE` to a shared secret string on every node in the
+        group — only nodes with the matching namespace will see each other.
+
+        **POC status.** v0.2 has an in-memory record store (rebuilt from MetaCore
+        on every restart, ~2.5s for ~500 records) and no announcement signing yet.
+        Don't rely on this for production federation until v0.2.1.
+
+        The dashboard is protected by Yundera's built-in Authelia via OIDC — sign
+        in with your existing Yundera account. The peer-to-peer API surface
+        (`/api/peers`, `/api/peer/*`, `/api/file/*`, `/api/search*`) is intentionally
+        bypassed so other peers can reach it without an OIDC session.
+
+  pre-install-cmd: |
+    if [ ! -d /DATA/AppData/metacore/meta-core ]; then
+      echo "ERROR: MetaCore must be installed before MetaShare." >&2 &&
+      echo "Missing: /DATA/AppData/metacore/meta-core (install MetaCore first)" >&2 &&
+      exit 1;
+    fi
