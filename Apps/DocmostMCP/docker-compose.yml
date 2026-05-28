@@ -90,6 +90,10 @@ x-casaos:
     - amd64
     - arm64
   main: docmostmcp
+  hostname: docmostmcp-${APP_DOMAIN}
+  scheme: https
+  port_map: "443"
+  index: /?hash=${AUTH_HASH}
   envs:
     - container: DOCMOST_BASE_URL
       description:
@@ -144,13 +148,11 @@ x-casaos:
       en_us: |
         **Fill the install form with your Docmost credentials**
 
-        On the install screen, you'll see fields for `DOCMOST_EMAIL` and `DOCMOST_PASSWORD`. The first time the container starts it bakes those into `/DATA/AppData/docmostmcp/config.json`. After that the file is the source of truth — changing the install-form values later has no effect (delete the file to force regeneration, or edit it directly).
+        On the install screen, you'll see fields for `DOCMOST_EMAIL` and `DOCMOST_PASSWORD`. The first time the container starts it bakes those into `/DATA/AppData/docmostmcp/config.json`. After that, the bundled **config UI** at `/` is the easiest way to update them: click **Open** on the app card to land on the UI, where you can edit credentials, run a live **Test connection** against Docmost, and copy the ready-to-paste public MCP URL with the auth hash baked in.
 
         **Prerequisites:**
         1. A running **Docmost** instance reachable from the `pcs` Docker network (typically the companion Docmost app installed from this store)
         2. A Docmost user account — **strongly recommended** to create a dedicated service account in Docmost rather than reusing admin, since this MCP can read/write/move every page that account can see
-
-        **To rotate credentials after install:** open the **File Browser** app and edit `/DATA/AppData/docmostmcp/config.json`, then restart the app. The cached JWT lives at `/DATA/AppData/docmostmcp/token.json` and is rebuilt automatically on next use.
 
         **MCP Integration (for AI/LLMs):**
 
