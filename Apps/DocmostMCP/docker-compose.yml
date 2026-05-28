@@ -14,9 +14,17 @@ services:
       - PGID=$PGID
       - TZ=$TZ
       - PORT=8000
+      # Docmost connection — the image's entrypoint writes these into
+      # /data/config.json on first start. CasaOS prompts the user for any
+      # field with an empty default at install time.
+      - DOCMOST_BASE_URL=http://docmost
+      - DOCMOST_EMAIL=
+      - DOCMOST_PASSWORD=
+      - DOCMOST_TIMEOUT=30
     volumes:
-      # config.json (Docmost credentials) and token.json (cached JWT) live here.
-      # The pre-install script seeds a template config.json on first install.
+      # config.json (generated from env vars on first start) and token.json
+      # (cached JWT) live here. Once /data/config.json exists, the entrypoint
+      # leaves it alone — manual edits persist.
       - type: bind
         source: /DATA/AppData/docmostmcp/
         target: /data
@@ -78,11 +86,27 @@ networks:
     external: true
 
 x-casaos:
-  pre-install-cmd: docker run --rm -v /DATA/AppData/docmostmcp/:/data/ nasselle/pre-install-toolbox https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/DocmostMCP/pre-install/init.sh
   architectures:
     - amd64
     - arm64
   main: docmostmcp
+  envs:
+    - container: DOCMOST_BASE_URL
+      description:
+        en_us: Internal URL to reach Docmost. Default `http://docmost` works for the companion Docmost app on this server.
+        fr_fr: URL interne pour atteindre Docmost. Par defaut `http://docmost` fonctionne pour l'application Docmost compagnon sur ce serveur.
+    - container: DOCMOST_EMAIL
+      description:
+        en_us: Email of the Docmost user the MCP authenticates as. Use a dedicated service account, not your admin.
+        fr_fr: Email de l'utilisateur Docmost que le MCP utilise pour s'authentifier. Utilisez un compte de service dedie, pas votre compte admin.
+    - container: DOCMOST_PASSWORD
+      description:
+        en_us: Password for the Docmost user above. Stored in /DATA/AppData/docmostmcp/config.json.
+        fr_fr: Mot de passe pour l'utilisateur Docmost ci-dessus. Stocke dans /DATA/AppData/docmostmcp/config.json.
+    - container: DOCMOST_TIMEOUT
+      description:
+        en_us: HTTP timeout (seconds) for Docmost API calls. Default 30.
+        fr_fr: Delai d'expiration HTTP (en secondes) pour les appels a l'API Docmost. Par defaut 30.
   author: Aptero
   category: Developer
   description:
@@ -118,19 +142,15 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        **Configuration required after install**
+        **Fill the install form with your Docmost credentials**
 
-        Docmost MCP needs Docmost login credentials to call the Docmost REST API on your behalf. The installer seeds a template config — you fill in the email and password before first use.
+        On the install screen, you'll see fields for `DOCMOST_EMAIL` and `DOCMOST_PASSWORD`. The first time the container starts it bakes those into `/DATA/AppData/docmostmcp/config.json`. After that the file is the source of truth — changing the install-form values later has no effect (delete the file to force regeneration, or edit it directly).
 
         **Prerequisites:**
         1. A running **Docmost** instance reachable from the `pcs` Docker network (typically the companion Docmost app installed from this store)
         2. A Docmost user account — **strongly recommended** to create a dedicated service account in Docmost rather than reusing admin, since this MCP can read/write/move every page that account can see
 
-        **Setup (2 steps):**
-        1. Open the **File Browser** app and navigate to `/DATA/AppData/docmostmcp/config.json`
-        2. Set `base_url` (default `http://docmost` works for the companion app), `email`, and `password`. Save.
-
-        The MCP authenticates against Docmost on first use and caches a JWT at `/DATA/AppData/docmostmcp/token.json`.
+        **To rotate credentials after install:** open the **File Browser** app and edit `/DATA/AppData/docmostmcp/config.json`, then restart the app. The cached JWT lives at `/DATA/AppData/docmostmcp/token.json` and is rebuilt automatically on next use.
 
         **MCP Integration (for AI/LLMs):**
 
