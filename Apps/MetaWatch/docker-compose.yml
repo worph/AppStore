@@ -114,7 +114,7 @@ services:
   # whatever it fetches. Public libp2p on host port 4003.
   # ---------------------------------------------------------------------------
   metawatch-share:
-    image: ghcr.io/worph/meta-share:1.0.0
+    image: ghcr.io/worph/meta-share:1.0.1
     container_name: metawatch-share
     hostname: metawatch-share
     restart: unless-stopped

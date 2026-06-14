@@ -71,7 +71,7 @@ services:
   # queries reach the gateway's records. Public libp2p on host port 4002.
   # ===========================================================================
   metagateway-share:
-    image: ghcr.io/worph/meta-share:1.0.0
+    image: ghcr.io/worph/meta-share:1.0.1
     container_name: metagateway-share
     hostname: metagateway-share
     restart: unless-stopped
@@ -326,13 +326,14 @@ services:
 
   # ===========================================================================
   # metagateway-tribler — headless Tribler core (IPv8 overlay). The feeder
-  # reaches it at :8085. Uses ghcr.io/worph/meta-tribler (= tribler:latest with
-  # a complete baked /seed/configuration.json that binds REST to 0.0.0.0:8085,
-  # key `changeme`); the entrypoint installs it on first boot without clobbering
-  # persisted state. IPv8 overlay on UDP 8090, host-published as 8092.
+  # reaches it at :8085. Uses the upstream ghcr.io/tribler/tribler image; the
+  # complete REST config (binds 0.0.0.0:8085, key `changeme`) is materialized on
+  # the host by pre-install-cmd and bind-mounted in at /seed/configuration.json.
+  # The entrypoint installs it on first boot without clobbering persisted state.
+  # IPv8 overlay on UDP 8090, host-published as 8092.
   # ===========================================================================
   metagateway-tribler:
-    image: ghcr.io/worph/meta-tribler:1.0.0
+    image: ghcr.io/tribler/tribler:latest
     container_name: metagateway-tribler
     hostname: metagateway-tribler
     restart: unless-stopped
@@ -353,6 +354,10 @@ services:
       - "8092:8090/udp"
     volumes:
       - /DATA/AppData/metagateway/tribler:/root/.Tribler
+      # Complete REST config, fetched to the host by pre-install-cmd. Tribler
+      # crashes on a partial config and ships no python/jq to patch it, so the
+      # entrypoint copies this seed into /root/.Tribler/8.0/ on first boot.
+      - /DATA/AppData/metagateway/tribler-config/configuration.json:/seed/configuration.json:ro
     networks:
       - metagateway
 
@@ -555,7 +560,11 @@ x-casaos:
     mkdir -p /DATA/AppData/metagateway/state
     mkdir -p /DATA/AppData/metagateway/prowlarr
     mkdir -p /DATA/AppData/metagateway/tribler
+    mkdir -p /DATA/AppData/metagateway/tribler-config
     mkdir -p /DATA/AppData/metagateway/tmdb-cache
+    # Complete Tribler REST config (binds 0.0.0.0:8085, key `changeme`) for the
+    # upstream tribler image, bind-mounted into the container at /seed/.
+    wget -q https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaGateway/pre-install/tribler-configuration.json -O /DATA/AppData/metagateway/tribler-config/configuration.json
     cat > /DATA/AppData/metagateway/state/gateway-config.json <<'JSON'
     {
       "feeders": {
