@@ -369,7 +369,7 @@ services:
   # from TMDB_TOKEN; see tips).
   # ===========================================================================
   metagateway-filename-parser:
-    image: ghcr.io/worph/metamesh-plugin-filename-parser:1.0.0
+    image: ghcr.io/worph/metamesh-plugin-filename-parser:1.0.1
     container_name: metagateway-filename-parser
     hostname: metagateway-filename-parser
     restart: unless-stopped
