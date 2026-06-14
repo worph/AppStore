@@ -147,8 +147,14 @@ services:
         condition: service_healthy
       common-feeder:
         condition: service_healthy
+      # torznab needs a Prowlarr API key that only exists AFTER the user runs
+      # Prowlarr's first-run wizard (see tips). Until then the feeder stays up
+      # but reports its torznab source as DEGRADED (the SDK no longer hard-exits
+      # on a bad/empty key — the error surfaces at /health instead). Gate the app
+      # on it being *started*, not *healthy*, so a fresh install never blocks on
+      # torznab being fully configured — the rest of the gateway comes up.
       metagateway-torznab-feeder:
-        condition: service_healthy
+        condition: service_started
       metagateway-tribler-feeder:
         condition: service_healthy
     healthcheck:
@@ -170,6 +176,10 @@ services:
     container_name: metagateway-book-feeder
     hostname: metagateway-book-feeder
     restart: unless-stopped
+    # Image bakes uid 10001 (metafeeder) as owner of the /data/meta-feeder state
+    # dir; the platform injects user 1000:1000 on services without a user:, which
+    # then can't write it. Run as root to match the sibling meta-* services.
+    user: "0:0"
     expose: ["8080"]
     environment:
       RUST_LOG: "info"
@@ -186,6 +196,7 @@ services:
     container_name: metagateway-paper-feeder
     hostname: metagateway-paper-feeder
     restart: unless-stopped
+    user: "0:0"
     expose: ["8080"]
     environment:
       RUST_LOG: "info"
@@ -203,6 +214,7 @@ services:
     container_name: metagateway-common-feeder
     hostname: metagateway-common-feeder
     restart: unless-stopped
+    user: "0:0"
     expose: ["8080"]
     environment:
       RUST_LOG: "info"
@@ -223,6 +235,7 @@ services:
     container_name: metagateway-torznab-feeder
     hostname: metagateway-torznab-feeder
     restart: unless-stopped
+    user: "0:0"
     expose: ["8080"]
     environment:
       RUST_LOG: "info,meta_feeder=info"
@@ -259,6 +272,7 @@ services:
     container_name: metagateway-tribler-feeder
     hostname: metagateway-tribler-feeder
     restart: unless-stopped
+    user: "0:0"
     expose: ["8080"]
     environment:
       RUST_LOG: "info,meta_feeder=info,torrent_feeder=info"
@@ -337,15 +351,19 @@ services:
     container_name: metagateway-tribler
     hostname: metagateway-tribler
     restart: unless-stopped
+    user: "0:0"
     entrypoint: ["/bin/sh", "-c"]
+    # NB: no shell variables / command-substitution here on purpose. The CasaOS
+    # install pipeline collapses `$$` -> `$`, after which `docker compose`
+    # interpolates `$CFG` as an (empty) host var, leaving `cp /seed/... ""`.
+    # Hardcoded paths are immune to that.
     command:
       - |
         set -e
-        CFG=/root/.Tribler/8.0/configuration.json
-        if [ ! -f "$$CFG" ]; then
-          mkdir -p "$$(dirname "$$CFG")"
-          cp /seed/configuration.json "$$CFG"
-          echo "tribler: installed baked config at $$CFG"
+        if [ ! -f /root/.Tribler/8.0/configuration.json ]; then
+          mkdir -p /root/.Tribler/8.0
+          cp /seed/configuration.json /root/.Tribler/8.0/configuration.json
+          echo "tribler: installed baked config"
         fi
         exec /usr/share/tribler/tribler -s
     environment:
@@ -537,6 +555,12 @@ x-casaos:
         Authelia via OIDC. The bundled Prowlarr has its own forms login (set a
         password on first run).
 
+        **The gateway works out of the box.** Books, papers and common-media
+        feeders need no setup. Torrent/video search (Torznab) needs a Prowlarr
+        key — until you add one, the gateway still runs and the **torznab feeder
+        simply shows as "degraded"** in the dashboard (it no longer crashes the
+        app). Set it up when you want video:
+
         **Torznab / Prowlarr setup (required for video):**
         1. Open `https://metagateway-prowlarr-$APP_DOMAIN/` and complete the
            Prowlarr first-run wizard (set an admin password).
@@ -544,7 +568,8 @@ x-casaos:
            test green.
         3. Settings → General → copy the **API Key**.
         4. In this app's settings, set `PROWLARR_API_KEY` (and `TMDB_TOKEN` for
-           posters/overviews), then restart the app.
+           posters/overviews), then restart the app. The torznab feeder turns
+           healthy once the key is valid.
 
         **TMDB enrichment:** set `TMDB_TOKEN` (a TMDB v4 read token). The tmdb
         plugin also accepts it via its `/configure` endpoint.

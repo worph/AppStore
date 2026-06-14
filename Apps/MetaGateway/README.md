@@ -48,9 +48,10 @@ container-name or data-path collisions.
 1. **Prowlarr** — open `https://metagateway-prowlarr-<domain>/`, finish the
    wizard, add indexers, copy the **API Key**.
 2. Set `PROWLARR_API_KEY` and `TMDB_TOKEN` (TMDB v4 read token) on this app,
-   then restart. Until set, the torznab upstream soft-skips but the stack stays
-   healthy. Optional: `GIPHY_API_KEY` (common-feeder), `SCIHUB_MIRRORS`
-   (paper-feeder).
+   then restart. Until set, the **torznab feeder reports as degraded** (the
+   reason is visible at its `/health` and in the dashboard) but never crashes —
+   the rest of the gateway stays healthy and the app boots normally. Optional:
+   `GIPHY_API_KEY` (common-feeder), `SCIHUB_MIRRORS` (paper-feeder).
 3. **Tribler** needs no setup — the baked config installs on first boot.
 
 ## Federation
@@ -62,12 +63,30 @@ MetaWatch discovery works over mDNS without them.
 
 ## Images
 
-Pulls `ghcr.io/worph/{meta-gateway,meta-core,meta-share,meta-feeder-book,
-meta-feeder-paper,meta-feeder-common,meta-feeder-torrent,metamesh-plugin-filename-parser,
-metamesh-plugin-tmdb,meta-tribler}:1.0.0`, plus
-`lscr.io/linuxserver/prowlarr:latest` and `ghcr.io/yundera/nginx-hash-lock:1.0.7`.
+| Image | Tag |
+|-------|-----|
+| `ghcr.io/worph/meta-gateway`, `meta-core`, `meta-feeder-{book,paper,common,torrent}`, `metamesh-plugin-tmdb` | `1.0.0` |
+| `ghcr.io/worph/meta-share` | `1.0.1` |
+| `ghcr.io/worph/metamesh-plugin-filename-parser` | `1.0.1` |
+| `ghcr.io/tribler/tribler` | `latest` (upstream) |
+| `lscr.io/linuxserver/prowlarr` | `latest` |
+| `ghcr.io/yundera/nginx-hash-lock` | `1.0.7` |
 
-**`meta-tribler`** is `ghcr.io/tribler/tribler:latest` with a complete baked
-`/seed/configuration.json` (REST bound to `0.0.0.0:8085`, key `changeme`); the
-entrypoint installs it on first boot. Build + publish all `worph/*` tags before
-listing the app.
+**Tribler** uses the upstream `ghcr.io/tribler/tribler` image directly (there is
+no custom `meta-tribler` image). `pre-install-cmd` fetches the complete REST
+config (bound to `0.0.0.0:8085`, key `changeme`) to
+`/DATA/AppData/metagateway/tribler-config/configuration.json` and bind-mounts it
+at `/seed/configuration.json`; the entrypoint installs it into `/root/.Tribler`
+on first boot.
+
+## Resilience notes
+
+- **Feeders run as `user: "0:0"`.** Their image bakes a non-root uid (10001) as
+  owner of the state dir, but the platform injects `user: 1000:1000` on services
+  without an explicit `user:`; running as root avoids a state-dir permission
+  crash.
+- **A misconfigured feeder never crash-loops.** The feeder SDK keeps a
+  feeder whose config is bad/incomplete *running* and reports it as **degraded**
+  via `/health` (with the reason) rather than exiting — so one bad key can't take
+  the gateway down. The app gates torznab on `service_started`, not
+  `service_healthy`, for the same reason.
