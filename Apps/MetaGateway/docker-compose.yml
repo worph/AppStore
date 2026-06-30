@@ -3,14 +3,15 @@ name: metagateway
 # =============================================================================
 # MetaGateway — bridges external sources into the MetaMesh network.
 #
-# A single gateway peer running the full feeder bundle, each feeder a sidecar:
-#   book-feeder      Project Gutenberg
-#   paper-feeder     arXiv / PubMed (+ Sci-Hub if configured)
-#   common-feeder    Wikimedia Commons (+ Giphy if configured)
-#   torznab-feeder   Prowlarr / torznab indexers (video/torrent)  + librqbit
-#   tribler-feeder   decentralized Tribler swarm (video/torrent)
-# plus the reused meta-sort enrichment plugins (filename-parser + tmdb), a
-# dedicated meta-core, and a co-located meta-share INGESTER that announces the
+# A single gateway peer — the bridging tier ONLY. Every content source is now a
+# SEPARATE store app (install whichever you want); the gateway discovers each by
+# URL over `pcs`, stores its resolved records, and soft-skips any not installed:
+#   MetaFeeder · Books      Project Gutenberg
+#   MetaFeeder · Papers     arXiv / PubMed (+ Sci-Hub if configured)
+#   MetaFeeder · Commons    Wikimedia Commons (+ Giphy if configured)
+#   MetaFeeder · Torznab    Prowlarr indexers (video/torrent) — own enrichment
+#   MetaFeeder · Tribler    Tribler IPv8 overlay (video/torrent) — own enrichment
+# Plus a dedicated meta-core, and a co-located meta-share INGESTER that announces the
 # gateway's resolved records on the swarm.
 #
 # Everything is scoped under the `metagateway-*` prefix and the per-stack
@@ -31,7 +32,8 @@ services:
   # File watcher ON so tmdb-plugin posters PUT over WebDAV get indexed + seeded.
   # ===========================================================================
   metagateway-core:
-    image: ghcr.io/worph/meta-core:1.0.0
+    # 1.0.1 carries the new meta-core API (records cids/ set, identity).
+    image: ghcr.io/worph/meta-core:1.0.1
     container_name: metagateway-core
     hostname: metagateway-core
     restart: unless-stopped
@@ -61,8 +63,10 @@ services:
       timeout: 3s
       retries: 30
       start_period: 30s
+    # `pcs` so the external feeder apps can write records/posters to this core.
     networks:
       - metagateway
+      - pcs
 
   # ===========================================================================
   # metagateway-share — meta-share INGESTER role (META_CORE_URL set). Polls this
@@ -71,7 +75,7 @@ services:
   # queries reach the gateway's records. Public libp2p on host port 4002.
   # ===========================================================================
   metagateway-share:
-    image: ghcr.io/worph/meta-share:1.0.1
+    image: ghcr.io/worph/meta-share:1.0.2
     container_name: metagateway-share
     hostname: metagateway-share
     restart: unless-stopped
@@ -119,7 +123,7 @@ services:
   # resolved records to its meta-core. Dashboard fronted by the hash-lock below.
   # ===========================================================================
   metagateway-app:
-    image: ghcr.io/worph/meta-gateway:1.0.0
+    image: ghcr.io/worph/meta-gateway:1.0.3
     container_name: metagateway-app
     hostname: metagateway-app
     restart: unless-stopped
@@ -141,278 +145,27 @@ services:
     depends_on:
       metagateway-core:
         condition: service_healthy
-      book-feeder:
-        condition: service_healthy
-      paper-feeder:
-        condition: service_healthy
-      common-feeder:
-        condition: service_healthy
-      # torznab needs a Prowlarr API key that only exists AFTER the user runs
-      # Prowlarr's first-run wizard (see tips). Until then the feeder stays up
-      # but reports its torznab source as DEGRADED (the SDK no longer hard-exits
-      # on a bad/empty key — the error surfaces at /health instead). Gate the app
-      # on it being *started*, not *healthy*, so a fresh install never blocks on
-      # torznab being fully configured — the rest of the gateway comes up.
-      metagateway-torznab-feeder:
-        condition: service_started
-      metagateway-tribler-feeder:
-        condition: service_healthy
+      # ALL feeders (book/paper/common + torznab/tribler) are SEPARATE store apps
+      # now — the gateway discovers them by URL from its feeders config and
+      # soft-skips any not installed, so they're not startup deps here.
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
       interval: 5s
       timeout: 3s
       retries: 10
       start_period: 5s
-    networks:
-      - metagateway
-
-  # ===========================================================================
-  # Feeder sidecars. Generic three (book/paper/common) need no config; the two
-  # torrent feeders share the unified torrent-feeder image, differentiated by
-  # env (torznab vs tribler source) and each driving the enrichment plugins.
-  # ===========================================================================
-  book-feeder:
-    image: ghcr.io/worph/meta-feeder-book:1.0.0
-    container_name: metagateway-book-feeder
-    hostname: metagateway-book-feeder
-    restart: unless-stopped
-    # Image bakes uid 10001 (metafeeder) as owner of the /data/meta-feeder state
-    # dir; the platform injects user 1000:1000 on services without a user:, which
-    # then can't write it. Run as root to match the sibling meta-* services.
-    user: "0:0"
-    expose: ["8080"]
-    environment:
-      RUST_LOG: "info"
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-      start_period: 5s
-    networks: [metagateway]
-
-  paper-feeder:
-    image: ghcr.io/worph/meta-feeder-paper:1.0.0
-    container_name: metagateway-paper-feeder
-    hostname: metagateway-paper-feeder
-    restart: unless-stopped
-    user: "0:0"
-    expose: ["8080"]
-    environment:
-      RUST_LOG: "info"
-      # SCIHUB_MIRRORS: "https://sci-hub.se,https://sci-hub.st"   # opt-in
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-      start_period: 5s
-    networks: [metagateway]
-
-  common-feeder:
-    image: ghcr.io/worph/meta-feeder-common:1.0.0
-    container_name: metagateway-common-feeder
-    hostname: metagateway-common-feeder
-    restart: unless-stopped
-    user: "0:0"
-    expose: ["8080"]
-    environment:
-      RUST_LOG: "info"
-      GIPHY_API_KEY: "${GIPHY_API_KEY:-}"   # opt-in; empty → giphy soft-skips
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-      start_period: 5s
-    networks: [metagateway]
-
-  # torznab feeder — talks to the bundled Prowlarr. Set PROWLARR_API_KEY (and
-  # TMDB_TOKEN) on this app after Prowlarr's first-run wizard (see tips below);
-  # until then the torznab upstream soft-skips but the stack stays healthy.
-  metagateway-torznab-feeder:
-    image: ghcr.io/worph/meta-feeder-torrent:1.0.0
-    container_name: metagateway-torznab-feeder
-    hostname: metagateway-torznab-feeder
-    restart: unless-stopped
-    user: "0:0"
-    expose: ["8080"]
-    environment:
-      RUST_LOG: "info,meta_feeder=info"
-      META_TORRENT_SOURCES: "torznab"
-      TORZNAB_INDEXERS: '[{"name":"Prowlarr-Native","base_url":"http://metagateway-prowlarr:9696","api_key":"${PROWLARR_API_KEY:-}","kind":"prowlarr-native","indexer_ids":"-2"}]'
-      TORZNAB_TMDB_TOKEN: "${TMDB_TOKEN:-}"
-      # Smart-feeder: self-publish to the gateway core + drive enrichment plugins.
-      META_CORE_URL: "http://metagateway-core:9000"
-      META_GATEWAY_PEER_ID: "metagateway"
-      FILENAME_PARSER_URL: "http://metagateway-filename-parser:8080"
-      TMDB_PLUGIN_URL: "http://metagateway-tmdb:8080"
-      META_FEEDER_CALLBACK_URL: "http://metagateway-torznab-feeder:8080/enrich/callback"
-      META_GATEWAY_TORZNAB_PAGE_SIZE: "20"
-      META_GATEWAY_TORZNAB_MAX_DEPTH: "500"
-      TZ: "$TZ"
-    depends_on:
-      metagateway-prowlarr:
-        condition: service_healthy
-      metagateway-filename-parser:
-        condition: service_healthy
-      metagateway-tmdb:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-      start_period: 5s
-    networks: [metagateway]
-
-  # tribler feeder — thin HTTP client of the headless Tribler core below.
-  metagateway-tribler-feeder:
-    image: ghcr.io/worph/meta-feeder-torrent:1.0.0
-    container_name: metagateway-tribler-feeder
-    hostname: metagateway-tribler-feeder
-    restart: unless-stopped
-    user: "0:0"
-    expose: ["8080"]
-    environment:
-      RUST_LOG: "info,meta_feeder=info,torrent_feeder=info"
-      META_TORRENT_SOURCES: "tribler"
-      TRIBLER_SIDECAR_URL: "http://metagateway-tribler:8085"
-      TRIBLER_API_KEY: "changeme"
-      META_CORE_URL: "http://metagateway-core:9000"
-      META_GATEWAY_PEER_ID: "metagateway"
-      FILENAME_PARSER_URL: "http://metagateway-filename-parser:8080"
-      TMDB_PLUGIN_URL: "http://metagateway-tmdb:8080"
-      TMDB_TOKEN: "${TMDB_TOKEN:-}"
-      META_FEEDER_CALLBACK_URL: "http://metagateway-tribler-feeder:8080/enrich/callback"
-      TZ: "$TZ"
-    depends_on:
-      metagateway-tribler:
-        condition: service_started
-      metagateway-core:
-        condition: service_healthy
-      metagateway-filename-parser:
-        condition: service_healthy
-      metagateway-tmdb:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-      start_period: 5s
-    networks: [metagateway]
-
-  # ===========================================================================
-  # metagateway-prowlarr — torznab indexer aggregator. Exposed publicly (its own
-  # forms login protects it) so you can run the first-run wizard, add indexers,
-  # and copy the API key. Put that key into this app's PROWLARR_API_KEY.
-  # ===========================================================================
-  metagateway-prowlarr:
-    image: lscr.io/linuxserver/prowlarr:latest
-    container_name: metagateway-prowlarr
-    hostname: metagateway-prowlarr
-    restart: unless-stopped
-    environment:
-      PUID: "10001"
-      PGID: "10001"
-      TZ: "$TZ"
-    volumes:
-      - /DATA/AppData/metagateway/prowlarr:/config:rw
-    labels:
-      caddy_0: metagateway-prowlarr-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 9696}}"
-      caddy_1: metagateway-prowlarr-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 9696}}"
-      caddy_2: metagateway-prowlarr-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 9696}}"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:9696/ping || curl -sf http://localhost:9696/ -o /dev/null"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 30s
+    # `pcs` so the gateway can reach the external feeder apps for discovery/query.
     networks:
       - metagateway
       - pcs
 
-  # ===========================================================================
-  # metagateway-tribler — headless Tribler core (IPv8 overlay). The feeder
-  # reaches it at :8085. Uses the upstream ghcr.io/tribler/tribler image; the
-  # complete REST config (binds 0.0.0.0:8085, key `changeme`) is materialized on
-  # the host by pre-install-cmd and bind-mounted in at /seed/configuration.json.
-  # The entrypoint installs it on first boot without clobbering persisted state.
-  # IPv8 overlay on UDP 8090, host-published as 8092.
-  # ===========================================================================
-  metagateway-tribler:
-    image: ghcr.io/tribler/tribler:latest
-    container_name: metagateway-tribler
-    hostname: metagateway-tribler
-    restart: unless-stopped
-    user: "0:0"
-    entrypoint: ["/bin/sh", "-c"]
-    # NB: no shell variables / command-substitution here on purpose. The CasaOS
-    # install pipeline collapses `$$` -> `$`, after which `docker compose`
-    # interpolates `$CFG` as an (empty) host var, leaving `cp /seed/... ""`.
-    # Hardcoded paths are immune to that.
-    command:
-      - |
-        set -e
-        if [ ! -f /root/.Tribler/8.0/configuration.json ]; then
-          mkdir -p /root/.Tribler/8.0
-          cp /seed/configuration.json /root/.Tribler/8.0/configuration.json
-          echo "tribler: installed baked config"
-        fi
-        exec /usr/share/tribler/tribler -s
-    environment:
-      - LANG=C.UTF-8
-    ports:
-      - "8092:8090/udp"
-    volumes:
-      - /DATA/AppData/metagateway/tribler:/root/.Tribler
-      # Complete REST config, fetched to the host by pre-install-cmd. Tribler
-      # crashes on a partial config and ships no python/jq to patch it, so the
-      # entrypoint copies this seed into /root/.Tribler/8.0/ on first boot.
-      - /DATA/AppData/metagateway/tribler-config/configuration.json:/seed/configuration.json:ro
-    networks:
-      - metagateway
-
-  # ===========================================================================
-  # Reused meta-sort enrichment plugins, pointed at this gateway's meta-core.
-  # filename-parser per file; tmdb once per torrent (poster/backdrop PUT over
-  # WebDAV → indexed by the core's watcher → seeded by the ingester).
-  # tmdb needs a TMDB API key via POST /configure (the feeder supplies the token
-  # from TMDB_TOKEN; see tips).
-  # ===========================================================================
-  metagateway-filename-parser:
-    image: ghcr.io/worph/metamesh-plugin-filename-parser:1.0.1
-    container_name: metagateway-filename-parser
-    hostname: metagateway-filename-parser
-    restart: unless-stopped
-    expose: ["8080"]
-    environment:
-      PORT: "8080"
-      EMIT_TITLE_TAGS: "true"
-    networks: [metagateway]
-
-  metagateway-tmdb:
-    image: ghcr.io/worph/metamesh-plugin-tmdb:1.0.0
-    container_name: metagateway-tmdb
-    hostname: metagateway-tmdb
-    restart: unless-stopped
-    expose: ["8080"]
-    environment:
-      PORT: "8080"
-      CACHE_DIR: "/cache"
-      WEBDAV_URL: "http://metagateway-core:9000/webdav"
-    volumes:
-      - /DATA/AppData/metagateway/tmdb-cache:/cache
-    depends_on:
-      metagateway-core:
-        condition: service_healthy
-    networks: [metagateway]
+  # NOTE: ALL feeders are now SEPARATE store apps — the generic ones
+  # (MetaFeeder · Books / Papers / Commons) and the torrent ones
+  # (MetaFeeder · Torznab / Tribler). The gateway is purely the bridging tier:
+  # it discovers every feeder by URL (feeders config / dashboard) over `pcs`,
+  # stores their resolved records in its meta-core, and announces them on the
+  # swarm. Install whichever feeders you want; the gateway soft-skips any not
+  # reachable. No feeder sidecars are bundled here anymore.
 
   # ===========================================================================
   # OIDC perimeter for the MetaGateway dashboard. container_name MUST equal the
@@ -461,6 +214,76 @@ services:
       - metagateway
       - pcs
 
+  # ===========================================================================
+  # AppShield gates — expose the bundled service UIs behind Yundera OIDC SSO so
+  # they're reachable + configurable from the dashboard's service links.
+  # AppShield's container_name MUST equal its subdomain prefix (the auth-registrar
+  # derives the OIDC client_id from it), so these use collision-free prefixes —
+  # `metagateway-core`/`-share` are already the backend names. These backends
+  # have no native auth, so they're reachable ONLY through these gates.
+  #   metagatewaycore  → meta-core dashboard (nginx :80, NOT the :9000 API)
+  #   metagatewayshare → meta-share dashboard (:3000)
+  # Prowlarr + Tribler are SEPARATE store apps (their own UIs + auth); the
+  # feeders reach them over `pcs`, so there's no gate for them here.
+  # ===========================================================================
+  metagatewaycore:
+    image: ghcr.io/yundera/appshield:2.0.3
+    container_name: metagatewaycore
+    hostname: metagatewaycore
+    restart: unless-stopped
+    user: "0:0"
+    expose: ["80"]
+    environment:
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
+      BACKEND_HOST: "metagateway-core"
+      BACKEND_PORT: "80"
+      LISTEN_PORT: "80"
+    labels:
+      caddy_0: metagatewaycore-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: metagatewaycore-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: metagatewaycore-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - metagateway-core
+    networks:
+      - metagateway
+      - pcs
+
+  metagatewayshare:
+    image: ghcr.io/yundera/appshield:2.0.3
+    container_name: metagatewayshare
+    hostname: metagatewayshare
+    restart: unless-stopped
+    user: "0:0"
+    expose: ["80"]
+    environment:
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
+      BACKEND_HOST: "metagateway-share"
+      BACKEND_PORT: "3000"
+      LISTEN_PORT: "80"
+    labels:
+      caddy_0: metagatewayshare-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: metagatewayshare-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: metagatewayshare-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - metagateway-share
+    networks:
+      - metagateway
+      - pcs
+
 networks:
   metagateway:
     name: metagateway
@@ -482,14 +305,16 @@ x-casaos:
 
       MetaGateway ingests content from external sources and makes it
       discoverable across the MetaMesh federation — so MetaWatch (and other
-      MetaShare peers) can find and stream it. It runs the full feeder bundle as
-      sidecars, plus a bundled Prowlarr, a headless Tribler core, the meta-sort
-      enrichment plugins, a dedicated meta-core, and a co-located meta-share
-      ingester that announces resolved records on the swarm.
+      MetaShare peers) can find and stream it. It's the **bridging tier only**:
+      a dedicated meta-core that stores resolved records, plus a co-located
+      meta-share ingester that announces them on the swarm. Every content source
+      is a **separate MetaFeeder app** (Books, Papers, Commons, Torznab, Tribler)
+      — install whichever you want; the gateway discovers each over the shared
+      network and soft-skips any not installed.
 
-      **Bundled sources:**
-      - **Torznab / Prowlarr** - Any torznab indexer aggregated by the bundled Prowlarr (video/torrent)
-      - **Tribler** - Decentralized torrent discovery over the IPv8 overlay (video/torrent)
+      **Sources (each a separate store app):**
+      - **Torznab / Prowlarr** - Indexers aggregated by the separate Prowlarr app (video/torrent)
+      - **Tribler** - Decentralized torrent discovery via the separate Tribler app (video/torrent)
       - **Project Gutenberg** - Public-domain books
       - **arXiv / PubMed** - Academic papers (optional Sci-Hub mirror)
       - **Wikimedia Commons** - Open-licensed images (optional Giphy)
@@ -552,52 +377,50 @@ x-casaos:
         what it surfaces.
 
         **Authentication:** The gateway dashboard is protected by Yundera's
-        Authelia via OIDC. The bundled Prowlarr has its own forms login (set a
-        password on first run).
+        Authelia via OIDC.
 
         **The gateway works out of the box.** Books, papers and common-media
-        feeders need no setup. Torrent/video search (Torznab) needs a Prowlarr
-        key — until you add one, the gateway still runs and the **torznab feeder
-        simply shows as "degraded"** in the dashboard (it no longer crashes the
-        app). Set it up when you want video:
+        feeders need no setup. Torrent/video needs the separate **Prowlarr** and
+        **Tribler** apps — until they're installed + configured, those feeders
+        simply show as **"degraded"** in the dashboard (they don't crash the app).
 
-        **Torznab / Prowlarr setup (required for video):**
-        1. Open `https://metagateway-prowlarr-$APP_DOMAIN/` and complete the
-           Prowlarr first-run wizard (set an admin password).
-        2. Indexers → Add Indexer → add one or more public indexers; confirm they
-           test green.
+        **Torznab / Prowlarr setup (required for torrent video):**
+        1. Install the **Prowlarr** app from the store (it runs on the shared
+           network as `prowlarr`).
+        2. Open Prowlarr, complete its first-run wizard, then Indexers → Add
+           Indexer → add one or more public indexers (confirm they test green).
         3. Settings → General → copy the **API Key**.
-        4. In this app's settings, set `PROWLARR_API_KEY` (and `TMDB_TOKEN` for
-           posters/overviews), then restart the app. The torznab feeder turns
-           healthy once the key is valid.
+        4. In the gateway dashboard, open the **torznab** plugin → configure, paste
+           the key into the indexer's API-key field, and Save. The torznab feeder
+           auto-reloads and turns healthy.
 
-        **TMDB enrichment:** set `TMDB_TOKEN` (a TMDB v4 read token). The tmdb
-        plugin also accepts it via its `/configure` endpoint.
+        **Tribler (optional, decentralized torrents):** install the **Tribler**
+        app from the store; the gateway's tribler feeder connects to it
+        automatically over the shared network — no key needed.
+
+        **TMDB enrichment:** set the TMDB v4 token in the torznab / tribler plugin
+        config (dashboard) for canonical posters + overviews.
 
         **Federation port (optional).** The meta-share ingester host-publishes
-        its libp2p listener on TCP **4002**, and Tribler's IPv8 overlay on UDP
-        **8092**. Open them inbound for best cross-node reach; same-host
-        discovery (a MetaWatch on the same box) works over mDNS without them.
+        its libp2p listener on TCP **4002** — open it inbound for best cross-node
+        reach; same-host discovery (a MetaWatch on the same box) works over mDNS.
 
   pre-install-cmd: |
     mkdir -p /DATA/AppData/metagateway/metacore
     mkdir -p /DATA/AppData/metagateway/files
     mkdir -p /DATA/AppData/metagateway/state
-    mkdir -p /DATA/AppData/metagateway/prowlarr
-    mkdir -p /DATA/AppData/metagateway/tribler
-    mkdir -p /DATA/AppData/metagateway/tribler-config
-    mkdir -p /DATA/AppData/metagateway/tmdb-cache
-    # Complete Tribler REST config (binds 0.0.0.0:8085, key `changeme`) for the
-    # upstream tribler image, bind-mounted into the container at /seed/.
-    wget -q https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaGateway/pre-install/tribler-configuration.json -O /DATA/AppData/metagateway/tribler-config/configuration.json
+    # Feeders map: all feeders are now SEPARATE store apps, listed by their pcs
+    # URLs (MetaFeeder · Books / Papers / Commons / Torznab / Tribler). The
+    # gateway soft-skips any feeder that isn't installed/reachable, and you can
+    # add/remove feeders at runtime from the dashboard.
     cat > /DATA/AppData/metagateway/state/gateway-config.json <<'JSON'
     {
       "feeders": {
-        "metagateway-book-feeder":    { "url": "http://metagateway-book-feeder:8080" },
-        "metagateway-paper-feeder":   { "url": "http://metagateway-paper-feeder:8080" },
-        "metagateway-common-feeder":  { "url": "http://metagateway-common-feeder:8080" },
-        "metagateway-torznab-feeder": { "url": "http://metagateway-torznab-feeder:8080" },
-        "metagateway-tribler-feeder": { "url": "http://metagateway-tribler-feeder:8080" }
+        "metafeederbook-feeder":     { "url": "http://metafeederbook-feeder:8080" },
+        "metafeederpaper-feeder":    { "url": "http://metafeederpaper-feeder:8080" },
+        "metafeedercommon-feeder":   { "url": "http://metafeedercommon-feeder:8080" },
+        "metafeedertorznab-feeder":  { "url": "http://metafeedertorznab-feeder:8080" },
+        "metafeedertribler-feeder":  { "url": "http://metafeedertribler-feeder:8080" }
       }
     }
     JSON

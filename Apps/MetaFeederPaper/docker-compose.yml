@@ -1,0 +1,133 @@
+name: metafeederpaper
+
+# =============================================================================
+# MetaFeeder · Papers — a standalone academic-paper feeder for MetaMesh.
+#
+# Hosts arXiv + PubMed (and Sci-Hub if a mirror is configured). Split out of
+# MetaGateway so you can run only the feeders you want. Headless: it finds papers
+# and returns the records to the MetaGateway core, which stores + announces them.
+# The gateway must list this feeder's URL (`http://metafeederpaper-feeder:8080`)
+# in its feeders config (both on the shared `pcs` network).
+# =============================================================================
+
+services:
+  metafeederpaper-feeder:
+    image: ghcr.io/worph/meta-feeder-paper:1.0.1
+    container_name: metafeederpaper-feeder
+    hostname: metafeederpaper-feeder
+    restart: unless-stopped
+    user: "0:0"
+    expose:
+      - 8080
+    environment:
+      RUST_LOG: "info,meta_feeder=info"
+      META_FEEDER_STATE_DIR: "/data/meta-feeder"
+      # Sci-Hub is opt-in. Uncomment + set mirrors to enable the scihub upstream;
+      # blank → it soft-skips (arXiv + PubMed work without it).
+      # SCIHUB_MIRRORS: "https://sci-hub.se,https://sci-hub.st"
+      TZ: "$TZ"
+    volumes:
+      - /DATA/AppData/metafeederpaper/state:/data/meta-feeder:rw
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - metafeederpaper
+      - pcs
+
+  metafeederpaper:
+    image: ghcr.io/yundera/appshield:2.0.3
+    container_name: metafeederpaper
+    hostname: metafeederpaper
+    restart: unless-stopped
+    user: "0:0"
+    expose:
+      - 80
+    environment:
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
+      BACKEND_HOST: "metafeederpaper-feeder"
+      BACKEND_PORT: "8080"
+      LISTEN_PORT: "80"
+    labels:
+      caddy_0: metafeederpaper-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: metafeederpaper-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: metafeederpaper-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - metafeederpaper-feeder
+    networks:
+      - metafeederpaper
+      - pcs
+
+networks:
+  metafeederpaper:
+    name: metafeederpaper
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  author: Worph Team
+  category: Media
+  developer: Aptero Team
+  main: metafeederpaper
+  webui_port: 80
+  index: /config
+
+  description:
+    en_us: |
+      **A standalone academic-paper feeder for the MetaMesh network.**
+
+      MetaFeeder · Papers bridges **arXiv** and **PubMed** (and **Sci-Hub** if you
+      configure a mirror) into MetaMesh. Split out of MetaGateway so you can run
+      only the feeders you want.
+
+      **Requires (from the store):**
+      - **MetaGateway** — its meta-core stores the resolved records and announces
+        them to the swarm. The gateway must list this feeder in its config.
+    fr_fr: |
+      **Un feeder d'articles académiques autonome pour le réseau MetaMesh.**
+
+      MetaFeeder · Papers connecte **arXiv** et **PubMed** (et **Sci-Hub** si un
+      miroir est configuré) à MetaMesh. Détaché de MetaGateway. **Nécessite** l'app
+      **MetaGateway**.
+
+  tagline:
+    en_us: Standalone arXiv / PubMed / Sci-Hub feeder for the MetaMesh network
+    fr_fr: Feeder arXiv / PubMed / Sci-Hub autonome pour le réseau MetaMesh
+
+  title:
+    en_us: MetaFeeder · Papers
+
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederPaper/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederPaper/thumbnail.png
+
+  store_app_id: metafeederpaper
+  is_uncontrolled: false
+
+  tips:
+    before_install:
+      en_us: |
+        **Install order:** install **MetaGateway** first.
+
+        **After installing this app:** in **MetaGateway**, make sure this feeder
+        is listed in its feeders config (`http://metafeederpaper-feeder:8080`) so
+        it gets discovered. arXiv + PubMed need no setup; Sci-Hub is opt-in (set
+        `SCIHUB_MIRRORS` in this app's compose).
+
+        **Authentication:** the config UI is protected by Yundera's Authelia (OIDC).
+
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/metafeederpaper/state

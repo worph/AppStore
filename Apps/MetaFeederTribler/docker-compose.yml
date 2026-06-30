@@ -1,0 +1,195 @@
+name: metafeedertribler
+
+# =============================================================================
+# MetaFeeder · Tribler — a STANDALONE Tribler feeder for MetaMesh.
+#
+# Split out of the MetaGateway stack so the torrent sources are modular. Bridges
+# the separate **Tribler** store app (decentralized IPv8 torrent discovery) into
+# the MetaMesh network; self-contained for enrichment (own filename-parser + tmdb).
+#
+# Needs, both over the shared `pcs` network:
+#   1. the **Tribler** app — its REST is republished at `tribler-backend:8086`
+#      (key auth disabled; the Tribler app gates its own UI).
+#   2. the shared **MetaCore** app (`metacore-app:9000`) — stores resolved
+#      records + TMDB posters; the shared **MetaShare** app announces them.
+# The **MetaGateway** app must list this feeder's URL
+# (`http://metafeedertribler-feeder:8080`) in its feeders config (all on `pcs`).
+# =============================================================================
+
+services:
+  metafeedertribler-feeder:
+    image: ghcr.io/worph/meta-feeder-torrent:1.0.3
+    container_name: metafeedertribler-feeder
+    hostname: metafeedertribler-feeder
+    restart: unless-stopped
+    user: "0:0"
+    expose:
+      - 8080
+    environment:
+      # UI-FIRST: all operator config (Tribler core URL + key, TMDB token /
+      # language, meta-core URL) is set in this feeder's own config page behind
+      # the AppShield gate below — NOT here. config.json (persisted to the state
+      # volume) is the source of truth; env is only a deprecated first-boot seed.
+      # The Tribler core URL is a cross-app modular seam → set it in the UI
+      # (e.g. http://tribler-backend:8086). The bundled filename-parser / tmdb
+      # sidecars are derived from the feeder's hostname prefix, the callback from
+      # self, and meta-core defaults to the pcs `http://metacore-app:9000`.
+      RUST_LOG: "info,meta_feeder=info,torrent_feeder=info"
+      META_TORRENT_SOURCES: "tribler"
+      META_GATEWAY_PEER_ID: "metafeedertribler"
+      META_FEEDER_STATE_DIR: "/data/meta-feeder"
+      TZ: "$TZ"
+    volumes:
+      - /DATA/AppData/metafeedertribler/state:/data/meta-feeder:rw
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    depends_on:
+      # service_started (not _healthy): the plugin images ship no healthcheck.
+      metafeedertribler-filename-parser:
+        condition: service_started
+      metafeedertribler-tmdb:
+        condition: service_started
+    networks:
+      - metafeedertribler
+      - pcs
+
+  metafeedertribler-filename-parser:
+    image: ghcr.io/worph/metamesh-plugin-filename-parser:1.0.1
+    container_name: metafeedertribler-filename-parser
+    hostname: metafeedertribler-filename-parser
+    restart: unless-stopped
+    expose:
+      - 8080
+    environment:
+      PORT: "8080"
+      EMIT_TITLE_TAGS: "true"
+    networks:
+      - metafeedertribler
+
+  metafeedertribler-tmdb:
+    image: ghcr.io/worph/metamesh-plugin-tmdb:1.0.0
+    container_name: metafeedertribler-tmdb
+    hostname: metafeedertribler-tmdb
+    restart: unless-stopped
+    expose:
+      - 8080
+    environment:
+      PORT: "8080"
+      CACHE_DIR: "/cache"
+      WEBDAV_URL: "http://metacore-app:9000/webdav"
+    volumes:
+      - /DATA/AppData/metafeedertribler/tmdb-cache:/cache
+    networks:
+      - metafeedertribler
+      - pcs
+
+  metafeedertribler:
+    image: ghcr.io/yundera/appshield:2.0.3
+    container_name: metafeedertribler
+    hostname: metafeedertribler
+    restart: unless-stopped
+    user: "0:0"
+    expose:
+      - 80
+    environment:
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
+      BACKEND_HOST: "metafeedertribler-feeder"
+      BACKEND_PORT: "8080"
+      LISTEN_PORT: "80"
+    labels:
+      caddy_0: metafeedertribler-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: metafeedertribler-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: metafeedertribler-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - metafeedertribler-feeder
+    networks:
+      - metafeedertribler
+      - pcs
+
+networks:
+  metafeedertribler:
+    name: metafeedertribler
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  author: Worph Team
+  category: Media
+  developer: Aptero Team
+  main: metafeedertribler
+  webui_port: 80
+  index: /config
+
+  description:
+    en_us: |
+      **A standalone Tribler feeder for the MetaMesh network.**
+
+      MetaFeeder · Tribler bridges the **Tribler** app (decentralized, anonymous
+      torrent discovery over IPv8) into MetaMesh so results surface in
+      **MetaWatch**. Split out of MetaGateway so torrent sources are modular.
+
+      **Self-contained:** ships its own filename-parser + TMDB enrichment.
+
+      **Requires (both from the store):**
+      - **Tribler** — the decentralized torrent source (reached as
+        `tribler-backend` on the shared network).
+      - **MetaGateway** — its meta-core stores resolved records and announces them.
+
+    fr_fr: |
+      **Un feeder Tribler autonome pour le réseau MetaMesh.**
+
+      MetaFeeder · Tribler connecte l'app **Tribler** (découverte de torrents
+      décentralisée et anonyme via IPv8) à MetaMesh pour apparaître dans
+      **MetaWatch**. Détaché de MetaGateway pour la modularité.
+
+      **Autonome :** embarque ses plugins filename-parser + TMDB.
+
+      **Nécessite (depuis le store) :** les apps **Tribler** (la source) et
+      **MetaGateway** (son meta-core stocke et annonce les enregistrements).
+
+  tagline:
+    en_us: Standalone Tribler feeder for the MetaMesh network
+    fr_fr: Feeder Tribler autonome pour le réseau MetaMesh
+
+  title:
+    en_us: MetaFeeder · Tribler
+
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederTribler/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederTribler/thumbnail.png
+
+  store_app_id: metafeedertribler
+  is_uncontrolled: false
+
+  tips:
+    before_install:
+      en_us: |
+        **Install order:** install **Tribler** and **MetaGateway** first.
+
+        **After installing this app:**
+        1. The feeder connects to the Tribler app automatically over the shared
+           network — no key needed.
+        2. Optionally open this app's config UI (dashboard link) to set a TMDB v4
+           token for posters/overviews. Save — the feeder reloads automatically.
+        3. In **MetaGateway**, make sure this feeder is listed in its feeders
+           config (`http://metafeedertribler-feeder:8080`) so it gets discovered.
+
+        **Authentication:** the config UI is protected by Yundera's Authelia (OIDC).
+
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/metafeedertribler/state
+    mkdir -p /DATA/AppData/metafeedertribler/tmdb-cache

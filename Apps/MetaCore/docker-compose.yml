@@ -5,7 +5,7 @@ services:
   # Public ingress goes through the `metacore` hash-lock proxy below — this
   # service has no public Caddy labels and no exposed host ports.
   metacore-app:
-    image: ghcr.io/worph/meta-core:1.0.0
+    image: ghcr.io/worph/meta-core:1.0.1
     container_name: metacore-app
     hostname: metacore-app
     restart: unless-stopped

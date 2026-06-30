@@ -27,7 +27,9 @@ services:
   # indexer. Data lives under /DATA/AppData/metawatch/ so CasaOS archives it.
   # ---------------------------------------------------------------------------
   metawatch-core:
-    image: ghcr.io/worph/meta-core:1.0.0
+    # 1.0.1 carries the identity API (commit 52f5b5c) required for MetaWatch
+    # sign-in / keypair generation; 1.0.0 predates it.
+    image: ghcr.io/worph/meta-core:1.0.1
     container_name: metawatch-core
     hostname: metawatch-core
     restart: unless-stopped
@@ -114,7 +116,7 @@ services:
   # whatever it fetches. Public libp2p on host port 4003.
   # ---------------------------------------------------------------------------
   metawatch-share:
-    image: ghcr.io/worph/meta-share:1.0.1
+    image: ghcr.io/worph/meta-share:1.0.2
     container_name: metawatch-share
     hostname: metawatch-share
     restart: unless-stopped
@@ -160,7 +162,7 @@ services:
   # My List + Continue Watching persist in /DATA/AppData/metawatch/data.
   # ---------------------------------------------------------------------------
   metawatch-app:
-    image: ghcr.io/worph/meta-watch:1.0.0
+    image: ghcr.io/worph/meta-watch:1.0.3
     container_name: metawatch-app
     hostname: metawatch-app
     restart: unless-stopped

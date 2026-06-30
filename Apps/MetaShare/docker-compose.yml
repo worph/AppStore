@@ -11,7 +11,7 @@ services:
   #  - 4001  libp2p TCP listener — must be reachable on the public IP so
   #          other archivists' peers can dial in via kad-DHT provider records.
   metashare-app:
-    image: ghcr.io/worph/meta-share:1.0.0
+    image: ghcr.io/worph/meta-share:1.0.2
     container_name: metashare-app
     hostname: metashare-app
     restart: unless-stopped
