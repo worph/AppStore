@@ -308,13 +308,12 @@ x-casaos:
       MetaShare peers) can find and stream it. It's the **bridging tier only**:
       a dedicated meta-core that stores resolved records, plus a co-located
       meta-share ingester that announces them on the swarm. Every content source
-      is a **separate MetaFeeder app** (Books, Papers, Commons, Torznab, Tribler)
+      is a **separate MetaFeeder app** (Books, Papers, Commons, Torrent-Usenet)
       — install whichever you want; the gateway discovers each over the shared
       network and soft-skips any not installed.
 
       **Sources (each a separate store app):**
-      - **Torznab / Prowlarr** - Indexers aggregated by the separate Prowlarr app (video/torrent)
-      - **Tribler** - Decentralized torrent discovery via the separate Tribler app (video/torrent)
+      - **Torrent-Usenet** - Torznab/Newznab indexers via the separate Prowlarr app, plus decentralized Tribler discovery (video/torrent/usenet)
       - **Project Gutenberg** - Public-domain books
       - **arXiv / PubMed** - Academic papers (optional Sci-Hub mirror)
       - **Wikimedia Commons** - Open-licensed images (optional Giphy)
@@ -338,9 +337,8 @@ x-casaos:
       headless, les plugins d'enrichissement meta-sort, un meta-core dédié et un
       ingesteur meta-share co-localisé qui annonce les enregistrements résolus.
 
-      **Sources intégrées :**
-      - **Torznab / Prowlarr** - Indexeurs torznab agrégés par le Prowlarr intégré (vidéo/torrent)
-      - **Tribler** - Découverte de torrents décentralisée via l'overlay IPv8 (vidéo/torrent)
+      **Sources (chacune une app du store) :**
+      - **Torrent-Usenet** - Indexeurs Torznab/Newznab via l'app Prowlarr, plus la découverte décentralisée Tribler (vidéo/torrent/usenet)
       - **Project Gutenberg** - Livres du domaine public
       - **arXiv / PubMed** - Articles académiques (miroir Sci-Hub optionnel)
       - **Wikimedia Commons** - Images sous licence libre (Giphy optionnel)
@@ -351,8 +349,8 @@ x-casaos:
       cohabite avec MetaWatch et les apps Meta* sans conflit.
 
   tagline:
-    en_us: Bridge torznab, Tribler, books, papers and images into the MetaMesh network
-    fr_fr: Connectez torznab, Tribler, livres, articles et images au réseau MetaMesh
+    en_us: Bridge torrent/usenet, books, papers and images into the MetaMesh network
+    fr_fr: Connectez torrent/usenet, livres, articles et images au réseau MetaMesh
 
   title:
     en_us: MetaGateway

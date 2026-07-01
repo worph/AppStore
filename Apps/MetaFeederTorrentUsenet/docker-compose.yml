@@ -1,0 +1,257 @@
+name: metafeedertorrentusenet
+
+# =============================================================================
+# MetaFeeder · Torrent-Usenet — a STANDALONE torrent/usenet feeder for MetaMesh.
+#
+# Merges the former MetaFeeder·Torznab and MetaFeeder·Tribler apps into ONE app:
+# both ran the SAME image (meta-feeder-torrent) and differed only by which
+# sources they enabled. This single app can bridge BOTH source types at once:
+#   - **Torznab / Newznab (Prowlarr)** — torrent AND usenet indexers aggregated
+#     by the separate Prowlarr store app (container `prowlarr:9696`).
+#   - **Tribler** — decentralized IPv8 torrent discovery from the separate
+#     Tribler store app (REST republished at `tribler-backend:8086`).
+# Install whichever sources you use — the feeder soft-skips any not configured.
+#
+# Split out of the MetaGateway stack so the sources stay modular. Self-contained
+# for enrichment: ships its own filename-parser + tmdb plugins.
+#
+# It needs, all reached over the shared `pcs` network:
+#   1. at least one source app — **Prowlarr** (`prowlarr:9696`) and/or
+#      **Tribler** (`tribler-backend:8086`).
+#   2. the shared **MetaCore** app (`metacore-app:9000`) — where resolved
+#      records + TMDB posters are stored; the shared **MetaShare** app then
+#      announces them to the swarm.
+# The **MetaGateway** app must list this feeder's URL
+# (`http://metafeedertorrentusenet-feeder:8080`) in its feeders config so it
+# discovers + queries it (MetaGateway, MetaCore and this feeder share `pcs`).
+#
+# Everything is scoped under the `metafeedertorrentusenet-*` prefix + the
+# per-stack `metafeedertorrentusenet` network + /DATA/AppData/metafeedertorrentusenet/
+# data root, so it installs alongside the other Meta* apps with zero collisions.
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # metafeedertorrentusenet-feeder — the feeder (meta-feeder-torrent) running with
+  # BOTH torznab and tribler sources enabled. The gateway reaches it directly on
+  # `pcs` for discovery/query/compute; the human configures it through the
+  # AppShield gate below.
+  # ---------------------------------------------------------------------------
+  metafeedertorrentusenet-feeder:
+    image: ghcr.io/worph/meta-feeder-torrent:1.0.3
+    container_name: metafeedertorrentusenet-feeder
+    hostname: metafeedertorrentusenet-feeder
+    restart: unless-stopped
+    user: "0:0"
+    expose:
+      - 8080
+    environment:
+      # UI-FIRST: all operator config (indexers + Prowlarr key, Tribler core URL,
+      # TMDB token / language, meta-core URL) is set in this feeder's own config
+      # page behind the AppShield gate below — NOT here. config.json (persisted to
+      # the state volume) is the source of truth; env is only a deprecated
+      # first-boot seed. The wiring that used to live here is now derived: the
+      # bundled filename-parser / tmdb sidecars from the feeder's hostname prefix,
+      # the callback from self, the peer id kept explicit (analytics group by it),
+      # and meta-core defaults to the pcs `http://metacore-app:9000`.
+      RUST_LOG: "info,meta_feeder=info,torrent_feeder=info"
+      # Both sources enabled out of the box; adjust in the config UI. The Tribler
+      # core URL is a cross-app modular seam → set it in the UI (e.g.
+      # http://tribler-backend:8086); Prowlarr is reached as `prowlarr:9696`.
+      META_TORRENT_SOURCES: "torznab,tribler"
+      META_GATEWAY_PEER_ID: "metafeedertorrentusenet"
+      META_FEEDER_STATE_DIR: "/data/meta-feeder"
+      # Streaming-page override (code default is 100; 20 streams results in
+      # smaller pages). Tuning — a future feeder-UI field will absorb it.
+      META_GATEWAY_TORZNAB_PAGE_SIZE: "20"
+      TZ: "$TZ"
+    volumes:
+      # Persist feeder config (config.json saved via the config UI) + redb cache.
+      # Transient librqbit downloads go to the container's /tmp (off backup).
+      - /DATA/AppData/metafeedertorrentusenet/state:/data/meta-feeder:rw
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    depends_on:
+      # service_started (not _healthy): the plugin images ship no healthcheck.
+      metafeedertorrentusenet-filename-parser:
+        condition: service_started
+      metafeedertorrentusenet-tmdb:
+        condition: service_started
+    networks:
+      - metafeedertorrentusenet
+      - pcs
+
+  # ---------------------------------------------------------------------------
+  # Bundled enrichment plugins (self-contained). filename-parser per file; tmdb
+  # once per torrent — tmdb writes posters/backdrops to the gateway core's WebDAV.
+  # No healthcheck: these plugin images don't ship one (curl absent).
+  # ---------------------------------------------------------------------------
+  metafeedertorrentusenet-filename-parser:
+    image: ghcr.io/worph/metamesh-plugin-filename-parser:1.0.1
+    container_name: metafeedertorrentusenet-filename-parser
+    hostname: metafeedertorrentusenet-filename-parser
+    restart: unless-stopped
+    expose:
+      - 8080
+    environment:
+      PORT: "8080"
+      EMIT_TITLE_TAGS: "true"
+    networks:
+      - metafeedertorrentusenet
+
+  metafeedertorrentusenet-tmdb:
+    image: ghcr.io/worph/metamesh-plugin-tmdb:1.0.0
+    container_name: metafeedertorrentusenet-tmdb
+    hostname: metafeedertorrentusenet-tmdb
+    restart: unless-stopped
+    expose:
+      - 8080
+    environment:
+      PORT: "8080"
+      CACHE_DIR: "/cache"
+      # Posters land in the gateway core (over pcs) so the ingester seeds them.
+      WEBDAV_URL: "http://metacore-app:9000/webdav"
+    volumes:
+      - /DATA/AppData/metafeedertorrentusenet/tmdb-cache:/cache
+    networks:
+      - metafeedertorrentusenet
+      - pcs
+
+  # ---------------------------------------------------------------------------
+  # AppShield gate — the feeder's config UI (set the Prowlarr key, Tribler core
+  # URL, TMDB token, toggle sources) behind Yundera OIDC SSO. container_name ==
+  # subdomain prefix. The gateway still reaches the feeder directly on `pcs`
+  # (this gate is for the human only); index → /config.
+  # ---------------------------------------------------------------------------
+  metafeedertorrentusenet:
+    image: ghcr.io/yundera/appshield:2.0.3
+    container_name: metafeedertorrentusenet
+    hostname: metafeedertorrentusenet
+    restart: unless-stopped
+    user: "0:0"
+    expose:
+      - 80
+    environment:
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
+      BACKEND_HOST: "metafeedertorrentusenet-feeder"
+      BACKEND_PORT: "8080"
+      LISTEN_PORT: "80"
+    labels:
+      caddy_0: metafeedertorrentusenet-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: metafeedertorrentusenet-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: metafeedertorrentusenet-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - metafeedertorrentusenet-feeder
+    networks:
+      - metafeedertorrentusenet
+      - pcs
+
+networks:
+  metafeedertorrentusenet:
+    name: metafeedertorrentusenet
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  author: Worph Team
+  category: Media
+  developer: Aptero Team
+  main: metafeedertorrentusenet
+  webui_port: 80
+  index: /config
+
+  description:
+    en_us: |
+      **A standalone torrent + usenet feeder for the MetaMesh network.**
+
+      MetaFeeder · Torrent-Usenet bridges your **Prowlarr** indexers
+      (Torznab/Newznab — torrent *and* usenet) and the decentralized **Tribler**
+      network into MetaMesh, so releases surface in **MetaWatch**. It's the
+      torrent/usenet source tier, split out of MetaGateway so you can run only the
+      feeders you want — and it merges the former Torznab and Tribler feeders into
+      one app (same image, so there's no reason to run two).
+
+      **Self-contained:** ships its own filename-parser + TMDB enrichment, so each
+      release gets a clean title, poster and plot.
+
+      **Sources (install whichever you use):**
+      - **Prowlarr** — Torznab/Newznab indexers, torrent or usenet (reached as
+        `prowlarr` on the shared network).
+      - **Tribler** — decentralized, anonymous torrent discovery over IPv8
+        (reached as `tribler-backend` on the shared network).
+
+      **Also requires:** **MetaGateway** — its meta-core stores the resolved
+      records and announces them to the swarm. The gateway must list this feeder
+      in its config.
+
+    fr_fr: |
+      **Un feeder torrent + usenet autonome pour le réseau MetaMesh.**
+
+      MetaFeeder · Torrent-Usenet connecte vos indexeurs **Prowlarr**
+      (Torznab/Newznab — torrent *et* usenet) et le réseau décentralisé
+      **Tribler** à MetaMesh pour qu'ils apparaissent dans **MetaWatch**. C'est la
+      couche de sources torrent/usenet, détachée de MetaGateway pour n'exécuter
+      que les feeders souhaités — elle fusionne les anciens feeders Torznab et
+      Tribler en une seule app (même image, inutile d'en exécuter deux).
+
+      **Autonome :** embarque ses propres plugins filename-parser + TMDB.
+
+      **Sources (installez celles que vous utilisez) :** l'app **Prowlarr**
+      (indexeurs Torznab/Newznab, torrent ou usenet) et l'app **Tribler**
+      (découverte de torrents décentralisée via IPv8).
+
+      **Nécessite aussi :** l'app **MetaGateway** (son meta-core stocke et annonce
+      les enregistrements).
+
+  tagline:
+    en_us: Standalone Prowlarr/Torznab + Tribler feeder for the MetaMesh network
+    fr_fr: Feeder Prowlarr/Torznab + Tribler autonome pour le réseau MetaMesh
+
+  title:
+    en_us: MetaFeeder · Torrent-Usenet
+
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederTorrentUsenet/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederTorrentUsenet/thumbnail.png
+
+  store_app_id: metafeedertorrentusenet
+  is_uncontrolled: false
+
+  tips:
+    before_install:
+      en_us: |
+        **Install order:** install **MetaGateway** first, plus at least one source
+        app — **Prowlarr** (Torznab/Newznab) and/or **Tribler**.
+
+        **After installing this app:**
+        1. For **Prowlarr**: complete its first-run wizard, add one or more
+           indexers (torrent or usenet), then copy the **API Key**
+           (Settings → General).
+        2. Open this app's config UI (the dashboard link). Paste the Prowlarr key
+           into the indexer's API-key field and/or set the Tribler core URL
+           (`http://tribler-backend:8086`); optionally set a TMDB v4 token for
+           posters. Toggle which sources are active. Save — the feeder reloads
+           automatically.
+        3. In **MetaGateway**, make sure this feeder is listed in its feeders
+           config (`http://metafeedertorrentusenet-feeder:8080`) so it gets
+           discovered.
+
+        **Authentication:** the config UI is protected by Yundera's Authelia (OIDC).
+
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/metafeedertorrentusenet/state
+    mkdir -p /DATA/AppData/metafeedertorrentusenet/tmdb-cache
