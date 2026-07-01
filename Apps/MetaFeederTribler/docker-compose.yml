@@ -68,7 +68,7 @@ services:
   # gate below.
   # ---------------------------------------------------------------------------
   metafeedertribler-feeder:
-    image: ghcr.io/worph/meta-feeder-tribler:1.0.1
+    image: ghcr.io/worph/meta-feeder-tribler:1.0.3
     container_name: metafeedertribler-feeder
     hostname: metafeedertribler-feeder
     restart: unless-stopped
