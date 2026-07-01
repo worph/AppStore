@@ -408,17 +408,18 @@ x-casaos:
     mkdir -p /DATA/AppData/metagateway/files
     mkdir -p /DATA/AppData/metagateway/state
     # Feeders map: all feeders are now SEPARATE store apps, listed by their pcs
-    # URLs (MetaFeeder · Books / Papers / Commons / Torznab / Tribler). The
+    # URLs (MetaFeeder · Books / Papers / Commons / Torrent-Usenet / Tribler). The
     # gateway soft-skips any feeder that isn't installed/reachable, and you can
-    # add/remove feeders at runtime from the dashboard.
+    # add/remove feeders at runtime from the dashboard. Each key/URL MUST match
+    # the corresponding app's feeder container hostname.
     cat > /DATA/AppData/metagateway/state/gateway-config.json <<'JSON'
     {
       "feeders": {
-        "metafeederbook-feeder":     { "url": "http://metafeederbook-feeder:8080" },
-        "metafeederpaper-feeder":    { "url": "http://metafeederpaper-feeder:8080" },
-        "metafeedercommon-feeder":   { "url": "http://metafeedercommon-feeder:8080" },
-        "metafeedertorznab-feeder":  { "url": "http://metafeedertorznab-feeder:8080" },
-        "metafeedertribler-feeder":  { "url": "http://metafeedertribler-feeder:8080" }
+        "metafeederbook-feeder":            { "url": "http://metafeederbook-feeder:8080" },
+        "metafeederpaper-feeder":           { "url": "http://metafeederpaper-feeder:8080" },
+        "metafeedercommon-feeder":          { "url": "http://metafeedercommon-feeder:8080" },
+        "metafeedertorrentusenet-feeder":   { "url": "http://metafeedertorrentusenet-feeder:8080" },
+        "metafeedertribler-feeder":         { "url": "http://metafeedertribler-feeder:8080" }
       }
     }
     JSON

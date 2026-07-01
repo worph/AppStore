@@ -116,7 +116,7 @@ services:
   # whatever it fetches. Public libp2p on host port 4003.
   # ---------------------------------------------------------------------------
   metawatch-share:
-    image: ghcr.io/worph/meta-share:1.0.2
+    image: ghcr.io/worph/meta-share:1.0.4
     container_name: metawatch-share
     hostname: metawatch-share
     restart: unless-stopped
@@ -128,6 +128,11 @@ services:
       - "4003:4001"
     volumes:
       - /DATA/AppData/metawatch/metacore:/meta-core:rw
+      # Operator settings written by the dashboard Settings panel (settings.json,
+      # e.g. optional direct-NNTP/Usenet credentials). Persisted on disk so
+      # dashboard edits survive container recreation — this stack has no separate
+      # credentialed gateway peer to forward to, so config lives here.
+      - /DATA/AppData/metawatch/metashare-config:/config:rw
     environment:
       HTTP_LISTEN: "0.0.0.0:3000"
       P2P_LISTEN: "/ip4/0.0.0.0/tcp/4001"
@@ -136,6 +141,7 @@ services:
       META_CORE_URL: "http://metawatch-core:9000"
       META_CORE_PATH: "/meta-core"
       META_CORE_POLL_SECS: "30"
+      META_SHARE_CONFIG_DIR: "/config"
       SERVICE_NAME: "meta-share"
       BASE_URL: "http://metawatch-share:3000"
       META_SHARE_PEER_API_URL: "http://metawatch-share:3000"
@@ -354,3 +360,4 @@ x-casaos:
   pre-install-cmd: |
     mkdir -p /DATA/AppData/metawatch/metacore
     mkdir -p /DATA/AppData/metawatch/data
+    mkdir -p /DATA/AppData/metawatch/metashare-config
