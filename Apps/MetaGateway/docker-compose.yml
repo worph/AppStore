@@ -21,8 +21,10 @@ name: metagateway
 # gateway (holds resolved feeder records, not your library) — hence its own
 # core rather than the shared MetaCore app.
 #
-# Federation: the meta-share ingester joins the PUBLIC libp2p swarm (kad-DHT,
-# default cohort) on host port 4002 + mDNS on `pcs`, so MetaWatch peers find it.
+# Federation: the gateway-app joins the PUBLIC IPFS DHT and is discovered for
+# live fan-out on host port 4002; the meta-share ingester also joins the public
+# swarm (records + bitswap byte-serving) on host port 4005 + mDNS on `pcs`, so
+# MetaWatch peers find both the gateway and its seeded bytes.
 # =============================================================================
 
 services:
@@ -72,10 +74,13 @@ services:
   # metagateway-share — meta-share INGESTER role (META_CORE_URL set). Polls this
   # gateway's meta-core, announces resolved records on Kamilata + rebuilds its
   # Bloom filter, and seeds blobs over IPFS/bitswap so federated MetaWatch
-  # queries reach the gateway's records. Public libp2p on host port 4002.
+  # queries reach the gateway's records. Public libp2p on host port 4005
+  # (the gateway-app owns 4002 for discovery).
   # ===========================================================================
   metagateway-share:
-    image: ghcr.io/worph/meta-share:1.0.2
+    # 1.0.5 = rsa-enabled libp2p (joins the public IPFS DHT — see metagateway-app)
+    # + P2P_ANNOUNCE support so remote peers can dial this bitswap seeder.
+    image: ghcr.io/worph/meta-share:1.0.5
     container_name: metagateway-share
     hostname: metagateway-share
     restart: unless-stopped
@@ -83,13 +88,26 @@ services:
     cpu_shares: 30
     expose:
       - 3000
+    # Own public libp2p port (4005). The gateway-app owns 4002 (discovery);
+    # this ingester's bitswap tier serves the gateway's seeded bytes to remote
+    # peers over the public DHT, so it needs its own dialable host port.
     ports:
-      - "4002:4001"
+      - "4005:4001"
     volumes:
       - /DATA/AppData/metagateway/metacore:/meta-core:rw
     environment:
       HTTP_LISTEN: "0.0.0.0:3000"
       P2P_LISTEN: "/ip4/0.0.0.0/tcp/4001"
+      # Advertise the routable address (published host port 4005) so kad
+      # provider records + identify carry a dialable multiaddr for remote
+      # bitswap fetches. Behind Docker NAT the swarm otherwise only sees
+      # container-internal addresses.
+      P2P_ANNOUNCE: "/ip4/${APP_PUBLIC_IP}/tcp/4005"
+      # Public IPFS DHT bootstraps by explicit /dns4/.../tcp/4001 (the nested
+      # dnsaddr form resolves to wss-only in some container resolvers). rsa
+      # feature required to complete the noise handshake with these RSA-keyed
+      # (Qm...) bootstrap nodes.
+      KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb"
       RUST_LOG: "info,meta_share=info,kamilata=info,beetswap=info"
       META_CORE_URL: "http://metagateway-core:9000"
       META_CORE_PATH: "/meta-core"
@@ -123,13 +141,23 @@ services:
   # resolved records to its meta-core. Dashboard fronted by the hash-lock below.
   # ===========================================================================
   metagateway-app:
-    image: ghcr.io/worph/meta-gateway:1.0.3
+    # 1.0.8 = rsa-enabled libp2p (required to join the public IPFS DHT: the
+    # bootstrap.libp2p.io nodes are RSA-keyed, so without `rsa` the noise
+    # handshake fails and the gateway never joins the DHT) + configurable
+    # P2P listen/announce so it's discoverable + dialable off-host.
+    image: ghcr.io/worph/meta-gateway:1.0.8
     container_name: metagateway-app
     hostname: metagateway-app
     restart: unless-stopped
     cpu_shares: 40
     expose:
       - 3000
+    # Public libp2p listener (4002). This is the peer MetaWatch/meta-search
+    # discovers via the kad `metamesh-gateway` provider namespace and dials
+    # for live gateway fan-out (torznab/tribler). Must be host-published +
+    # reachable inbound.
+    ports:
+      - "4002:4002"
     volumes:
       # gateway-config.json (feeders map) + gateway-enabled.json, written by
       # pre-install-cmd. Runtime redb caches also live here.
@@ -140,6 +168,13 @@ services:
       META_CORE_URL: "http://metagateway-core:9000"
       META_GATEWAY_PEER_ID: "metagateway"
       META_GATEWAY_BASE_URL: "http://metagateway-app:3000"
+      # Fixed libp2p port + advertise the routable address (published host
+      # port 4002) so provider records + identify carry a dialable multiaddr.
+      META_GATEWAY_P2P_LISTEN: "/ip4/0.0.0.0/tcp/4002"
+      META_GATEWAY_P2P_ANNOUNCE: "/ip4/${APP_PUBLIC_IP}/tcp/4002"
+      # Public IPFS DHT bootstraps via explicit /dns4/.../tcp/4001 (the nested
+      # dnsaddr default resolves to wss-only in some container resolvers).
+      KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb"
       RUST_LOG: "info,meta_gateway=info"
       TZ: "$TZ"
     depends_on:
@@ -399,9 +434,11 @@ x-casaos:
         **TMDB enrichment:** set the TMDB v4 token in the torznab / tribler plugin
         config (dashboard) for canonical posters + overviews.
 
-        **Federation port (optional).** The meta-share ingester host-publishes
-        its libp2p listener on TCP **4002** — open it inbound for best cross-node
-        reach; same-host discovery (a MetaWatch on the same box) works over mDNS.
+        **Federation ports (optional).** The gateway-app host-publishes its
+        libp2p listener on TCP **4002** (discovery / live fan-out) and the
+        meta-share ingester on TCP **4005** (records + bitswap byte-serving) —
+        open both inbound for best cross-node reach; same-host discovery (a
+        MetaWatch on the same box) works over mDNS without them.
 
   pre-install-cmd: |
     mkdir -p /DATA/AppData/metagateway/metacore

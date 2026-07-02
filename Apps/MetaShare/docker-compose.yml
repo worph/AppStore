@@ -11,7 +11,11 @@ services:
   #  - 4001  libp2p TCP listener — must be reachable on the public IP so
   #          other archivists' peers can dial in via kad-DHT provider records.
   metashare-app:
-    image: ghcr.io/worph/meta-share:1.0.2
+    # 1.0.5 = rsa-enabled libp2p (required to join the public IPFS DHT — the
+    # bootstrap.libp2p.io nodes are RSA-keyed; without `rsa` the noise
+    # handshake fails and this peer never actually reaches the DHT) +
+    # P2P_ANNOUNCE support so remote archivists can dial this seeder.
+    image: ghcr.io/worph/meta-share:1.0.5
     container_name: metashare-app
     hostname: metashare-app
     restart: unless-stopped
@@ -37,6 +41,15 @@ services:
     environment:
       - HTTP_LISTEN=0.0.0.0:3000
       - P2P_LISTEN=/ip4/0.0.0.0/tcp/4001
+      # Advertise the routable address (published host port 4001) so kad
+      # provider records + identify carry a dialable multiaddr — otherwise,
+      # behind Docker NAT, the swarm only sees container-internal addresses
+      # and remote archivists can't dial in to fetch seeded blocks.
+      - P2P_ANNOUNCE=/ip4/${APP_PUBLIC_IP}/tcp/4001
+      # Public IPFS DHT bootstraps by explicit /dns4/.../tcp/4001. The default
+      # nested-dnsaddr form resolves to wss-only in some container resolvers
+      # (no ws transport → no bootstrap); these direct addresses avoid that.
+      - KAD_BOOTSTRAP_PEERS=/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb
       - RUST_LOG=info,meta_share=info,kamilata=info
 
       # Service registration into /meta-core/services/

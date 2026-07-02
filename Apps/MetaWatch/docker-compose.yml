@@ -67,7 +67,11 @@ services:
   # host port 4004; mDNS on pcs for same-host peer discovery.
   # ---------------------------------------------------------------------------
   metawatch-search:
-    image: ghcr.io/worph/meta-search:1.0.0
+    # 1.0.1 = rsa-enabled libp2p — required to join the public IPFS DHT (the
+    # RSA-keyed bootstrap.libp2p.io nodes) and therefore to DISCOVER remote
+    # gateways via the kad `metamesh-gateway` provider namespace. Without it
+    # this peer only ever sees same-host mDNS peers.
+    image: ghcr.io/worph/meta-search:1.0.1
     container_name: metawatch-search
     hostname: metawatch-search
     restart: unless-stopped
@@ -84,6 +88,11 @@ services:
       HTTP_LISTEN: "0.0.0.0:3000"
       P2P_LISTEN: "/ip4/0.0.0.0/tcp/4001"
       RUST_LOG: "info,meta_search=info,kamilata=info,beetswap=info"
+      # Public IPFS DHT bootstraps by explicit /dns4/.../tcp/4001 (the nested
+      # dnsaddr default resolves to wss-only in some container resolvers).
+      # NOTE: meta-search has no P2P_ANNOUNCE yet, so it discovers gateways
+      # (outbound) but isn't itself dialable off-host until that lands.
+      KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb"
       SEARCH_TIMEOUT_SECS: "300"
       META_CORE_URL: "http://metawatch-core:9000"
       META_CORE_PATH: "/meta-core"
@@ -116,7 +125,10 @@ services:
   # whatever it fetches. Public libp2p on host port 4003.
   # ---------------------------------------------------------------------------
   metawatch-share:
-    image: ghcr.io/worph/meta-share:1.0.4
+    # 1.0.5 = rsa-enabled libp2p (joins the public IPFS DHT) + P2P_ANNOUNCE so
+    # remote peers can dial this transport peer to fetch the bytes it seeds
+    # (fetch-implies-seed). Without rsa it never reaches the public DHT.
+    image: ghcr.io/worph/meta-share:1.0.5
     container_name: metawatch-share
     hostname: metawatch-share
     restart: unless-stopped
@@ -136,6 +148,13 @@ services:
     environment:
       HTTP_LISTEN: "0.0.0.0:3000"
       P2P_LISTEN: "/ip4/0.0.0.0/tcp/4001"
+      # Advertise the routable address (published host port 4003) so remote
+      # peers can dial this transport peer for the bytes it seeds. Behind
+      # Docker NAT the swarm otherwise only sees container-internal addresses.
+      P2P_ANNOUNCE: "/ip4/${APP_PUBLIC_IP}/tcp/4003"
+      # Public IPFS DHT bootstraps by explicit /dns4/.../tcp/4001 (the nested
+      # dnsaddr default resolves to wss-only in some container resolvers).
+      KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb"
       RUST_LOG: "info,meta_share=info,kamilata=info,beetswap=info"
       SEARCH_TIMEOUT_SECS: "300"
       META_CORE_URL: "http://metawatch-core:9000"

@@ -1,7 +1,7 @@
-name: metafeedertorrentusenet
+name: metafeederindexer
 
 # =============================================================================
-# MetaFeeder · Torrent-Usenet — a STANDALONE Prowlarr feeder for MetaMesh.
+# MetaFeeder - Indexer — a STANDALONE Prowlarr feeder for MetaMesh.
 #
 # Bridges your **Prowlarr** indexers — Torznab/Newznab, torrent AND usenet — into
 # MetaMesh, so releases surface in **MetaWatch**. Prowlarr is the separate store
@@ -20,25 +20,25 @@ name: metafeedertorrentusenet
 #      records + TMDB posters are stored; the shared **MetaShare** app then
 #      announces them to the swarm.
 # The **MetaGateway** app must list this feeder's URL
-# (`http://metafeedertorrentusenet-feeder:8080`) in its feeders config so it
+# (`http://metafeederindexer-feeder:8080`) in its feeders config so it
 # discovers + queries it (MetaGateway, MetaCore and this feeder share `pcs`).
 #
-# Everything is scoped under the `metafeedertorrentusenet-*` prefix + the
-# per-stack `metafeedertorrentusenet` network + /DATA/AppData/metafeedertorrentusenet/
+# Everything is scoped under the `metafeederindexer-*` prefix + the
+# per-stack `metafeederindexer` network + /DATA/AppData/metafeederindexer/
 # data root, so it installs alongside the other Meta* apps with zero collisions.
 # =============================================================================
 
 services:
   # ---------------------------------------------------------------------------
-  # metafeedertorrentusenet-feeder — the feeder (meta-feeder-torrent) running the
+  # metafeederindexer-feeder — the feeder (meta-feeder-indexer) running the
   # Prowlarr/Torznab source. The gateway reaches it directly on `pcs` for
   # discovery/query/compute; the human configures it through the AppShield gate
   # below.
   # ---------------------------------------------------------------------------
-  metafeedertorrentusenet-feeder:
-    image: ghcr.io/worph/meta-feeder-torrent:1.0.7
-    container_name: metafeedertorrentusenet-feeder
-    hostname: metafeedertorrentusenet-feeder
+  metafeederindexer-feeder:
+    image: ghcr.io/worph/meta-feeder-indexer:1.0.7
+    container_name: metafeederindexer-feeder
+    hostname: metafeederindexer-feeder
     restart: unless-stopped
     user: "0:0"
     expose:
@@ -53,10 +53,10 @@ services:
       # meta-core defaults to the pcs `http://metacore-app:9000`; Prowlarr is
       # reached as `prowlarr:9696`.
       RUST_LOG: "info,meta_feeder=info,meta_feeder::store=debug"
-      META_GATEWAY_PEER_ID: "metafeedertorrentusenet"
-      FILENAME_PARSER_URL: "http://metafeedertorrentusenet-filename-parser:8080"
-      TMDB_PLUGIN_URL: "http://metafeedertorrentusenet-tmdb:8080"
-      META_FEEDER_CALLBACK_URL: "http://metafeedertorrentusenet-feeder:8080/enrich/callback"
+      META_GATEWAY_PEER_ID: "metafeederindexer"
+      FILENAME_PARSER_URL: "http://metafeederindexer-filename-parser:8080"
+      TMDB_PLUGIN_URL: "http://metafeederindexer-tmdb:8080"
+      META_FEEDER_CALLBACK_URL: "http://metafeederindexer-feeder:8080/enrich/callback"
       META_FEEDER_STATE_DIR: "/data/meta-feeder"
       # Prowlarr paging/depth tuning (code defaults 100 / deeper); a future
       # feeder-UI field will absorb these.
@@ -66,7 +66,7 @@ services:
     volumes:
       # Persist feeder config (config.json saved via the config UI) + redb cache.
       # Transient librqbit downloads go to the container's /tmp (off backup).
-      - /DATA/AppData/metafeedertorrentusenet/state:/data/meta-feeder:rw
+      - /DATA/AppData/metafeederindexer/state:/data/meta-feeder:rw
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
       interval: 5s
@@ -75,12 +75,12 @@ services:
       start_period: 5s
     depends_on:
       # service_started (not _healthy): the plugin images ship no healthcheck.
-      metafeedertorrentusenet-filename-parser:
+      metafeederindexer-filename-parser:
         condition: service_started
-      metafeedertorrentusenet-tmdb:
+      metafeederindexer-tmdb:
         condition: service_started
     networks:
-      - metafeedertorrentusenet
+      - metafeederindexer
       - pcs
 
   # ---------------------------------------------------------------------------
@@ -88,10 +88,10 @@ services:
   # once per torrent — tmdb writes posters/backdrops to the gateway core's WebDAV.
   # No healthcheck: these plugin images don't ship one (curl absent).
   # ---------------------------------------------------------------------------
-  metafeedertorrentusenet-filename-parser:
+  metafeederindexer-filename-parser:
     image: ghcr.io/worph/metamesh-plugin-filename-parser:1.0.1
-    container_name: metafeedertorrentusenet-filename-parser
-    hostname: metafeedertorrentusenet-filename-parser
+    container_name: metafeederindexer-filename-parser
+    hostname: metafeederindexer-filename-parser
     restart: unless-stopped
     expose:
       - 8080
@@ -99,12 +99,12 @@ services:
       PORT: "8080"
       EMIT_TITLE_TAGS: "true"
     networks:
-      - metafeedertorrentusenet
+      - metafeederindexer
 
-  metafeedertorrentusenet-tmdb:
+  metafeederindexer-tmdb:
     image: ghcr.io/worph/metamesh-plugin-tmdb:1.0.0
-    container_name: metafeedertorrentusenet-tmdb
-    hostname: metafeedertorrentusenet-tmdb
+    container_name: metafeederindexer-tmdb
+    hostname: metafeederindexer-tmdb
     restart: unless-stopped
     expose:
       - 8080
@@ -114,9 +114,9 @@ services:
       # Posters land in the gateway core (over pcs) so the ingester seeds them.
       WEBDAV_URL: "http://metacore-app:9000/webdav"
     volumes:
-      - /DATA/AppData/metafeedertorrentusenet/tmdb-cache:/cache
+      - /DATA/AppData/metafeederindexer/tmdb-cache:/cache
     networks:
-      - metafeedertorrentusenet
+      - metafeederindexer
       - pcs
 
   # ---------------------------------------------------------------------------
@@ -125,10 +125,10 @@ services:
   # still reaches the feeder directly on `pcs` (this gate is for the human only);
   # index → /config.
   # ---------------------------------------------------------------------------
-  metafeedertorrentusenet:
+  metafeederindexer:
     image: ghcr.io/yundera/appshield:2.0.3
-    container_name: metafeedertorrentusenet
-    hostname: metafeedertorrentusenet
+    container_name: metafeederindexer
+    hostname: metafeederindexer
     restart: unless-stopped
     user: "0:0"
     expose:
@@ -137,27 +137,27 @@ services:
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
       CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
-      BACKEND_HOST: "metafeedertorrentusenet-feeder"
+      BACKEND_HOST: "metafeederindexer-feeder"
       BACKEND_PORT: "8080"
       LISTEN_PORT: "80"
     labels:
-      caddy_0: metafeedertorrentusenet-${APP_DOMAIN}
+      caddy_0: metafeederindexer-${APP_DOMAIN}
       caddy_0.import: gateway_tls
       caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: metafeedertorrentusenet-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1: metafeederindexer-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: metafeedertorrentusenet-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2: metafeederindexer-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     depends_on:
-      - metafeedertorrentusenet-feeder
+      - metafeederindexer-feeder
     networks:
-      - metafeedertorrentusenet
+      - metafeederindexer
       - pcs
 
 networks:
-  metafeedertorrentusenet:
-    name: metafeedertorrentusenet
+  metafeederindexer:
+    name: metafeederindexer
   pcs:
     name: pcs
     external: true
@@ -169,7 +169,7 @@ x-casaos:
   author: Worph Team
   category: Media
   developer: Aptero Team
-  main: metafeedertorrentusenet
+  main: metafeederindexer
   webui_port: 80
   index: /config
 
@@ -177,7 +177,7 @@ x-casaos:
     en_us: |
       **A standalone torrent + usenet feeder for the MetaMesh network.**
 
-      MetaFeeder · Torrent-Usenet bridges your **Prowlarr** indexers
+      MetaFeeder - Indexer bridges your **Prowlarr** indexers
       (Torznab/Newznab — torrent *and* usenet) into MetaMesh, so releases surface
       in **MetaWatch**. It's the torrent/usenet source tier, split out of
       MetaGateway so you can run only the feeders you want.
@@ -199,7 +199,7 @@ x-casaos:
     fr_fr: |
       **Un feeder torrent + usenet autonome pour le réseau MetaMesh.**
 
-      MetaFeeder · Torrent-Usenet connecte vos indexeurs **Prowlarr**
+      MetaFeeder - Indexer connecte vos indexeurs **Prowlarr**
       (Torznab/Newznab — torrent *et* usenet) à MetaMesh pour qu'ils apparaissent
       dans **MetaWatch**. C'est la couche de sources torrent/usenet, détachée de
       MetaGateway pour n'exécuter que les feeders souhaités.
@@ -220,12 +220,12 @@ x-casaos:
     fr_fr: Feeder Prowlarr/Torznab (torrent + usenet) autonome pour MetaMesh
 
   title:
-    en_us: MetaFeeder · Torrent-Usenet
+    en_us: MetaFeeder - Indexer
 
-  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederTorrentUsenet/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederTorrentUsenet/thumbnail.png
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederIndexer/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederIndexer/thumbnail.png
 
-  store_app_id: metafeedertorrentusenet
+  store_app_id: metafeederindexer
   is_uncontrolled: false
 
   tips:
@@ -242,11 +242,11 @@ x-casaos:
            into the indexer's API-key field; optionally set a TMDB v4 token for
            posters. Save — the feeder reloads automatically.
         3. In **MetaGateway**, make sure this feeder is listed in its feeders
-           config (`http://metafeedertorrentusenet-feeder:8080`) so it gets
+           config (`http://metafeederindexer-feeder:8080`) so it gets
            discovered.
 
         **Authentication:** the config UI is protected by Yundera's Authelia (OIDC).
 
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/metafeedertorrentusenet/state
-    mkdir -p /DATA/AppData/metafeedertorrentusenet/tmdb-cache
+    mkdir -p /DATA/AppData/metafeederindexer/state
+    mkdir -p /DATA/AppData/metafeederindexer/tmdb-cache
