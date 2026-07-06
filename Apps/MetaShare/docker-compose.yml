@@ -15,7 +15,7 @@ services:
     # bootstrap.libp2p.io nodes are RSA-keyed; without `rsa` the noise
     # handshake fails and this peer never actually reaches the DHT) +
     # P2P_ANNOUNCE support so remote archivists can dial this seeder.
-    image: ghcr.io/worph/meta-share:1.0.5
+    image: ghcr.io/worph/meta-share:1.0.7
     container_name: metashare-app
     hostname: metashare-app
     restart: unless-stopped

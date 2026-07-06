@@ -71,7 +71,7 @@ services:
     # RSA-keyed bootstrap.libp2p.io nodes) and therefore to DISCOVER remote
     # gateways via the kad `metamesh-gateway` provider namespace. Without it
     # this peer only ever sees same-host mDNS peers.
-    image: ghcr.io/worph/meta-search:1.0.1
+    image: ghcr.io/worph/meta-search:1.0.2
     container_name: metawatch-search
     hostname: metawatch-search
     restart: unless-stopped
@@ -128,7 +128,7 @@ services:
     # 1.0.5 = rsa-enabled libp2p (joins the public IPFS DHT) + P2P_ANNOUNCE so
     # remote peers can dial this transport peer to fetch the bytes it seeds
     # (fetch-implies-seed). Without rsa it never reaches the public DHT.
-    image: ghcr.io/worph/meta-share:1.0.5
+    image: ghcr.io/worph/meta-share:1.0.7
     container_name: metawatch-share
     hostname: metawatch-share
     restart: unless-stopped
@@ -187,7 +187,7 @@ services:
   # My List + Continue Watching persist in /DATA/AppData/metawatch/data.
   # ---------------------------------------------------------------------------
   metawatch-app:
-    image: ghcr.io/worph/meta-watch:1.0.3
+    image: ghcr.io/worph/meta-watch:1.0.5
     container_name: metawatch-app
     hostname: metawatch-app
     restart: unless-stopped

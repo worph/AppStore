@@ -80,7 +80,7 @@ services:
   metagateway-share:
     # 1.0.5 = rsa-enabled libp2p (joins the public IPFS DHT — see metagateway-app)
     # + P2P_ANNOUNCE support so remote peers can dial this bitswap seeder.
-    image: ghcr.io/worph/meta-share:1.0.5
+    image: ghcr.io/worph/meta-share:1.0.7
     container_name: metagateway-share
     hostname: metagateway-share
     restart: unless-stopped
@@ -145,7 +145,7 @@ services:
     # bootstrap.libp2p.io nodes are RSA-keyed, so without `rsa` the noise
     # handshake fails and the gateway never joins the DHT) + configurable
     # P2P listen/announce so it's discoverable + dialable off-host.
-    image: ghcr.io/worph/meta-gateway:1.0.8
+    image: ghcr.io/worph/meta-gateway:1.0.9
     container_name: metagateway-app
     hostname: metagateway-app
     restart: unless-stopped
