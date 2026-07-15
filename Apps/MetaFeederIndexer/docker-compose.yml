@@ -38,6 +38,10 @@ services:
   metafeederindexer-feeder:
     image: ghcr.io/worph/meta-feeder-indexer:1.0.9
     container_name: metafeederindexer-feeder
+    # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
+    # instead of swap. Mirrors the dev sub-stack limits.
+    mem_limit: 512m
+    memswap_limit: 512m
     hostname: metafeederindexer-feeder
     restart: unless-stopped
     user: "0:0"
@@ -49,19 +53,22 @@ services:
       # read from the persisted config.json (this feeder's config page behind the
       # AppShield gate); env is only a deprecated first-boot seed. These env vars
       # are wiring only: the enrichment sidecars, the enrich callback, the peer id
-      # (analytics group by it), the state dir, and Prowlarr paging/depth tuning.
-      # meta-core defaults to the pcs `http://metacore-app:9000`; Prowlarr is
-      # reached as `prowlarr:9696`.
+      # and Prowlarr paging. meta-core defaults to the pcs
+      # `http://metacore-app:9000`; Prowlarr is reached as `prowlarr:9696`.
       RUST_LOG: "info,meta_feeder=info,meta_feeder::store=debug"
-      META_GATEWAY_PEER_ID: "metafeederindexer"
+      # The peer id stamped into provenance.gateway_peer on every record this
+      # feeder self-publishes. It names the GATEWAY this feeder serves — not the
+      # feeder itself — so records are attributed to the gateway that fronts them
+      # (analytics group by it). Without it, it falls back to HOSTNAME.
+      META_GATEWAY_PEER_ID: "metagateway"
       FILENAME_PARSER_URL: "http://metafeederindexer-filename-parser:8080"
       TMDB_PLUGIN_URL: "http://metafeederindexer-tmdb:8080"
       META_FEEDER_CALLBACK_URL: "http://metafeederindexer-feeder:8080/enrich/callback"
-      META_FEEDER_STATE_DIR: "/data/meta-feeder"
-      # Prowlarr paging/depth tuning (code defaults 100 / deeper); a future
-      # feeder-UI field will absorb these.
+      # LOAD-BEARING at meta-feeder-indexer:1.0.9 — NOT a restatement of the
+      # default: that build defaults the page size to 100. 20 is the pacing
+      # choice (results stream 20-at-a-time). META_GATEWAY_PROWLARR_MAX_DEPTH
+      # was dropped — its 500 did match the default.
       META_GATEWAY_PROWLARR_PAGE_SIZE: "20"
-      META_GATEWAY_PROWLARR_MAX_DEPTH: "500"
       TZ: "$TZ"
     volumes:
       # Persist feeder config (config.json saved via the config UI) + redb cache.
@@ -91,12 +98,15 @@ services:
   metafeederindexer-filename-parser:
     image: ghcr.io/worph/metamesh-plugin-filename-parser:1.0.1
     container_name: metafeederindexer-filename-parser
+    # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
+    # instead of swap. Mirrors the dev sub-stack limits.
+    mem_limit: 256m
+    memswap_limit: 256m
     hostname: metafeederindexer-filename-parser
     restart: unless-stopped
     expose:
       - 8080
     environment:
-      PORT: "8080"
       EMIT_TITLE_TAGS: "true"
     networks:
       - metafeederindexer
@@ -104,14 +114,22 @@ services:
   metafeederindexer-tmdb:
     image: ghcr.io/worph/metamesh-plugin-tmdb:1.0.0
     container_name: metafeederindexer-tmdb
+    # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
+    # instead of swap. Mirrors the dev sub-stack limits.
+    mem_limit: 384m
+    memswap_limit: 384m
     hostname: metafeederindexer-tmdb
     restart: unless-stopped
     expose:
       - 8080
     environment:
-      PORT: "8080"
-      CACHE_DIR: "/cache"
       # Posters land in the gateway core (over pcs) so the ingester seeds them.
+      # LOAD-BEARING at metamesh-plugin-tmdb:1.0.0 — do NOT remove.
+      # Newer source derives WebDAV from the metaCoreUrl passed on each /process
+      # (GET /urls -> webdavUrlInternal), which is why the dev compose omits it. The
+      # PUBLISHED image predates that: without this var it logs "WebDAV client
+      # unavailable" and silently writes no posters/backdrops, so every record then
+      # fails meta-watch's poster gate. Drop only after re-tagging the plugin.
       WEBDAV_URL: "http://metacore-app:9000/webdav"
     volumes:
       - /DATA/AppData/metafeederindexer/tmdb-cache:/cache
@@ -126,7 +144,7 @@ services:
   # index → /config.
   # ---------------------------------------------------------------------------
   metafeederindexer:
-    image: ghcr.io/yundera/appshield:2.0.3
+    image: ghcr.io/yundera/appshield:2.0.5
     container_name: metafeederindexer
     hostname: metafeederindexer
     restart: unless-stopped

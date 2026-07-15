@@ -7,6 +7,10 @@ services:
   metacore-app:
     image: ghcr.io/worph/meta-core:1.0.1
     container_name: metacore-app
+    # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
+    # instead of swap. Mirrors the dev sub-stack limits.
+    mem_limit: 768m
+    memswap_limit: 768m
     hostname: metacore-app
     restart: unless-stopped
     privileged: true
@@ -29,16 +33,7 @@ services:
       - /DATA/AppData/metacore/cache:/data/cache
 
     environment:
-      - META_CORE_PATH=/meta-core
-      - FILES_PATH=/files
-      - SERVICE_NAME=meta-core
-      - SERVICE_VERSION=1.0.0
-      - META_CORE_HTTP_PORT=9000
-      - META_CORE_HTTP_HOST=0.0.0.0
-      - REDIS_PORT=6379
       - BASE_URL=https://metacore-$APP_DOMAIN
-      - ENABLE_FILE_WATCHER=true
-      - WATCH_INTERVAL_MS=1000
       - TZ=$TZ
 
     # Runs as root for nginx, Redis, rclone mounts
@@ -56,13 +51,13 @@ services:
   # OIDC perimeter for the MetaCore dashboard. Self-registers as an OIDC client
   # with the platform's auth-registrar on first login (no secrets to manage).
   #
-  # Naming convention (per nginx-hash-lock + auth-registrar): the proxy's
+  # Naming convention (per appshield + auth-registrar): the proxy's
   # container_name MUST equal the URL-prefix of the public hostname, because the
   # registrar's redirect-URI allowlist is "<container_name>" or "<container_name>-*".
   # Our public URL is `metacore-${APP_DOMAIN}`, so the proxy container is named
   # `metacore` and the backend takes the `-app` suffix.
   metacore:
-    image: ghcr.io/yundera/nginx-hash-lock:1.0.7
+    image: ghcr.io/yundera/appshield:2.0.5
     container_name: metacore
     hostname: metacore
     restart: unless-stopped
@@ -76,6 +71,8 @@ services:
       BACKEND_HOST: "metacore-app"
       BACKEND_PORT: "80"
       LISTEN_PORT: "80"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
 
     depends_on:
       - metacore-app

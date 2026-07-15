@@ -37,6 +37,10 @@ services:
     # 1.0.1 carries the new meta-core API (records cids/ set, identity).
     image: ghcr.io/worph/meta-core:1.0.1
     container_name: metagateway-core
+    # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
+    # instead of swap. Mirrors the dev sub-stack limits.
+    mem_limit: 768m
+    memswap_limit: 768m
     hostname: metagateway-core
     restart: unless-stopped
     privileged: true
@@ -48,16 +52,7 @@ services:
       - /DATA/AppData/metagateway/metacore:/meta-core:rw
       - /DATA/AppData/metagateway/files:/files:rw
     environment:
-      - META_CORE_PATH=/meta-core
-      - FILES_PATH=/files
-      - SERVICE_NAME=meta-core
-      - SERVICE_VERSION=1.0.0
-      - META_CORE_HTTP_PORT=9000
-      - META_CORE_HTTP_HOST=0.0.0.0
-      - REDIS_PORT=6379
       - BASE_URL=http://metagateway-core:9000
-      - ENABLE_FILE_WATCHER=true
-      - WATCH_INTERVAL_MS=1000
       - TZ=$TZ
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:9000/health"]
@@ -78,10 +73,14 @@ services:
   # (the gateway-app owns 4002 for discovery).
   # ===========================================================================
   metagateway-share:
-    # 1.0.5 = rsa-enabled libp2p (joins the public IPFS DHT — see metagateway-app)
+    # 1.0.8 = rsa-enabled libp2p (joins the public IPFS DHT — see metagateway-app)
     # + P2P_ANNOUNCE support so remote peers can dial this bitswap seeder.
-    image: ghcr.io/worph/meta-share:1.0.7
+    image: ghcr.io/worph/meta-share:1.0.8
     container_name: metagateway-share
+    # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
+    # instead of swap. Mirrors the dev sub-stack limits.
+    mem_limit: 3g
+    memswap_limit: 3g
     hostname: metagateway-share
     restart: unless-stopped
     user: "0:0"
@@ -95,8 +94,15 @@ services:
       - "4005:4001"
     volumes:
       - /DATA/AppData/metagateway/metacore:/meta-core:rw
+      # Operator settings (settings.json — NNTP creds + indexer API keys). This
+      # is the CREDENTIALED peer of the pair: it materialises NZB postings for
+      # credential-less clients. Losing settings.json on an update means the
+      # gateway silently stops serving nzb-release bytes until re-entered.
+      - /DATA/AppData/metagateway/share-config:/config:rw
+      # Blockstore + seed manifest + NZB cache (META_SHARE_DATA=/data/meta-share).
+      # Without it the gateway's seeded corpus is wiped on every recreate.
+      - /DATA/AppData/metagateway/share-data:/data:rw
     environment:
-      HTTP_LISTEN: "0.0.0.0:3000"
       P2P_LISTEN: "/ip4/0.0.0.0/tcp/4001"
       # Advertise the routable address (published host port 4005) so kad
       # provider records + identify carry a dialable multiaddr for remote
@@ -108,18 +114,14 @@ services:
       # feature required to complete the noise handshake with these RSA-keyed
       # (Qm...) bootstrap nodes.
       KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb"
-      RUST_LOG: "info,meta_share=info,kamilata=info,beetswap=info"
       META_CORE_URL: "http://metagateway-core:9000"
       META_CORE_PATH: "/meta-core"
-      META_CORE_POLL_SECS: "30"
-      # A busy gateway accumulates far more than a small cohort's records.
-      META_CORE_MAX_RECORDS: "5000"
-      SERVICE_NAME: "meta-share"
       BASE_URL: "http://metagateway-share:3000"
+      # Deprecated name, kept ON PURPOSE: the current name is INTERNAL_BASE_URL, but
+      # meta-share:1.0.8 / meta-search:1.0.2 don't know it yet. Renaming now would
+      # leave peer_url unset (no service registration, peer stops advertising its API
+      # URL). Rename together with the next image bump.
       META_SHARE_PEER_API_URL: "http://metagateway-share:3000"
-      KAD_NAMESPACE: "metamesh-share-default"
-      TARGET_PEER_COUNT: "8"
-      ENABLE_MDNS: "true"
       TZ: "$TZ"
     depends_on:
       metagateway-core:
@@ -141,12 +143,18 @@ services:
   # resolved records to its meta-core. Dashboard fronted by the hash-lock below.
   # ===========================================================================
   metagateway-app:
-    # 1.0.8 = rsa-enabled libp2p (required to join the public IPFS DHT: the
+    # 1.0.12 = rsa-enabled libp2p (required to join the public IPFS DHT: the
     # bootstrap.libp2p.io nodes are RSA-keyed, so without `rsa` the noise
     # handshake fails and the gateway never joins the DHT) + configurable
-    # P2P listen/announce so it's discoverable + dialable off-host.
-    image: ghcr.io/worph/meta-gateway:1.0.9
+    # P2P listen/announce so it's discoverable + dialable off-host + the
+    # 2026-07 discovery/filters fixes that make the meta-search fan-out
+    # actually route `fileType:video` queries here.
+    image: ghcr.io/worph/meta-gateway:1.0.12
     container_name: metagateway-app
+    # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
+    # instead of swap. Mirrors the dev sub-stack limits.
+    mem_limit: 1g
+    memswap_limit: 1g
     hostname: metagateway-app
     restart: unless-stopped
     cpu_shares: 40
@@ -163,9 +171,12 @@ services:
       # pre-install-cmd. Runtime redb caches also live here.
       - /DATA/AppData/metagateway/state:/data/meta-gateway:rw
     environment:
-      META_GATEWAY_HTTP_LISTEN: "0.0.0.0:3000"
-      META_GATEWAY_STATE_DIR: "/data/meta-gateway"
-      META_CORE_URL: "http://metagateway-core:9000"
+      # NOTE: `meta_core_url` (and `meta_share_url`) live in gateway-config.json
+      # since v1.0.12 — no longer read from env. The pre-install-cmd below seeds
+      # them; the dashboard edits them at runtime. `META_GATEWAY_BASE_URL` stays
+      # in env because it's an identify-layer setting (baseUrl= token in the
+      # libp2p identify agent_version) — without it meta-search can't HTTP-fetch
+      # /api/gateway/plugins on this gateway to populate its routing table.
       META_GATEWAY_PEER_ID: "metagateway"
       META_GATEWAY_BASE_URL: "http://metagateway-app:3000"
       # Fixed libp2p port + advertise the routable address (published host
@@ -175,7 +186,6 @@ services:
       # Public IPFS DHT bootstraps via explicit /dns4/.../tcp/4001 (the nested
       # dnsaddr default resolves to wss-only in some container resolvers).
       KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb"
-      RUST_LOG: "info,meta_gateway=info"
       TZ: "$TZ"
     depends_on:
       metagateway-core:
@@ -207,7 +217,7 @@ services:
   # URL prefix (`metagateway`) for the registrar's redirect-URI allowlist.
   # ===========================================================================
   metagateway:
-    image: ghcr.io/yundera/nginx-hash-lock:1.0.7
+    image: ghcr.io/yundera/appshield:2.0.5
     container_name: metagateway
     hostname: metagateway
     restart: unless-stopped
@@ -219,7 +229,8 @@ services:
       BACKEND_HOST: "metagateway-app"
       BACKEND_PORT: "3000"
       LISTEN_PORT: "80"
-      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
     depends_on:
       - metagateway-app
     labels:
@@ -262,7 +273,7 @@ services:
   # feeders reach them over `pcs`, so there's no gate for them here.
   # ===========================================================================
   metagatewaycore:
-    image: ghcr.io/yundera/appshield:2.0.3
+    image: ghcr.io/yundera/appshield:2.0.5
     container_name: metagatewaycore
     hostname: metagatewaycore
     restart: unless-stopped
@@ -291,7 +302,7 @@ services:
       - pcs
 
   metagatewayshare:
-    image: ghcr.io/yundera/appshield:2.0.3
+    image: ghcr.io/yundera/appshield:2.0.5
     container_name: metagatewayshare
     hostname: metagatewayshare
     restart: unless-stopped
@@ -451,6 +462,8 @@ x-casaos:
     # the corresponding app's feeder container hostname.
     cat > /DATA/AppData/metagateway/state/gateway-config.json <<'JSON'
     {
+      "meta_core_url":  "http://metagateway-core:9000",
+      "meta_share_url": "http://metagateway-share:3000",
       "feeders": {
         "metafeederbook-feeder":            { "url": "http://metafeederbook-feeder:8080" },
         "metafeederpaper-feeder":           { "url": "http://metafeederpaper-feeder:8080" },
