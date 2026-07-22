@@ -133,10 +133,11 @@ services:
   # whatever it fetches. Public libp2p on host port 4003.
   # ---------------------------------------------------------------------------
   metawatch-share:
-    # 1.0.8 = rsa-enabled libp2p (joins the public IPFS DHT) + P2P_ANNOUNCE so
-    # remote peers can dial this transport peer to fetch the bytes it seeds
-    # (fetch-implies-seed). Without rsa it never reaches the public DHT.
-    image: ghcr.io/worph/meta-share:1.0.8
+    # 1.0.13 = nocopy library seeding + core/cache source surfacing, on top of
+    # the 1.0.8 floor: rsa-enabled libp2p (joins the public IPFS DHT) +
+    # P2P_ANNOUNCE so remote peers can dial this transport peer to fetch the
+    # bytes it seeds (fetch-implies-seed). Without rsa it never reaches the DHT.
+    image: ghcr.io/worph/meta-share:1.0.13
     container_name: metawatch-share
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
     # instead of swap. Mirrors the dev sub-stack limits.

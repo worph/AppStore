@@ -11,11 +11,14 @@ services:
   #  - 4001  libp2p TCP listener — must be reachable on the public IP so
   #          other archivists' peers can dial in via kad-DHT provider records.
   metashare-app:
-    # 1.0.8 = rsa-enabled libp2p (required to join the public IPFS DHT — the
-    # bootstrap.libp2p.io nodes are RSA-keyed; without `rsa` the noise
-    # handshake fails and this peer never actually reaches the DHT) +
-    # P2P_ANNOUNCE support so remote archivists can dial this seeder.
-    image: ghcr.io/worph/meta-share:1.0.8
+    # 1.0.13 = nocopy library seeding (meta-core files seeded as filestore refs,
+    # no second on-disk copy) + core/cache source surfacing in the dashboard, on
+    # top of the 1.0.8 floor this pin still requires: rsa-enabled libp2p
+    # (required to join the public IPFS DHT — the bootstrap.libp2p.io nodes are
+    # RSA-keyed; without `rsa` the noise handshake fails and this peer never
+    # actually reaches the DHT) + P2P_ANNOUNCE support so remote archivists can
+    # dial this seeder.
+    image: ghcr.io/worph/meta-share:1.0.13
     container_name: metashare-app
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
     # instead of swap. Mirrors the dev sub-stack limits.
@@ -24,6 +27,15 @@ services:
     hostname: metashare-app
     restart: unless-stopped
     cpu_shares: 20
+
+    # Give meta-share room to shut down cleanly on SIGTERM (docker stop /
+    # `up -d` recreate) before docker escalates to SIGKILL. The binary catches
+    # SIGTERM, drains in-flight HTTP briefly, then unwinds so redb's Database
+    # Drop writes its allocator-state table — without which the next open runs a
+    # full multi-scan repair of blocks.redb (minutes of silent CPU before the
+    # port binds, proportional to blockstore size). 3s drain + the allocator
+    # write fits the 10s default, but a large store gets headroom here.
+    stop_grace_period: 30s
 
     expose:
       - 3000   # HTTP API (Axum)
