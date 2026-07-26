@@ -1,0 +1,583 @@
+name: metafeederusenet
+
+# =============================================================================
+# MetaFeeder · Usenet — a STANDALONE, self-hosted Usenet feeder for MetaMesh.
+#
+# Unlike MetaFeeder - Indexer (which proxies an EXTERNAL Newznab/Torznab
+# indexer and mints an `nzb-release` (0x1005) cid embedding that indexer's
+# host), this app runs its OWN header scan (an `nntmux` — newznab-tmux fork —
+# sidecar) so it can mint a PORTABLE `nzb-posting` (0x1003) cid: a digest over
+# the article Message-ID set, embedding no indexer host, redeemable by ANY
+# peer with a plain NNTP provider account. It ADDS a Usenet source; it does
+# not replace the Prowlarr/Torznab one — a gateway query fans out to both.
+#
+# Design record (meta-gateway repo): docs/others/self-hosted-usenet-indexer-study.md
+# Feeder repo: github.com/worph/meta-feeder-usenet
+#
+# It needs, over the shared `pcs` network:
+#   - the shared **MetaCore** app (`metacore-app:9000`) — where resolved
+#     records + TMDB posters are stored; the shared **MetaShare** app then
+#     announces them to the swarm.
+# The **MetaGateway** app must list this feeder's URL
+# (`http://metafeederusenet-feeder:8080`) in its feeders config so it
+# discovers + queries it (MetaGateway, MetaCore and this feeder share `pcs`).
+#
+# Everything is scoped under the `metafeederusenet-*` prefix + the per-stack
+# `metafeederusenet` network + /DATA/AppData/metafeederusenet/ data root, so it
+# installs alongside the other Meta* apps with zero collisions.
+#
+# amd64 ONLY — `pyrowman/nntmux` ships no arm64 build.
+#
+# ⚠ Four silent-failure traps in the `pyrowman/nntmux` image, empirically
+# verified (see the meta-gateway dev compose header for the full writeup):
+#   1. `PATH_TO_NZBS` (and every other storage path var) must be ABSENT from
+#      the env, never present-but-blank — that reads as an explicit empty
+#      string, not "unset", and nntmux aborts NZB writing with 0 releases and
+#      no visible error. This compose bind-mounts a COMPLETE, hand-filled
+#      `.env` (below) rather than relying on individual `environment:` keys,
+#      for exactly this reason.
+#   2. `DB_CONNECTION` must be `mariadb`, not `mysql` — the install migration
+#      loads its schema file by connection name; `mysql` finds no matching
+#      schema and fails partway through a from-scratch migration.
+#   3. Manticore is a HARD first-boot dependency (unless
+#      `ELASTICSEARCH_ENABLED=true`, which just swaps it for a heavier one) —
+#      `metafeederusenet-manticore` below is not optional.
+#   4. Seeded usenet groups default to `active=0, backfill=0` — scanning an
+#      inactive group silently does nothing. See the tips below for the SQL
+#      to activate one.
+# One FIRST-BOOT-ONLY loud bug: the entrypoint runs `config:cache` before
+# `key:generate`, so every session route 500s until you run
+# `docker exec metafeederusenet-nntmux php artisan config:clear` once. See tips.
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # metafeederusenet-db — MariaDB backing nntmux's OWN release catalog. Not
+  # shared with the gateway's meta-core Redis or anything else in the mesh.
+  # ---------------------------------------------------------------------------
+  metafeederusenet-db:
+    image: mariadb:12.3
+    container_name: metafeederusenet-db
+    hostname: metafeederusenet-db
+    restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 512m
+    environment:
+      MARIADB_DATABASE: nntmux
+      MARIADB_USER: nntmux
+      MARIADB_PASSWORD: "$APP_DEFAULT_PASSWORD"
+      MARIADB_RANDOM_ROOT_PASSWORD: "yes"
+    volumes:
+      - /DATA/AppData/metafeederusenet/db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    networks:
+      - metafeederusenet
+
+  # ---------------------------------------------------------------------------
+  # metafeederusenet-redis — nntmux's OWN Redis. Deliberately separate from the
+  # gateway core's Redis (different failure domain; losing this one is free).
+  # ---------------------------------------------------------------------------
+  metafeederusenet-redis:
+    image: redis:7-alpine
+    container_name: metafeederusenet-redis
+    hostname: metafeederusenet-redis
+    restart: unless-stopped
+    mem_limit: 128m
+    memswap_limit: 128m
+    networks:
+      - metafeederusenet
+
+  # ---------------------------------------------------------------------------
+  # metafeederusenet-manticore — RT-index search backend. NOT optional (trap
+  # #3 above) — a hard first-boot dependency of nntmux's own entrypoint, even
+  # though this feeder reads `releases` via SQL directly and never touches it.
+  # Digest-pinned (upstream reuses low-looking version numbers across an old
+  # semver line and a newer CalVer-ish one; the digest is unambiguous).
+  # ---------------------------------------------------------------------------
+  metafeederusenet-manticore:
+    image: manticoresearch/manticore@sha256:032388dc77321e3ac898a14b9a0c3fc22ab8d08cd2582abd6c5b642d46b82181
+    container_name: metafeederusenet-manticore
+    hostname: metafeederusenet-manticore
+    restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 512m
+    ulimits:
+      nofile: { soft: 65535, hard: 65535 }
+    networks:
+      - metafeederusenet
+
+  # ---------------------------------------------------------------------------
+  # metafeederusenet-nntmux — the header scanner + web UI/API. Exposed DIRECTLY
+  # via Caddy (no AppShield gate): nntmux ships its own admin login
+  # (ADMIN_USER/ADMIN_PASS, seeded below), the same convention this store uses
+  # for every app that brings its own auth (Jellyfin, Nextcloud, Immich, ...).
+  # ---------------------------------------------------------------------------
+  metafeederusenet-nntmux:
+    # Digest-pinned, NOT :latest — a silent tag move could change the
+    # `misc/update/*.php` command surface the "collate via tinker" tip below
+    # depends on. Re-pin deliberately, re-verify the trap list above when you do.
+    image: pyrowman/nntmux@sha256:7fc221f7a806fee3e4a2145159e1a147962edc095282bdc692806968f791fabe
+    container_name: metafeederusenet-nntmux
+    hostname: metafeederusenet-nntmux
+    restart: unless-stopped
+    # No RAM cap: the header scanner's working set scales with your scan
+    # breadth (group set x backfill depth), an operator choice (see tips), not
+    # something this compose can size ahead of time.
+    environment:
+      # Shell-script-consumed vars — the entrypoint's own `mkdir -p` step reads
+      # these from the PROCESS environment, not the mounted .env. Keep in
+      # lockstep with the matching keys in nntmux.env below.
+      PATH_TO_NZBS: /app/storage/nzb/
+      COVERS_PATH: /app/storage/covers
+      TEMP_UNRAR_PATH: /app/storage/tmp/unrar/
+      TEMP_UNZIP_PATH: /app/storage/tmp/unzip/
+      ELASTICSEARCH_ENABLED: "false"
+    volumes:
+      # The complete, hand-filled .env (trap #1) — a full-file mount rather
+      # than individual `environment:` keys. Writable: `nntmux:install`
+      # persists a generated APP_KEY back into it on first boot.
+      - /DATA/AppData/metafeederusenet/nntmux-env/nntmux.env:/app/.env:rw
+      # The .nzb store — shared with metafeederusenet-feeder below,
+      # read-write here (nntmux writes), read-only there (feeder only reads).
+      - /DATA/AppData/metafeederusenet/nntmux-storage/nzb:/app/storage/nzb:rw
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "-o", "/dev/null", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    depends_on:
+      metafeederusenet-db:
+        condition: service_healthy
+      metafeederusenet-redis:
+        condition: service_started
+      metafeederusenet-manticore:
+        condition: service_started
+    labels:
+      caddy_0: metafeederusenetnntmux-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: metafeederusenetnntmux-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: metafeederusenetnntmux-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - metafeederusenet
+      - pcs
+
+  # ---------------------------------------------------------------------------
+  # metafeederusenet-feeder — the usenet feeder sidecar (meta-feeder-usenet).
+  # Reads nntmux's release catalog + shared .nzb store; self-publishes
+  # resolved records + seeds the `.nzb` manifest to the shared MetaCore. The
+  # gateway reaches it directly on `pcs`; the human configures it through the
+  # AppShield gate below.
+  # ---------------------------------------------------------------------------
+  metafeederusenet-feeder:
+    image: ghcr.io/worph/meta-feeder-usenet:1.0.0
+    container_name: metafeederusenet-feeder
+    # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM instead
+    # of swap. Mirrors the dev sub-stack limits.
+    mem_limit: 256m
+    memswap_limit: 256m
+    hostname: metafeederusenet-feeder
+    restart: unless-stopped
+    user: "0:0"
+    expose:
+      - 8080
+    environment:
+      # INFRA-ONLY env (the "config: no env if in webui" rule). Operator
+      # config beyond the two DB/path seeds below — TMDB token / language,
+      # meta-core URL — is read from the persisted config.json (this
+      # feeder's config page behind the AppShield gate). These env vars are
+      # wiring only: the enrichment sidecars, the enrich callback, the peer id.
+      RUST_LOG: "info,meta_feeder=info"
+      # The peer id stamped into provenance.gateway_peer on every record this
+      # feeder self-publishes — names the GATEWAY this feeder serves, not the
+      # feeder itself (analytics group by it). Without it, falls back to HOSTNAME.
+      META_GATEWAY_PEER_ID: "metagateway"
+      FILENAME_PARSER_URL: "http://metafeederusenet-filename-parser:8080"
+      TMDB_PLUGIN_URL: "http://metafeederusenet-tmdb:8080"
+      META_FEEDER_CALLBACK_URL: "http://metafeederusenet-feeder:8080/enrich/callback"
+      # First-boot SEED only (the persisted config.json wins on every later
+      # restart — change these on the /config page after first boot, not here).
+      NNTMUX_DB_URL: "mysql://nntmux:${APP_DEFAULT_PASSWORD}@metafeederusenet-db:3306/nntmux"
+      NNTMUX_NZB_PATH: "/nntmux-nzb"
+      TZ: "$TZ"
+    volumes:
+      # Persist feeder config (config.json saved via the config UI) + redb cache.
+      - /DATA/AppData/metafeederusenet/feeder-state:/data/meta-feeder:rw
+      # Same volume nntmux writes .nzb.gz into — read-only here.
+      - /DATA/AppData/metafeederusenet/nntmux-storage/nzb:/nntmux-nzb:ro
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    depends_on:
+      metafeederusenet-nntmux:
+        condition: service_healthy
+      metafeederusenet-filename-parser:
+        condition: service_started
+      metafeederusenet-tmdb:
+        condition: service_started
+    networks:
+      - metafeederusenet
+      - pcs
+
+  # ---------------------------------------------------------------------------
+  # Bundled enrichment plugins (self-contained). filename-parser per file; tmdb
+  # once per release — tmdb writes posters/backdrops to the shared meta-core's
+  # WebDAV (over pcs) so the ingester seeds them. No healthcheck: these plugin
+  # images don't ship one (curl absent).
+  # ---------------------------------------------------------------------------
+  metafeederusenet-filename-parser:
+    image: ghcr.io/worph/metamesh-plugin-filename-parser:1.0.1
+    container_name: metafeederusenet-filename-parser
+    mem_limit: 256m
+    memswap_limit: 256m
+    hostname: metafeederusenet-filename-parser
+    restart: unless-stopped
+    expose:
+      - 8080
+    environment:
+      EMIT_TITLE_TAGS: "true"
+    networks:
+      - metafeederusenet
+
+  metafeederusenet-tmdb:
+    image: ghcr.io/worph/metamesh-plugin-tmdb:1.0.0
+    container_name: metafeederusenet-tmdb
+    mem_limit: 384m
+    memswap_limit: 384m
+    hostname: metafeederusenet-tmdb
+    restart: unless-stopped
+    expose:
+      - 8080
+    environment:
+      # Posters land in the shared meta-core (over pcs) so the ingester seeds
+      # them. LOAD-BEARING at metamesh-plugin-tmdb:1.0.0 — do NOT remove (see
+      # the sibling feeder apps' identical note: the published image needs
+      # this, unlike the source build the dev stack runs).
+      WEBDAV_URL: "http://metacore-app:9000/webdav"
+    volumes:
+      - /DATA/AppData/metafeederusenet/tmdb-cache:/cache
+    networks:
+      - metafeederusenet
+      - pcs
+
+  # ---------------------------------------------------------------------------
+  # AppShield gate — the feeder's config UI (nntmux DB URL / nzb path, TMDB
+  # token) behind Yundera OIDC SSO. container_name == subdomain prefix. The
+  # gateway still reaches the feeder directly on `pcs` (this gate is for the
+  # human only); index → /config.
+  # ---------------------------------------------------------------------------
+  metafeederusenet:
+    image: ghcr.io/yundera/appshield:2.0.6
+    container_name: metafeederusenet
+    hostname: metafeederusenet
+    restart: unless-stopped
+    user: "0:0"
+    expose:
+      - 80
+    environment:
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
+      BACKEND_HOST: "metafeederusenet-feeder"
+      BACKEND_PORT: "8080"
+      LISTEN_PORT: "80"
+    labels:
+      caddy_0: metafeederusenet-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: metafeederusenet-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: metafeederusenet-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - metafeederusenet-feeder
+    networks:
+      - metafeederusenet
+      - pcs
+
+networks:
+  metafeederusenet:
+    name: metafeederusenet
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+
+  author: Worph Team
+  category: Media
+  developer: Aptero Team
+  main: metafeederusenet
+  webui_port: 80
+  index: /config
+
+  description:
+    en_us: |
+      **A standalone, self-hosted Usenet feeder for the MetaMesh network.**
+
+      MetaFeeder · Usenet runs its own Usenet header scan (a bundled
+      **nntmux** indexer) instead of proxying a third-party Newznab site.
+      Because it finds article Message-IDs itself at scan time, it mints a
+      **portable** posting reference — no indexer host baked in, redeemable by
+      any peer with a plain NNTP provider account. It adds a Usenet source
+      alongside **MetaFeeder - Indexer**; it doesn't replace it.
+
+      **Self-contained:** ships its own nntmux scanner (MariaDB + Redis +
+      Manticore) + filename-parser + TMDB enrichment, so each release gets a
+      clean title, poster and plot.
+
+      **You still need a Usenet provider account** (NNTP login) — this app
+      scans headers, it does not supply an account. Configure it after
+      install (see the install tips).
+
+      **Also requires:** **MetaGateway** — its meta-core stores the resolved
+      records and announces them to the swarm. The gateway must list this
+      feeder in its config.
+
+    fr_fr: |
+      **Un feeder Usenet autonome et auto-hébergé pour le réseau MetaMesh.**
+
+      MetaFeeder · Usenet effectue lui-même le scan des en-têtes Usenet (un
+      indexeur **nntmux** embarqué) plutôt que de passer par un site Newznab
+      tiers. Comme il retrouve les Message-ID des articles dès le scan, il
+      génère une référence de posting **portable** — sans hôte d'indexeur
+      intégré, exploitable par n'importe quel pair disposant d'un simple
+      compte NNTP. Il ajoute une source Usenet en plus de **MetaFeeder -
+      Indexer**, sans le remplacer.
+
+      **Autonome :** embarque son scanner nntmux (MariaDB + Redis + Manticore)
+      + ses plugins filename-parser + TMDB.
+
+      **Un compte fournisseur Usenet (NNTP) reste nécessaire** — cette app
+      scanne les en-têtes, elle ne fournit pas d'accès. À configurer après
+      installation (voir les conseils d'installation).
+
+      **Nécessite aussi :** l'app **MetaGateway** (son meta-core stocke et
+      annonce les enregistrements).
+
+  tagline:
+    en_us: Self-hosted Usenet header scanner (bundled nntmux) for the MetaMesh network
+    fr_fr: Scanner Usenet auto-hébergé (nntmux inclus) pour le réseau MetaMesh
+
+  title:
+    en_us: MetaFeeder · Usenet
+
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederUsenet/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederUsenet/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederUsenet/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederUsenet/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederUsenet/thumbnail.png
+
+  store_app_id: metafeederusenet
+  is_uncontrolled: false
+
+  tips:
+    before_install:
+      en_us: |
+        **Install order:** install **MetaGateway** first (this feeder
+        publishes to its shared meta-core).
+
+        **After installing this app, a Usenet provider account is required**
+        (this scans headers itself — it needs a plain NNTP login):
+        1. Edit `/DATA/AppData/metafeederusenet/nntmux-env/nntmux.env` (via
+           SSH or a file-manager app) and fill in `NNTP_SERVER`, `NNTP_PORT`,
+           `NNTP_USERNAME`, `NNTP_PASSWORD` (use the SAME provider account
+           your MetaShare/meta-share peer is already credentialed against —
+           one account, two consumers). Keep `NNTP_CONNECTIONS` low (1-2):
+           the scanner and playback share the same provider connection slots,
+           so a greedy value here stalls playback mid-stream elsewhere.
+        2. Restart the nntmux container: `docker restart metafeederusenet-nntmux`.
+        3. **First boot only:** nntmux's install sequence caches its config
+           before generating an encryption key, so every page 500s until you
+           run `docker exec metafeederusenet-nntmux php artisan config:clear`
+           once. (`curl -sI https://metafeederusenetnntmux-<your-domain>/` — a
+           `500` means you need this; a `302` redirect to `/login` means
+           you're fine.)
+        4. Log in to the nntmux dashboard at the **MetaFeeder Usenet nntmux**
+           link (`ADMIN_USER=admin`, password = this app's auto-generated
+           default password — check CasaOS's app credentials panel) and
+           change it.
+        5. **Activate at least one usenet group** — seeded groups start
+           inactive, and scanning an inactive group silently finds nothing:
+           ```
+           docker exec metafeederusenet-db mariadb -unntmux -p"<password>" nntmux \
+             -e "UPDATE usenet_groups SET active=1, backfill=1 WHERE name IN ('alt.binaries.teevee');"
+           ```
+        6. Trigger a scan + collation (there's no scheduler wired up yet —
+           run this whenever you want fresh releases):
+           ```
+           docker exec metafeederusenet-nntmux sh -c '
+             php misc/update/update_binaries.php alt.binaries.teevee 50000 &&
+             php artisan tinker --execute="
+               (new Blacklight\processing\ProcessReleases)->processReleases(1, 1, \"alt.binaries.teevee\", new Blacklight\NNTP);
+             "'
+           ```
+        7. Open this app's config UI (the dashboard link) to optionally set a
+           TMDB v4 token for posters, then Save.
+        8. In **MetaGateway**, make sure this feeder is listed in its feeders
+           config (`http://metafeederusenet-feeder:8080`) so it gets
+           discovered.
+
+        **Note:** which groups to scan, backfill depth and scan interval are
+        your call as the operator — pick them for your own catalog.
+
+        **Authentication:** the feeder's config UI is protected by Yundera's
+        Authelia (OIDC); nntmux uses its own login (seeded above).
+
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/metafeederusenet/db
+    mkdir -p /DATA/AppData/metafeederusenet/nntmux-env
+    mkdir -p /DATA/AppData/metafeederusenet/nntmux-storage/nzb
+    mkdir -p /DATA/AppData/metafeederusenet/nntmux-storage/covers
+    mkdir -p /DATA/AppData/metafeederusenet/feeder-state
+    mkdir -p /DATA/AppData/metafeederusenet/tmdb-cache
+    # Seed nntmux's .env (trap #1 — must be a complete file, see header).
+    # NNTP_* are deliberately left blank; fill them in per the install tips.
+    if [ ! -f /DATA/AppData/metafeederusenet/nntmux-env/nntmux.env ]; then
+      cat > /DATA/AppData/metafeederusenet/nntmux-env/nntmux.env <<NNTMUX_ENV
+    DB_CONNECTION=mariadb
+    DB_HOST=metafeederusenet-db
+    DB_PORT=3306
+    DB_SOCKET=
+    DB_USERNAME=nntmux
+    DB_PASSWORD=$APP_DEFAULT_PASSWORD
+    DB_DATABASE=nntmux
+
+    MANTICORESEARCH_HOST=metafeederusenet-manticore
+    MANTICORESEARCH_PORT=9308
+
+    ELASTICSEARCH_HOST=localhost
+    ELASTICSEARCH_PORT=9200
+    ELASTICSEARCH_SCHEME=http
+    ELASTICSEARCH_USER=
+    ELASTICSEARCH_PASS=
+    ELASTICSEARCH_LOGGING=false
+    ELASTICSEARCH_ENABLED=false
+
+    NNTP_COMPRESSED_HEADERS=false
+    USE_ALTERNATE_NNTP_SERVER=false
+
+    NNTP_USERNAME=
+    NNTP_PASSWORD=
+    NNTP_SERVER=
+    NNTP_PORT=563
+    NNTP_CONNECTIONS=1
+    NNTP_SSLENABLED=true
+    NNTP_SOCKET_TIMEOUT=120
+
+    NNTP_USERNAME_A=
+    NNTP_PASSWORD_A=
+    NNTP_SERVER_A=
+    NNTP_PORT_A=
+    NNTP_CONNECTIONS_A=
+    NNTP_SSLENABLED_A=false
+    NNTP_SOCKET_TIMEOUT_A=120
+
+    NN_MULTIPROCESSING_MAX_CHILD_TIME=1800
+
+    ADMIN_USER=admin
+    ADMIN_PASS=$APP_DEFAULT_PASSWORD
+    ADMIN_EMAIL=admin@$APP_DOMAIN
+
+    APP_NAME=NNTmux
+    APP_ENV=production
+    APP_DEBUG=false
+    APP_TIMEZONE=UTC
+    APP_URL=https://metafeederusenetnntmux-$APP_DOMAIN
+
+    APP_LOCALE=en
+    APP_FALLBACK_LOCALE=en
+    APP_FAKER_LOCALE=en_US
+
+    APP_MAINTENANCE_DRIVER=file
+    APP_MAINTENANCE_STORE=database
+
+    BCRYPT_ROUNDS=12
+    APP_KEY=
+    LOG_CHANNEL=stack
+    LOG_STACK=single
+    PASSWORD_HASH=argon2id
+
+    BROADCAST_CONNECTION=log
+    CACHE_STORE=file
+    QUEUE_CONNECTION=sync
+
+    REDIS_HOST=metafeederusenet-redis
+    REDIS_PASSWORD=null
+    REDIS_PORT=6379
+    REDIS_CLIENT=phpredis
+
+    SESSION_DRIVER=file
+    SESSION_DOMAIN=null
+    SESSION_SECURE_COOKIE=false
+    SESSION_ENCRYPT=false
+    SESSION_COOKIE=nntmux
+    SESSION_PATH=/
+
+    SCOUT_DRIVER=database
+    SCOUT_QUEUE=true
+
+    ITEMS_PER_PAGE=50
+    ITEMS_PER_COVER_PAGE=25
+    MAX_PAGER_RESULTS=125000
+    ECHOCLI=true
+    RENAME_PAR2=false
+    ADD_PAR2=false
+    RENAME_MUSIC_MEDIAINFO=true
+    CACHE_EXPIRY_SHORT=5
+    CACHE_EXPIRY_MEDIUM=10
+    CACHE_EXPIRY_LONG=15
+
+    SSL_CAFILE=
+    SSL_CAPATH=
+    SSL_VERIFY_PEER=false
+    SSL_VERIFY_HOST=false
+    SSL_ALLOW_SELF_SIGNED=true
+
+    SMARTY_DEBUG=false
+    SMARTY_CACHING=false
+    SMARTY_CACHE_LIFE=120
+    SMARTY_COMPILE_CHECK=false
+    SMARTY_FORCE_COMPILE=false
+    SMARTY_CACHE_DRIVER=file
+
+    TMDB_APIKEY=9a4e16adddcd1e86da19bcaf5ff3c2a3
+    TMDB_CACHE=false
+    TMDB_LOG=false
+    TVDB_APIKEY=ef6fb572-bcee-4d99-9b52-90549ad7553a
+    TVDB_PIN=
+
+    TEMP_UNRAR_PATH=/app/storage/tmp/unrar/
+    TEMP_UNZIP_PATH=/app/storage/tmp/unzip/
+    VIEW_COMPILED_PATH=/app/storage/framework/views
+    PATH_TO_NZBS=/app/storage/nzb/
+    COVERS_PATH=/app/storage/covers
+
+    TELESCOPE_ENABLED=false
+    PURGE_INACTIVE_USERS=false
+    OTP_ENABLED=false
+    CHECK_PASSWORDED_RARS=false
+    DELETE_PASSWORDED_RELEASES=false
+    DELETE_POSSIBLE_PASSWORDED_RELEASES=false
+    EXTRACT_USING_RARINFO=false
+    PRIVATE_PROFILES=true
+    STORE_USER_IP=false
+    FORUM_FRONTEND_ENABLED=false
+    NNTMUX_ENV
+    fi

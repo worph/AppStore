@@ -241,7 +241,7 @@ services:
   # `metawatch-<user>.<domain>`.
   # ---------------------------------------------------------------------------
   metawatch:
-    image: ghcr.io/yundera/appshield:2.0.5
+    image: ghcr.io/yundera/appshield:2.0.6
     container_name: metawatch
     hostname: metawatch
     restart: unless-stopped
@@ -294,7 +294,7 @@ services:
   # metagatewaycore / metagatewayshare gates.
   # ---------------------------------------------------------------------------
   metawatchshare:
-    image: ghcr.io/yundera/appshield:2.0.5
+    image: ghcr.io/yundera/appshield:2.0.6
     container_name: metawatchshare
     hostname: metawatchshare
     restart: unless-stopped
@@ -323,7 +323,7 @@ services:
       - pcs
 
   metawatchsearch:
-    image: ghcr.io/yundera/appshield:2.0.5
+    image: ghcr.io/yundera/appshield:2.0.6
     container_name: metawatchsearch
     hostname: metawatchsearch
     restart: unless-stopped

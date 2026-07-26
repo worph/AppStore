@@ -57,7 +57,7 @@ services:
   # Our public URL is `metacore-${APP_DOMAIN}`, so the proxy container is named
   # `metacore` and the backend takes the `-app` suffix.
   metacore:
-    image: ghcr.io/yundera/appshield:2.0.5
+    image: ghcr.io/yundera/appshield:2.0.6
     container_name: metacore
     hostname: metacore
     restart: unless-stopped

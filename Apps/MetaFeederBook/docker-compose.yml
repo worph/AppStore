@@ -46,7 +46,7 @@ services:
   # from it). The gateway still reaches the feeder directly on `pcs`; index → /config.
   # ---------------------------------------------------------------------------
   metafeederbook:
-    image: ghcr.io/yundera/appshield:2.0.5
+    image: ghcr.io/yundera/appshield:2.0.6
     container_name: metafeederbook
     hostname: metafeederbook
     restart: unless-stopped

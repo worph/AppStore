@@ -217,7 +217,7 @@ services:
   # URL prefix (`metagateway`) for the registrar's redirect-URI allowlist.
   # ===========================================================================
   metagateway:
-    image: ghcr.io/yundera/appshield:2.0.5
+    image: ghcr.io/yundera/appshield:2.0.6
     container_name: metagateway
     hostname: metagateway
     restart: unless-stopped
@@ -273,7 +273,7 @@ services:
   # feeders reach them over `pcs`, so there's no gate for them here.
   # ===========================================================================
   metagatewaycore:
-    image: ghcr.io/yundera/appshield:2.0.5
+    image: ghcr.io/yundera/appshield:2.0.6
     container_name: metagatewaycore
     hostname: metagatewaycore
     restart: unless-stopped
@@ -302,7 +302,7 @@ services:
       - pcs
 
   metagatewayshare:
-    image: ghcr.io/yundera/appshield:2.0.5
+    image: ghcr.io/yundera/appshield:2.0.6
     container_name: metagatewayshare
     hostname: metagatewayshare
     restart: unless-stopped

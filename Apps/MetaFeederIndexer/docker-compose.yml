@@ -144,7 +144,7 @@ services:
   # index → /config.
   # ---------------------------------------------------------------------------
   metafeederindexer:
-    image: ghcr.io/yundera/appshield:2.0.5
+    image: ghcr.io/yundera/appshield:2.0.6
     container_name: metafeederindexer
     hostname: metafeederindexer
     restart: unless-stopped

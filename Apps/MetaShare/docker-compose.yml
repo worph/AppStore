@@ -125,7 +125,7 @@ services:
   # Naming: container_name MUST equal the URL-prefix of the public hostname so
   # the registrar's redirect-URI allowlist accepts `metashare-<user>.<domain>`.
   metashare:
-    image: ghcr.io/yundera/appshield:2.0.5
+    image: ghcr.io/yundera/appshield:2.0.6
     container_name: metashare
     hostname: metashare
     restart: unless-stopped
