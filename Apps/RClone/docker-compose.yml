@@ -2,7 +2,7 @@ name: rclone
 services:
   rclone:
     user: $PUID:$PGID
-    image: rclone/rclone:1.70.3
+    image: rclone/rclone:1.74.4
     container_name: rclone
     hostname: rclone
     restart: unless-stopped
@@ -21,6 +21,7 @@ services:
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     volumes:
       - /DATA/AppData/rclone/config/:/config/rclone/
+      - /DATA/AppData/rclone/cache/:/cache/
       - /DATA/Rclone/:/data/:rshared,z
       - /etc/passwd:/etc/passwd:ro
       - /etc/group:/etc/group:ro
