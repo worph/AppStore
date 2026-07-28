@@ -48,6 +48,49 @@ name: metafeederusenet
 # One FIRST-BOOT-ONLY loud bug: the entrypoint runs `config:cache` before
 # `key:generate`, so every session route 500s until you run
 # `docker exec metafeederusenet-nntmux php artisan config:clear` once. See tips.
+#
+# ⚠ Four more, found the hard way on a live box (2026-07-26) after this stack
+# came up with SEVEN healthy containers and returned ZERO results for every
+# query — the feeder answering `"Done"` and nothing else. None of them logs
+# anything; each one alone is enough to keep the catalog empty forever.
+#
+#   5. NEVER set a key in `nntmux.env` unless the value must DIFFER from the
+#      PHP default. `config/nntmux.php` does
+#      `env('NN_MULTIPROCESSING_MAX_CHILD_TIME', 1800)` and Laravel's `env()`
+#      returns STRINGS, so restating the default in the .env handed
+#      `Pool::timeout(float)` a `string("1800")` → TypeError → every Forking
+#      multiprocessing runner died on start. Those runners are exactly what a
+#      scan needs. This is trap #1's type-flavoured twin: a redundant
+#      restatement is not a no-op, it silently changes the value's TYPE. The
+#      key is therefore deliberately ABSENT from the seeded .env below (see the
+#      comment there); with it absent, `gettype()` reports `integer` and the
+#      runners execute. Same rule applies to any other key you are tempted to
+#      "document" by writing its default into the file.
+#      (Upstream record: meta-gateway `dev/docker-compose.feeder-usenet.yml`,
+#      the "CORRECTION (2026-07-26)" block.)
+#   6. The image runs `frankenphp` and NOTHING ELSE — no cron, no supervisord,
+#      no queue worker. nntmux's own `settings.running=1` therefore starts
+#      nothing: there is no process to read it. Even with valid NNTP creds and
+#      active groups the catalog stays empty permanently. That is why
+#      `metafeederusenet-scanner` below exists — it is the missing loop, run as
+#      a SECOND container off the same image so the web container's
+#      install/populate entrypoint stays untouched.
+#   7. The nntmux entrypoint RE-SEEDS `settings` and `usenet_groups` on EVERY
+#      container boot. Configuration applied before a restart silently reverts
+#      (observed: `running`→0, `delaytime`→2, every group→`active=0`). Apply
+#      group activation and scheduler settings AFTER the final restart, and
+#      re-check them after any `docker restart` / stack update.
+#   8. `settings.delaytime` (HOURS, default 2) stalls a backfilled catalog:
+#      `ProcessReleases` refuses to advance a collection until it has aged past
+#      it. That is correct for live tailing (a posting may still be uploading)
+#      and pointless for backfill, where every article is already days old —
+#      and the symptom, collections climbing while releases flatline, is
+#      indistinguishable from a broken pipeline because nothing logs an error.
+#      Because trap #7 re-seeds it back to 2 on every restart, the scanner
+#      loop below ASSERTS `delaytime=0` on each pass **while `backfill=1`** —
+#      the one setting it writes, making the tier self-healing across
+#      restarts. It is scoped to the backfill phase on purpose: with
+#      `backfill=0` (pure forward tailing) the operator's own value stands.
 # =============================================================================
 
 services:
@@ -60,8 +103,13 @@ services:
     container_name: metafeederusenet-db
     hostname: metafeederusenet-db
     restart: unless-stopped
-    mem_limit: 512m
-    memswap_limit: 512m
+    # 2g, not the 512m this shipped with: 512m is fine for an empty schema and
+    # far too small once the catalog is real. A header scan of a busy binary
+    # group builds `collections`/`binaries`/`parts` tables in the tens of
+    # millions of rows, and InnoDB starved of buffer pool turns collation into
+    # a disk-thrash that never catches up. Measured on a live box.
+    mem_limit: 2g
+    memswap_limit: 2g
     environment:
       MARIADB_DATABASE: nntmux
       MARIADB_USER: nntmux
@@ -125,9 +173,12 @@ services:
     container_name: metafeederusenet-nntmux
     hostname: metafeederusenet-nntmux
     restart: unless-stopped
-    # No RAM cap: the header scanner's working set scales with your scan
-    # breadth (group set x backfill depth), an operator choice (see tips), not
-    # something this compose can size ahead of time.
+    # The working set scales with scan breadth (group set x backfill depth), an
+    # operator choice (see tips), so this is a ceiling rather than a size: 3g
+    # is what a real corpus needed on a live box — 1536m was reached and
+    # exceeded by a single busy group's header scan. Raise it if you scan wide.
+    mem_limit: 3g
+    memswap_limit: 3g
     environment:
       # Shell-script-consumed vars — the entrypoint's own `mkdir -p` step reads
       # these from the PROCESS environment, not the mounted .env. Keep in
@@ -170,6 +221,78 @@ services:
     networks:
       - metafeederusenet
       - pcs
+
+  # ---------------------------------------------------------------------------
+  # metafeederusenet-scanner — the SCAN LOOP (trap #6). The nntmux image runs
+  # frankenphp and nothing else, so without this container nothing ever calls
+  # the scan/backfill/collate entry points and the catalog stays empty forever,
+  # no matter how correct the credentials, the groups or `settings.running` are.
+  #
+  # It is a second container off the SAME digest-pinned image, sharing the same
+  # `/app/.env` and the same nzb store, rather than a second process inside the
+  # web container — the web container's entrypoint runs install/populate under
+  # `set -e` and must keep it; here it is REPLACED by `entrypoint:` below so
+  # that install/populate does NOT run twice against one database.
+  #
+  # Every knob (interval, binaries on/off, backfill on/off, backfill_qty,
+  # backfill_days, running) is read from nntmux's own `settings` table at
+  # /admin/tmux-edit — deliberately NOT from new env vars here, which would
+  # make two sources of truth for one number.
+  # ---------------------------------------------------------------------------
+  metafeederusenet-scanner:
+    # MUST stay byte-identical to metafeederusenet-nntmux's pin above: the two
+    # containers share one `/app/.env` and one database schema, and the script
+    # below calls `misc/update/*.php` + `Blacklight\` classes by name.
+    image: pyrowman/nntmux@sha256:7fc221f7a806fee3e4a2145159e1a147962edc095282bdc692806968f791fabe
+    container_name: metafeederusenet-scanner
+    hostname: metafeederusenet-scanner
+    restart: unless-stopped
+    # Bypasses the image's own install/populate entrypoint on purpose — see the
+    # block comment above. Only the web container may run it.
+    entrypoint: ["/bin/sh", "/scanner.sh"]
+    # The image ships a HEALTHCHECK that curls its own web server. This
+    # container deliberately runs no web server — its entrypoint IS the scan
+    # loop — so the inherited probe can only ever fail. Observed live: a
+    # scanner actively backfilling and writing NZBs sitting at
+    # `Up 5 minutes (unhealthy)`.
+    #
+    # That is not cosmetic. A permanently-red container that is in fact working
+    # trains the operator to ignore health status, which is precisely how this
+    # stack's empty-catalog failure stayed invisible for so long — the feeder's
+    # own health() reporting `ok` over a zero-row catalog was the same bug from
+    # the other direction. Liveness for this container is its LOG
+    # (`docker logs -f metafeederusenet-scanner`), not a probe; a probe that
+    # cannot be honest is worse than none.
+    healthcheck:
+      disable: true
+    # A backfill pass holds a group's article range in memory; 2g is the
+    # headroom measured alongside nntmux's own 3g on a live box.
+    mem_limit: 2g
+    memswap_limit: 2g
+    environment:
+      # Same shell-script-consumed vars as metafeederusenet-nntmux: the wrapper
+      # scripts read these from the PROCESS environment, not from the mounted
+      # .env (trap #1). Keep the two blocks in lockstep.
+      PATH_TO_NZBS: /app/storage/nzb/
+      COVERS_PATH: /app/storage/covers
+      TEMP_UNRAR_PATH: /app/storage/tmp/unrar/
+      TEMP_UNZIP_PATH: /app/storage/tmp/unzip/
+      ELASTICSEARCH_ENABLED: "false"
+    volumes:
+      # The same .env the web container filled in — one credential set, one
+      # APP_KEY. Read-write only because Laravel's .env handling expects it.
+      - /DATA/AppData/metafeederusenet/nntmux-env/nntmux.env:/app/.env:rw
+      # nntmux writes .nzb.gz here; the feeder reads them read-only.
+      - /DATA/AppData/metafeederusenet/nntmux-storage/nzb:/app/storage/nzb:rw
+      # The loop itself, provisioned by pre-install-cmd below.
+      - /DATA/AppData/metafeederusenet/scanner/scanner.sh:/scanner.sh:ro
+    depends_on:
+      # Not just `started`: the loop's very first action is an artisan call, so
+      # it must not race the web container's install/migrate step.
+      metafeederusenet-nntmux:
+        condition: service_healthy
+    networks:
+      - metafeederusenet
 
   # ---------------------------------------------------------------------------
   # metafeederusenet-feeder — the usenet feeder sidecar (meta-feeder-usenet).
@@ -342,8 +465,16 @@ x-casaos:
       clean title, poster and plot.
 
       **You still need a Usenet provider account** (NNTP login) — this app
-      scans headers, it does not supply an account. Configure it after
-      install (see the install tips).
+      scans headers, it does not supply an account, and nothing at all is
+      indexed until you supply one. Configure it after install (see the
+      install tips). Keep the connection count low: this scanner and your
+      playback share the same provider connection slots.
+
+      **The catalog is not instant.** Once configured, a bundled scanner
+      container runs the header-scan / backfill / collation loop on the
+      interval you set. A first pass over a few busy binary groups pulls
+      tens of GB and runs for hours; a deep backfill is hundreds of GB. The
+      install tips show which knobs bound that.
 
       **Also requires:** **MetaGateway** — its meta-core stores the resolved
       records and announces them to the swarm. The gateway must list this
@@ -364,8 +495,17 @@ x-casaos:
       + ses plugins filename-parser + TMDB.
 
       **Un compte fournisseur Usenet (NNTP) reste nécessaire** — cette app
-      scanne les en-têtes, elle ne fournit pas d'accès. À configurer après
-      installation (voir les conseils d'installation).
+      scanne les en-têtes, elle ne fournit pas d'accès, et rien n'est indexé
+      tant que vous n'en fournissez pas un. À configurer après installation
+      (voir les conseils d'installation). Gardez un nombre de connexions
+      faible : le scan et la lecture partagent les mêmes créneaux du
+      fournisseur.
+
+      **Le catalogue ne se remplit pas instantanément.** Une fois configuré,
+      un conteneur de scan embarqué exécute la boucle scan / backfill /
+      collation à l'intervalle que vous choisissez. Un premier passage sur
+      quelques gros groupes binaires télécharge des dizaines de Go et dure
+      des heures ; un backfill profond, des centaines de Go.
 
       **Nécessite aussi :** l'app **MetaGateway** (son meta-core stocke et
       annonce les enregistrements).
@@ -413,21 +553,53 @@ x-casaos:
            link (`ADMIN_USER=admin`, password = this app's auto-generated
            default password — check CasaOS's app credentials panel) and
            change it.
+
+        **⚠ Do steps 5-6 AFTER your LAST restart, and re-check them after
+        every later restart or stack update.** The nntmux entrypoint RE-SEEDS
+        the `settings` and `usenet_groups` tables on EVERY container boot, so
+        anything you configure before a restart silently reverts (observed:
+        `running` back to 0, `delaytime` back to 2, every group back to
+        `active=0`) — with no error anywhere.
+
         5. **Activate at least one usenet group** — seeded groups start
-           inactive, and scanning an inactive group silently finds nothing:
+           inactive (`active=0`), and scanning an inactive group silently
+           touches nothing at all:
            ```
            docker exec metafeederusenet-db mariadb -unntmux -p"<password>" nntmux \
              -e "UPDATE usenet_groups SET active=1, backfill=1 WHERE name IN ('alt.binaries.teevee');"
            ```
-        6. Trigger a scan + collation (there's no scheduler wired up yet —
-           run this whenever you want fresh releases):
-           ```
-           docker exec metafeederusenet-nntmux sh -c '
-             php misc/update/update_binaries.php alt.binaries.teevee 50000 &&
-             php artisan tinker --execute="
-               (new Blacklight\processing\ProcessReleases)->processReleases(1, 1, \"alt.binaries.teevee\", new Blacklight\NNTP);
-             "'
-           ```
+        6. **Start the scheduler** in nntmux's admin UI (**/admin/tmux-edit**)
+           or directly in the `settings` table: set `running=1`, pick your
+           `monitor_delay` (seconds between passes), and turn on `binaries`
+           and/or `backfill` with a `backfill_qty` / `backfill_days` you're
+           happy to pay for. The bundled `metafeederusenet-scanner` container
+           polls these settings and runs the scan/backfill/collate loop for
+           you — the nntmux image itself ships NO cron and NO queue worker, so
+           this container is what actually makes a scan happen. There are
+           deliberately no env vars for these knobs: the `settings` table is
+           the single source of truth.
+
+           **`delaytime` (HOURS, default 2) will stall a backfilled catalog.**
+           nntmux won't turn a collection into a release until it has aged
+           past `delaytime`, which is right for tailing live posts and
+           pointless when backfilling history — and the symptom (collections
+           climbing, releases flat, zero query results) looks exactly like a
+           broken pipeline. **While `backfill=1`, the scanner forces
+           `delaytime=0` for you on every pass** and logs
+           `asserting delaytime=0 for the backfill phase (was N)` when it does
+           — it has to re-assert it because a container restart re-seeds the
+           value back to 2. This is the only setting the loop ever writes.
+
+           So if you want a different steady-state `delaytime`, **set
+           `backfill=0` first**, then set your value — otherwise the loop will
+           keep pulling it back to 0. With `backfill=0` the scanner never
+           touches it and `1`-`2` is the sensible live-tailing value.
+
+           **Budget the first scan.** A first header pass over a few busy
+           binary groups pulls tens of GB and runs for hours; a
+           full-retention backfill is hundreds of GB. `backfill_days` is the
+           knob that bounds it — start small, widen once you see releases.
+
         7. Open this app's config UI (the dashboard link) to optionally set a
            TMDB v4 token for posters, then Save.
         8. In **MetaGateway**, make sure this feeder is listed in its feeders
@@ -436,6 +608,11 @@ x-casaos:
 
         **Note:** which groups to scan, backfill depth and scan interval are
         your call as the operator — pick them for your own catalog.
+
+        **Watch the loop:** `docker logs -f metafeederusenet-scanner` prints
+        one line per pass (`header scan` / `backfill direct` / `collate
+        <group>` / `sleeping`). `settings.running=0` shows up there as
+        `idle`.
 
         **Authentication:** the feeder's config UI is protected by Yundera's
         Authelia (OIDC); nntmux uses its own login (seeded above).
@@ -447,6 +624,7 @@ x-casaos:
     mkdir -p /DATA/AppData/metafeederusenet/nntmux-storage/covers
     mkdir -p /DATA/AppData/metafeederusenet/feeder-state
     mkdir -p /DATA/AppData/metafeederusenet/tmdb-cache
+    mkdir -p /DATA/AppData/metafeederusenet/scanner
     # Seed nntmux's .env (trap #1 — must be a complete file, see header).
     # NNTP_* are deliberately left blank; fill them in per the install tips.
     if [ ! -f /DATA/AppData/metafeederusenet/nntmux-env/nntmux.env ]; then
@@ -489,7 +667,13 @@ x-casaos:
     NNTP_SSLENABLED_A=false
     NNTP_SOCKET_TIMEOUT_A=120
 
-    NN_MULTIPROCESSING_MAX_CHILD_TIME=1800
+    # NN_MULTIPROCESSING_MAX_CHILD_TIME is deliberately ABSENT (trap #5).
+    # Writing it here, even as its own default of 1800, hands
+    # Pool::timeout(float) a string via Laravel's env(), which returns STRINGS,
+    # and every Forking multiprocessing runner dies with a TypeError.
+    # RULE for this whole file: never set a key unless the value must DIFFER
+    # from the PHP default in config/nntmux.php. Restating a default is not
+    # documentation, it is a type change.
 
     ADMIN_USER=admin
     ADMIN_PASS=$APP_DEFAULT_PASSWORD
@@ -581,3 +765,111 @@ x-casaos:
     FORUM_FRONTEND_ENABLED=false
     NNTMUX_ENV
     fi
+    # Seed the scan loop run by metafeederusenet-scanner (trap #6). Unlike
+    # nntmux.env above this is NOT guarded by `[ ! -f ]` and is NOT operator
+    # config: it is shipped code, so a store update must be able to replace a
+    # stale copy. Every tunable it reads lives in nntmux's `settings` table.
+    # Quoted heredoc delimiter ('SCANNER_SH') — the script contains $, \ and
+    # nested quotes that must reach the file verbatim, unexpanded.
+    cat > /DATA/AppData/metafeederusenet/scanner/scanner.sh <<'SCANNER_SH'
+    #!/bin/sh
+    # nntmux scan launcher.
+    #
+    # The pyrowman/nntmux image runs frankenphp and NOTHING else: no cron, no
+    # supervisord, no queue worker. So `settings.running=1` changes nothing on
+    # its own, because nothing ever starts the loop. This is that loop.
+    #
+    # It runs as a SECOND CONTAINER off the same image + the same /app/.env and
+    # nzb volume, rather than as a second process inside the web container, so
+    # the web container's entrypoint (install/populate under `set -e`) is left
+    # untouched.
+    #
+    # INVOCATION IS NOT FREE CHOICE. Measured PER RUNNER on a live box, NOT a
+    # blanket "Forking works":
+    #   * multiprocessing/binaries.php   — Forking OK.
+    #   * multiprocessing/backfill.php   — NO-OP. Reports "...3 job(s) to do
+    #     using a max of 0 child process(es)" and returns in 0s having done
+    #     nothing. Backfill must be driven DIRECTLY, per group (see the
+    #     backfill block below).
+    #   * collation MUST go through tinker/ProcessReleases DIRECTLY.
+    #     multiprocessing/releases.php aborts every batch on a benign PHP
+    #     warning (ReleaseCleaning.php:165) that turns fatal inside the Spatie
+    #     child -> 0 releases while collections pile into the tens of
+    #     thousands.
+    #
+    # Every knob comes from nntmux's own `settings` table (edited at
+    # /admin/tmux-edit), never from env — otherwise there are two sources of
+    # truth for one number.
+    set -u
+
+    cd /app || exit 1
+
+    setting()     { php artisan tinker --execute="echo DB::table('settings')->where('name','$1')->value('value');" 2>/dev/null | tr -dc '0-9'; }
+    set_setting() { php artisan tinker --execute="DB::table('settings')->where('name','$1')->update(['value'=>'$2']);" >/dev/null 2>&1; }
+    groups()  { php artisan tinker --execute="foreach (DB::table('usenet_groups')->where('active',1)->pluck('name') as \$g) echo \$g, PHP_EOL;" 2>/dev/null | grep -E '^[a-z0-9.]+$'; }
+
+    log() { echo "[scanner $(date -u +%H:%M:%S)] $*"; }
+
+    log "launcher started"
+    while true; do
+        if [ "$(setting running)" != "1" ]; then
+            log "settings.running=0 — idle"
+            sleep 30
+            continue
+        fi
+
+        if [ "$(setting binaries)" = "1" ]; then
+            qty="$(setting backfill_qty)"; [ -n "$qty" ] || qty=20000
+            log "header scan (qty=$qty)"
+            php misc/update/multiprocessing/binaries.php "$qty" 2>&1 | tail -3
+        fi
+
+        # Backfill must run DIRECT, per group. multiprocessing/backfill.php
+        # reports "max of 0 child process(es)" and silently does nothing — the
+        # Forking wrapper leaves maxProcesses=0 for this runner specifically.
+        # Depth is capped by settings.backfill_days, so this reaches back that
+        # far and then stops advancing; it is NOT a full-retention backfill.
+        if [ "$(setting backfill)" = "1" ]; then
+            # The ONLY setting this loop writes. `delaytime` (hours, default 2)
+            # blocks ProcessReleases from advancing a collection until it ages
+            # past it. Correct for the leading edge — a posting may still be
+            # uploading — but pointless for backfill, where every article is
+            # already days old. Left at 2 during backfill it stalls the catalog
+            # for two hours with a failure mode indistinguishable from a broken
+            # pipeline (collections climb, releases flatline, nothing logs an
+            # error).
+            #
+            # Asserted every pass, not once at boot, because the nntmux
+            # entrypoint RE-SEEDS `settings` on every container start (trap #7)
+            # — a restart silently puts this back to 2 and the tier quietly
+            # stops producing. Scoped to `backfill=1` so a pure forward-tailing
+            # deployment (`backfill=0`) keeps the operator's own value: this is
+            # a per-phase mode, not a preference we get to override.
+            if [ "$(setting delaytime)" != "0" ]; then
+                log "asserting delaytime=0 for the backfill phase (was $(setting delaytime))"
+                set_setting delaytime 0
+            fi
+            qty="$(setting backfill_qty)"; [ -n "$qty" ] || qty=20000
+            log "backfill direct (backfill_days=$(setting backfill_days), qty=$qty)"
+            groups | while read -r g; do
+                [ -n "$g" ] || continue
+                php misc/update/backfill.php "$g" "$qty" 2>&1 | grep -iE "articles|backfill|Group|no new" | tail -2
+            done
+        fi
+
+        # Collation, per active group, DIRECT (never multiprocessing/releases.php).
+        # Never wrap this in a short `timeout`: killing it between the release
+        # INSERT and createNZBs() leaves a release row with no .nzb.gz, which
+        # the feeder then correctly skips forever.
+        groups | while read -r g; do
+            [ -n "$g" ] || continue
+            log "collate $g"
+            php artisan tinker --execute="(new Blacklight\\processing\\ProcessReleases)->processReleases(1, 1, \"$g\", new Blacklight\\NNTP);" 2>&1 | grep -iE "releases (ready|created)|Added [0-9]+ releases|NZB" | tail -3
+        done
+
+        delay="$(setting monitor_delay)"; [ -n "$delay" ] || delay=30
+        log "pass complete; sleeping ${delay}s"
+        sleep "$delay"
+    done
+    SCANNER_SH
+    chmod 755 /DATA/AppData/metafeederusenet/scanner/scanner.sh
