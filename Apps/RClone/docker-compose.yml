@@ -6,6 +6,13 @@ services:
     container_name: rclone
     hostname: rclone
     restart: unless-stopped
+    cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 256M
     expose:
       - 80
     networks:
