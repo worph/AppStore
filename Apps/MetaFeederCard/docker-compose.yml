@@ -43,7 +43,7 @@ services:
   # below.
   # ---------------------------------------------------------------------------
   metafeedercard-feeder:
-    image: ghcr.io/worph/meta-feeder-card:1.0.0
+    image: ghcr.io/worph/meta-feeder-card:1.0.1
     container_name: metafeedercard-feeder
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM instead of
     # swap. This feeder holds no bytes and does far less than the indexer feeder

@@ -18,7 +18,7 @@ services:
     # RSA-keyed; without `rsa` the noise handshake fails and this peer never
     # actually reaches the DHT) + P2P_ANNOUNCE support so remote archivists can
     # dial this seeder.
-    image: ghcr.io/worph/meta-share:1.0.13
+    image: ghcr.io/worph/meta-share:1.0.22
     container_name: metashare-app
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
     # instead of swap. Mirrors the dev sub-stack limits.

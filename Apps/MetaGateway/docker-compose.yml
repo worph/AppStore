@@ -35,7 +35,7 @@ services:
   # ===========================================================================
   metagateway-core:
     # 1.0.1 carries the new meta-core API (records cids/ set, identity).
-    image: ghcr.io/worph/meta-core:1.0.1
+    image: ghcr.io/worph/meta-core:1.0.7
     container_name: metagateway-core
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
     # instead of swap. Mirrors the dev sub-stack limits.
@@ -75,7 +75,7 @@ services:
   metagateway-share:
     # 1.0.8 = rsa-enabled libp2p (joins the public IPFS DHT — see metagateway-app)
     # + P2P_ANNOUNCE support so remote peers can dial this bitswap seeder.
-    image: ghcr.io/worph/meta-share:1.0.8
+    image: ghcr.io/worph/meta-share:1.0.22
     container_name: metagateway-share
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
     # instead of swap. Mirrors the dev sub-stack limits.
@@ -149,7 +149,7 @@ services:
     # P2P listen/announce so it's discoverable + dialable off-host + the
     # 2026-07 discovery/filters fixes that make the meta-search fan-out
     # actually route `fileType:video` queries here.
-    image: ghcr.io/worph/meta-gateway:1.0.12
+    image: ghcr.io/worph/meta-gateway:1.0.22
     container_name: metagateway-app
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
     # instead of swap. Mirrors the dev sub-stack limits.

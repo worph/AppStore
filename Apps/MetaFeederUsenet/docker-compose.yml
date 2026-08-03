@@ -302,7 +302,7 @@ services:
   # AppShield gate below.
   # ---------------------------------------------------------------------------
   metafeederusenet-feeder:
-    image: ghcr.io/worph/meta-feeder-usenet:1.0.0
+    image: ghcr.io/worph/meta-feeder-usenet:1.0.1
     container_name: metafeederusenet-feeder
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM instead
     # of swap. Mirrors the dev sub-stack limits.

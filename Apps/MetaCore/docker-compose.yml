@@ -5,7 +5,7 @@ services:
   # Public ingress goes through the `metacore` hash-lock proxy below — this
   # service has no public Caddy labels and no exposed host ports.
   metacore-app:
-    image: ghcr.io/worph/meta-core:1.0.1
+    image: ghcr.io/worph/meta-core:1.0.7
     container_name: metacore-app
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
     # instead of swap. Mirrors the dev sub-stack limits.
@@ -31,6 +31,18 @@ services:
 
       # Application cache storage
       - /DATA/AppData/metacore/cache:/data/cache
+
+      # Plugin output — gateway/feeder-published artwork (posters, backdrops)
+      # lands here via meta-core's WebDAV endpoint, and every record's
+      # `filePath` points into it. This MUST be a bind mount: without it the
+      # directory is the container's writable layer, so any `docker compose
+      # up -d` that recreates metacore-app silently deletes every poster while
+      # Redis keeps pointing at them. That is exactly what happened on
+      # watch.nsl.sh on 2026-08-03 (270 files → 0), and it is the reason a
+      # fraction of poster CIDs 404 with a healthy-looking record behind them.
+      # metacore-app is the only service that mounts /files; the gateway and
+      # feeders write here over HTTP, so this one mount covers all of them.
+      - /DATA/AppData/metacore/plugin:/files/plugin:rw
 
     environment:
       - BASE_URL=https://metacore-$APP_DOMAIN
@@ -195,3 +207,4 @@ x-casaos:
 
   pre-install-cmd: |
     mkdir -p /DATA/AppData/metacore/meta-core
+    mkdir -p /DATA/AppData/metacore/plugin/share

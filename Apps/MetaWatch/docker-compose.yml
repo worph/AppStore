@@ -29,7 +29,7 @@ services:
   metawatch-core:
     # 1.0.1 carries the identity API (commit 52f5b5c) required for MetaWatch
     # sign-in / keypair generation; 1.0.0 predates it.
-    image: ghcr.io/worph/meta-core:1.0.1
+    image: ghcr.io/worph/meta-core:1.0.7
     container_name: metawatch-core
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
     # instead of swap. Mirrors the dev sub-stack limits.
@@ -68,7 +68,7 @@ services:
     # RSA-keyed bootstrap.libp2p.io nodes) and therefore to DISCOVER remote
     # gateways via the kad `metamesh-gateway` provider namespace. Without it
     # this peer only ever sees same-host mDNS peers.
-    image: ghcr.io/worph/meta-search:1.0.2
+    image: ghcr.io/worph/meta-search:1.0.9
     container_name: metawatch-search
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
     # instead of swap. Mirrors the dev sub-stack limits.
@@ -137,7 +137,7 @@ services:
     # the 1.0.8 floor: rsa-enabled libp2p (joins the public IPFS DHT) +
     # P2P_ANNOUNCE so remote peers can dial this transport peer to fetch the
     # bytes it seeds (fetch-implies-seed). Without rsa it never reaches the DHT.
-    image: ghcr.io/worph/meta-share:1.0.13
+    image: ghcr.io/worph/meta-share:1.0.22
     container_name: metawatch-share
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
     # instead of swap. Mirrors the dev sub-stack limits.
@@ -196,7 +196,7 @@ services:
   # My List + Continue Watching persist in /DATA/AppData/metawatch/data.
   # ---------------------------------------------------------------------------
   metawatch-app:
-    image: ghcr.io/worph/meta-watch:1.0.6
+    image: ghcr.io/worph/meta-watch:1.0.21
     container_name: metawatch-app
     hostname: metawatch-app
     restart: unless-stopped
