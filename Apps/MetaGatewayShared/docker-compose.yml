@@ -1,0 +1,245 @@
+name: metagateway
+
+# =============================================================================
+# MetaGateway (shared backend) — source-bridging tier for the MetaMesh network.
+#
+# This is the SHARED-BACKEND variant of MetaGateway. It ships only the gateway
+# dispatcher plus the card feeder, and REUSES the standalone MetaCore and
+# MetaShare apps already installed on the box:
+#
+#   metagateway-app  →  the dispatcher / gateway UI
+#   metagateway-card →  the card feeder (curated-row cards for MetaWatch's wall)
+#   metagateway      →  AppShield OIDC gate in front of the dispatcher
+#
+# Contrast with the `MetaGateway` app in this store, which is SELF-CONTAINED
+# (its own metagateway-core + metagateway-share + bundled Prowlarr/Tribler).
+# Pick exactly one: both use compose project `metagateway` and the same
+# /DATA/AppData/metagateway paths, so they cannot be installed side by side.
+#
+# Deployed and validated on watch.nsl.sh (2026-08-04).
+#
+# REQUIRES, on the same box and on the `pcs` network:
+#   - MetaCore  → provides metacore-app (record store the dispatcher writes to)
+#   - MetaShare → provides metashare-app (seeds the CIDs the gateway resolves)
+# Indexer sources (torznab/Prowlarr and friends) are configured at runtime in
+# gateway-config.json under /DATA/AppData/metagateway/state — not here. Install
+# the separate **Prowlarr** and **MetaFeederIndexer** apps to feed it.
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # metagateway-app — the gateway dispatcher. Resolves external-source queries
+  # into MetaMesh records and writes them to the standalone metacore-app, whose
+  # co-located metashare-app then seeds the resolved CIDs.
+  # ---------------------------------------------------------------------------
+  metagateway-app:
+    image: ghcr.io/worph/meta-gateway:1.0.23
+    container_name: metagateway-app
+    hostname: metagateway-app
+    restart: unless-stopped
+    user: "1000:1000"
+    cpu_shares: 40
+    # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
+    # instead of swap. Mirrors the dev sub-stack limits.
+    mem_limit: 1g
+    memswap_limit: 1g
+    expose:
+      - 3000
+    volumes:
+      # gateway-config.json (source definitions, feeder URLs) + dispatcher state.
+      - /DATA/AppData/metagateway/state:/data/meta-gateway:rw
+    environment:
+      META_GATEWAY_BASE_URL: "http://metagateway-app:3000"
+      META_GATEWAY_PEER_ID: "metagateway"
+      TZ: "$TZ"
+    depends_on:
+      metagateway-card:
+        condition: service_healthy
+        required: false
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    labels:
+      icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaGateway/icon.png
+    networks:
+      - metagateway
+      - pcs
+
+  # ---------------------------------------------------------------------------
+  # metagateway-card — the CARD feeder. Answers the curated-row card queries
+  # that populate MetaWatch's home wall (one query per row, no per-title
+  # anchoring). Optional: the dispatcher starts without it, but the wall on
+  # every connected MetaWatch stays empty.
+  #
+  # Runs as 10001:999 — the uid/gid baked into the meta-feeder-card image.
+  # ---------------------------------------------------------------------------
+  metagateway-card:
+    image: ghcr.io/worph/meta-feeder-card:1.0.1
+    container_name: metagateway-card
+    hostname: metagateway-card
+    restart: unless-stopped
+    user: "10001:999"
+    cpu_shares: 30
+    mem_limit: 256m
+    memswap_limit: 256m
+    expose:
+      - 8080
+    volumes:
+      - /DATA/AppData/metagateway/card:/data/meta-feeder:rw
+    environment:
+      RUST_LOG: "info"
+      TZ: "$TZ"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    labels:
+      icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaGateway/icon.png
+    networks:
+      - metagateway
+
+  # ---------------------------------------------------------------------------
+  # AppShield gate — the public entrypoint to the dispatcher UI, behind Yundera
+  # OIDC SSO. container_name MUST equal the subdomain prefix (`metagateway`):
+  # auth-registrar derives the OIDC client_id from it.
+  #
+  # /health is handled ahead of the gate so probes don't need a session.
+  # `pcs` is REQUIRED — the gate resolves auth-registrar and casaos-oidc-bridge
+  # by name on that network.
+  # ---------------------------------------------------------------------------
+  metagateway:
+    image: ghcr.io/yundera/appshield:2.0.6
+    container_name: metagateway
+    hostname: metagateway
+    restart: unless-stopped
+    user: "0:0"
+    cpu_shares: 90
+    expose:
+      - 80
+    environment:
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      BACKEND_HOST: "metagateway-app"
+      BACKEND_PORT: "3000"
+      LISTEN_PORT: "80"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
+    depends_on:
+      - metagateway-app
+    labels:
+      # ---- metagateway-${APP_DOMAIN} (gateway TLS) ----
+      caddy_0: metagateway-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.0_handle: "/health"
+      caddy_0.0_handle.reverse_proxy: "metagateway-app:3000"
+      caddy_0.1_handle: ""
+      caddy_0.1_handle.reverse_proxy: "{{upstreams 80}}"
+
+      # ---- metagateway-IP.nip.io (gateway TLS) ----
+      caddy_1: metagateway-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.0_handle: "/health"
+      caddy_1.0_handle.reverse_proxy: "metagateway-app:3000"
+      caddy_1.1_handle: ""
+      caddy_1.1_handle.reverse_proxy: "{{upstreams 80}}"
+
+      # ---- metagateway-IP.sslip.io (Let's Encrypt) ----
+      caddy_2: metagateway-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.0_handle: "/health"
+      caddy_2.0_handle.reverse_proxy: "metagateway-app:3000"
+      caddy_2.1_handle: ""
+      caddy_2.1_handle.reverse_proxy: "{{upstreams 80}}"
+
+      icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaGateway/icon.png
+    networks:
+      - metagateway
+      - pcs
+
+networks:
+  metagateway:
+    name: metagateway
+  pcs:
+    name: ${APP_NET}
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  author: Worph Team
+  category: Media
+  developer: Aptero Team
+  hostname: metagateway-${APP_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaGateway/icon.png
+  index: /
+  is_uncontrolled: false
+  main: metagateway
+  port_map: "443"
+  scheme: https
+  store_app_id: metagatewayshared
+  title:
+    en_us: MetaGateway (shared backend)
+  tagline:
+    en_us: MetaGateway reusing the standalone MetaCore + MetaShare apps
+    fr_fr: MetaGateway réutilisant les apps MetaCore et MetaShare autonomes
+  description:
+    en_us: |
+      **The source-bridging tier for the MetaMesh network.**
+
+      MetaGateway ingests content from external sources and makes it
+      discoverable across the MetaMesh federation — so MetaWatch (and other
+      MetaShare peers) can find and stream it.
+
+      This build is the **shared-backend** variant: it ships the dispatcher and
+      the card feeder only, and **requires** the standalone MetaCore and
+      MetaShare apps on the same box, which it reuses for the record store and
+      for seeding resolved CIDs. One core, one share — no duplicated services.
+      If you want a stack that bundles its own core, share, Prowlarr and
+      Tribler instead, install **MetaGateway**.
+
+      **How it fits:** MetaGateway is the *producer*; **MetaWatch** is the
+      *consumer*. Install MetaGateway to populate the network, then browse it in
+      MetaWatch.
+
+      **Sources** are configured at runtime in `gateway-config.json`; install
+      **Prowlarr** and **MetaFeederIndexer** (and optionally
+      **MetaFeederUsenet**) to supply them.
+    fr_fr: |
+      **La couche de passerelle de sources pour le réseau MetaMesh.**
+
+      MetaGateway ingère du contenu depuis des sources externes et le rend
+      découvrable à travers la fédération MetaMesh — pour que MetaWatch (et les
+      autres pairs MetaShare) puissent le trouver et le lire.
+
+      Cette version est la variante **backend partagé** : elle n'embarque que le
+      dispatcher et le feeder de cartes, et **nécessite** les apps MetaCore et
+      MetaShare autonomes sur la même machine. Un seul cœur, un seul share —
+      aucun doublon.
+
+      **Place dans l'écosystème :** MetaGateway est le *producteur* ; MetaWatch
+      est le *consommateur*.
+  tips:
+    before_install:
+      en_us: |
+        **Requires MetaCore + MetaShare.** Install both standalone apps first —
+        this build reuses them instead of bundling its own copies.
+
+        **Conflicts with `MetaGateway`.** Both use the compose project
+        `metagateway` and the same data paths. Install one or the other.
+
+        **Sources are runtime config.** After install, define your sources in
+        `/DATA/AppData/metagateway/state/gateway-config.json` (or through the
+        dispatcher UI). Install **Prowlarr** + **MetaFeederIndexer** to give it
+        something to query.
+
+        **The card feeder matters.** `metagateway-card` answers the curated-row
+        card queries that fill MetaWatch's home wall. Without it the dispatcher
+        still works for search, but every connected MetaWatch shows an empty
+        wall.
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/metagateway/state
+    mkdir -p /DATA/AppData/metagateway/card

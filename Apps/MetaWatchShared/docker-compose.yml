@@ -1,0 +1,311 @@
+name: metawatch
+
+# =============================================================================
+# MetaWatch (shared backend) — Stremio-style, video-only client for MetaMesh.
+#
+# This is the SHARED-BACKEND variant of MetaWatch. It ships only its own
+# discovery peer (meta-search) and REUSES the standalone MetaCore and MetaShare
+# apps already installed on the box:
+#
+#   metawatch-search →  discovery (Kamilata federated search, identity proxy)
+#                       → talks to the standalone metacore-app over `pcs`
+#   metawatch-app    →  the UI/back-end the user browses
+#                       → streams bytes from the standalone metashare-app
+#
+# Contrast with the `MetaWatch` app in this store, which is SELF-CONTAINED (its
+# own metawatch-core + metawatch-share). Pick exactly one: both use compose
+# project `metawatch` and the same /DATA/AppData/metawatch paths, so they cannot
+# be installed side by side.
+#
+# Deployed and validated on watch.nsl.sh (2026-08-04).
+#
+# REQUIRES, on the same box and on the `pcs` network:
+#   - MetaCore  → provides metacore-app (identity keystore + record store)
+#   - MetaShare → provides metashare-app (byte transport for playback)
+# Install those FIRST. Without them meta-watch cannot sign anyone in and cannot
+# play anything.
+#
+# NOTE — every service that must reach metacore-app / metashare-app / the auth
+# stack carries BOTH `metawatch` and `pcs`. Dropping `pcs` from metawatch-search
+# breaks sign-in ("keystore unreachable; refusing to issue a token") while every
+# container still reports healthy; dropping it from the metawatchsearch gate
+# leaves it unable to resolve auth-registrar, so OIDC login fails. Both were
+# observed on watch.nsl.sh — do not "tidy" these away.
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # metawatch-search — DISCOVERY peer. Federated Kamilata search, record
+  # metadata, poster/thumbnail recovery, shared prefs, User Data Layer and the
+  # identity/sign chain (meta-watch → meta-search → meta-core). Public libp2p on
+  # host port 4004; mDNS on `pcs` for same-host peer discovery.
+  #
+  # Unlike the self-contained variant, META_CORE_URL points at the STANDALONE
+  # metacore-app, and /meta-core is that app's directory — this peer holds no
+  # core of its own.
+  # ---------------------------------------------------------------------------
+  metawatch-search:
+    image: ghcr.io/worph/meta-search:1.0.9
+    container_name: metawatch-search
+    hostname: metawatch-search
+    restart: unless-stopped
+    user: "0:0"
+    cpu_shares: 30
+    # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
+    # instead of swap. Mirrors the dev sub-stack limits.
+    mem_limit: 1g
+    memswap_limit: 1g
+    expose:
+      - 3000
+    ports:
+      # libp2p TCP — host-published so the swarm can dial this peer.
+      - "4004:4001"
+    volumes:
+      # The STANDALONE MetaCore's directory: this peer reads the leader info /
+      # identity keystore written by metacore-app. Not a private core.
+      - /DATA/AppData/metacore/meta-core:/meta-core:rw
+      # META_SHARE_DATA (default /data/meta-share): prefs.json (language prefs)
+      # + the redb blockstore holding poster/thumbnail blocks recovered off the
+      # swarm. Without this mount both are on the container's writable layer and
+      # every image bump loses the prefs and re-fetches every poster.
+      - /DATA/AppData/metawatch/search-data:/data:rw
+    environment:
+      P2P_LISTEN: "/ip4/0.0.0.0/tcp/4001"
+      # Public IPFS DHT bootstraps by explicit /dns4/.../tcp/4001 (the nested
+      # dnsaddr default resolves to wss-only in some container resolvers).
+      KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb"
+      # The standalone MetaCore app. Port 80 is its hash-lock/appshield-free
+      # backend port on `pcs` — NOT 9000 (that is the self-contained variant's
+      # private core).
+      META_CORE_URL: "http://metacore-app:80"
+      META_CORE_PATH: "/meta-core"
+      BASE_URL: "http://metawatch-search:3000"
+      INTERNAL_BASE_URL: "http://metawatch-search:3000"
+      TZ: "$TZ"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - metawatch
+      - pcs
+
+  # ---------------------------------------------------------------------------
+  # metawatch-app — the back-end the browser talks to. Zero media work: flat
+  # Range/206 byte proxy to the STANDALONE metashare-app; search/identity via
+  # metawatch-search. My List + Continue Watching persist in
+  # /DATA/AppData/metawatch/data.
+  #
+  # NO AppShield gate in front of it: meta-watch has its OWN authentication (a
+  # secp256k1 keypair proven by signing a challenge, invite-only signup), so it
+  # owns the caddy_* labels directly and Caddy proxies straight to :3000.
+  # ---------------------------------------------------------------------------
+  metawatch-app:
+    image: ghcr.io/worph/meta-watch:1.0.25
+    container_name: metawatch-app
+    hostname: metawatch-app
+    restart: unless-stopped
+    user: "1000:1000"
+    cpu_shares: 30
+    # Hard RAM cap with swap disabled (memswap_limit == mem_limit → zero swap
+    # budget on cgroup v2) so the container is OOM-killed instead of pushing
+    # the host into swap. Same value the dev stack pins (METAWATCH_MEM=512m).
+    mem_limit: 512m
+    memswap_limit: 512m
+    expose:
+      - 3000
+    volumes:
+      - /DATA/AppData/metawatch/data:/app/data
+    environment:
+      # The STANDALONE MetaShare app — this variant ships no transport peer.
+      META_SHARE_URL: "http://metashare-app:3000"
+      META_SEARCH_URL: "http://metawatch-search:3000"
+      # Browser-reachable topbar chips. meta-share is the standalone app's own
+      # public host; meta-search is the gate defined below.
+      META_SHARE_PUBLIC_URL: "https://metashare-${APP_DOMAIN}"
+      META_SEARCH_PUBLIC_URL: "https://metawatchsearch-${APP_DOMAIN}"
+      META_WATCH_SYNC_PEERS: "http://metawatch-search:3000"
+      TZ: "$TZ"
+    depends_on:
+      metawatch-search:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    labels:
+      # ---- metawatch-${APP_DOMAIN} (gateway TLS) ----
+      caddy_0: metawatch-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 3000}}"
+
+      # ---- metawatch-IP.nip.io (gateway TLS) ----
+      caddy_1: metawatch-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 3000}}"
+
+      # ---- metawatch-IP.sslip.io (Let's Encrypt) ----
+      caddy_2: metawatch-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 3000}}"
+
+      icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaWatch/icon.png
+    networks:
+      - metawatch
+      - pcs
+
+  # ---------------------------------------------------------------------------
+  # AppShield gate — exposes the metawatch-search dashboard behind Yundera OIDC
+  # SSO so the meta-watch topbar chip (🔎 meta-search) can open it.
+  # container_name MUST equal the subdomain prefix: auth-registrar derives the
+  # OIDC client_id from it.
+  #
+  # `pcs` is REQUIRED here — the gate resolves auth-registrar and the
+  # casaos-oidc-bridge by name on that network. Without it nginx starts and
+  # looks healthy, but every OIDC login fails.
+  # ---------------------------------------------------------------------------
+  metawatchsearch:
+    image: ghcr.io/yundera/appshield:2.0.6
+    container_name: metawatchsearch
+    hostname: metawatchsearch
+    restart: unless-stopped
+    user: "0:0"
+    expose:
+      - 80
+    environment:
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      BACKEND_HOST: "metawatch-search"
+      BACKEND_PORT: "3000"
+      LISTEN_PORT: "80"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
+    depends_on:
+      - metawatch-search
+    labels:
+      caddy_0: metawatchsearch-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+
+      caddy_1: metawatchsearch-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+
+      caddy_2: metawatchsearch-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+
+      icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaWatch/icon.png
+    networks:
+      - metawatch
+      - pcs
+
+networks:
+  metawatch:
+    name: metawatch
+  pcs:
+    name: ${APP_NET}
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  author: Worph Team
+  category: Media
+  developer: Aptero Team
+  hostname: metawatch-${APP_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaWatch/icon.png
+  index: /
+  is_uncontrolled: false
+  main: metawatch-app
+  port_map: "443"
+  scheme: https
+  store_app_id: metawatchshared
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaWatch/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaWatch/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaWatch/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaWatch/thumbnail.png
+  title:
+    en_us: MetaWatch (shared backend)
+  tagline:
+    en_us: MetaWatch reusing the standalone MetaCore + MetaShare apps
+    fr_fr: MetaWatch réutilisant les apps MetaCore et MetaShare autonomes
+  description:
+    en_us: |
+      **A Stremio-style, video-only player for the decentralized MetaMesh network.**
+
+      MetaWatch browses curated rows and filtered search across the MetaMesh
+      federation and plays back in your browser — the server does zero media
+      work (flat byte-range streaming, no transcode). Anything without a poster
+      and a description is hidden, so the wall is always clean.
+
+      This build is the **shared-backend** variant: it ships only its own
+      discovery (meta-search) and **requires** the standalone MetaCore and
+      MetaShare apps on the same box, which it reuses for identity, state and
+      content transport. One core, one share — no duplicated services. If you
+      want a stack that bundles everything instead, install **MetaWatch**.
+
+      **Key Features:**
+      - **Curated Rows + Search** - Popular / trending / top-rated / anime rows, plus federated search
+      - **Browser-Side Playback** - SegmentPlayer streams via Range/206; the server never transcodes
+      - **Poster-Gated Wall** - Only titles with poster + description are shown
+      - **Show Aggregation** - Per-episode records grouped into show pages by tmdbid/imdbid/title
+      - **My List + Continue Watching** - Persistent, backed by the User Data Layer op-log
+      - **TV Remote Navigation** - D-pad spatial navigation for the 10-foot UI
+      - **Federated Discovery** - Joins the public libp2p swarm to find MetaGateway records
+    fr_fr: |
+      **Un lecteur vidéo façon Stremio pour le réseau décentralisé MetaMesh.**
+
+      MetaWatch parcourt des rangées sélectionnées et une recherche filtrée à
+      travers la fédération MetaMesh et lit la vidéo dans votre navigateur — le
+      serveur ne fait aucun travail média (streaming par plages d'octets, sans
+      transcodage). Tout ce qui n'a ni affiche ni description est masqué.
+
+      Cette version est la variante **backend partagé** : elle n'embarque que
+      sa propre découverte (meta-search) et **nécessite** les apps MetaCore et
+      MetaShare autonomes sur la même machine, qu'elle réutilise pour l'identité,
+      l'état et le transport. Un seul core, un seul share — aucun doublon.
+
+      **Fonctionnalités Clés:**
+      - **Rangées + Recherche** - Populaire / tendances / mieux notés / anime, plus recherche fédérée
+      - **Lecture Côté Navigateur** - SegmentPlayer en Range/206 ; le serveur ne transcode jamais
+      - **Mur à Affiches** - Seuls les titres avec affiche + description sont montrés
+      - **Agrégation de Séries** - Épisodes regroupés en pages de série par tmdbid/imdbid/titre
+      - **Ma Liste + Reprendre** - Persistant, via l'op-log de la couche de données utilisateur
+      - **Navigation Télécommande** - Navigation spatiale D-pad pour l'interface salon
+  tips:
+    before_install:
+      en_us: |
+        **Requires MetaCore + MetaShare.** Install both standalone apps first —
+        this build reuses them instead of bundling its own copies. Only
+        meta-search is local to this stack.
+
+        **Conflicts with `MetaWatch`.** Both use the compose project `metawatch`
+        and the same data paths. Install one or the other, not both.
+
+        **Authentication:** MetaWatch has its **own** sign-in — a profile is a
+        secp256k1 keypair and you prove it by signing a challenge, so the secret
+        key never leaves the browser. There is no Authelia/OIDC layer in front of
+        it: creating a profile needs an invite link from an existing user.
+
+        **Federation ports (optional).** meta-search host-publishes its libp2p
+        listener on TCP **4004** so the public IPFS kad-DHT and other nodes can
+        dial in. Transport is handled by the shared MetaShare app, which
+        publishes its own listener on TCP **4001**. Open them inbound if you
+        want this client reachable across networks; same-host discovery (e.g. a
+        MetaGateway on the same box) works over mDNS without them.
+
+        **Content comes from gateways.** To see anything, at least one
+        MetaGateway (or another MetaShare archivist) must be reachable on the
+        swarm. Install **MetaGateway** for the torznab/Prowlarr + Tribler feed.
+
+        **After installation:**
+        1. Open `https://metawatch-<your-domain>/`
+        2. Create a profile (or paste your secret key to sign in)
+        3. Browse the rows or search; results stream in as gateways respond
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/metawatch/data
+    mkdir -p /DATA/AppData/metawatch/search-data

@@ -18,7 +18,7 @@ services:
     # RSA-keyed; without `rsa` the noise handshake fails and this peer never
     # actually reaches the DHT) + P2P_ANNOUNCE support so remote archivists can
     # dial this seeder.
-    image: ghcr.io/worph/meta-share:1.0.22
+    image: ghcr.io/worph/meta-share:1.0.24
     container_name: metashare-app
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
     # instead of swap. Mirrors the dev sub-stack limits.
@@ -91,11 +91,11 @@ services:
       # via the public Caddy URL, which routes back through this hash-lock
       # proxy with /api/peer/* and /api/file/* on the bypass list).
       #
-      # Deprecated name, kept ON PURPOSE: the current name is INTERNAL_BASE_URL,
-      # but meta-share:1.0.8 doesn't know it yet. Renaming now would leave
-      # peer_url unset (no service registration, peer stops advertising its API
-      # URL). Rename together with the next image bump.
-      - META_SHARE_PEER_API_URL=https://metashare-$APP_DOMAIN
+      # Renamed at the 1.0.24 bump (2026-08-04), as the old note here said to do:
+      # META_SHARE_PEER_API_URL was the pre-1.0.8 spelling. watch.nsl.sh runs
+      # 1.0.24 with INTERNAL_BASE_URL and registers its peer_url correctly, so the
+      # deprecated name is no longer needed. Do NOT set both.
+      - INTERNAL_BASE_URL=https://metashare-$APP_DOMAIN
 
       # NOTE: KAD_NAMESPACE, TARGET_PEER_COUNT, ENABLE_MDNS, META_CORE_POLL_SECS,
       # META_CORE_MAX_RECORDS, HTTP_LISTEN, SERVICE_NAME and RUST_LOG were all

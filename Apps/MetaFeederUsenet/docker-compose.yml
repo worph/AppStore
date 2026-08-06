@@ -375,7 +375,7 @@ services:
       - metafeederusenet
 
   metafeederusenet-tmdb:
-    image: ghcr.io/worph/metamesh-plugin-tmdb:1.0.0
+    image: ghcr.io/worph/metamesh-plugin-tmdb:1.0.1
     container_name: metafeederusenet-tmdb
     mem_limit: 384m
     memswap_limit: 384m
