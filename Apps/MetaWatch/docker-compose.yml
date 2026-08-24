@@ -43,7 +43,7 @@ services:
     expose:
       - 9000
     volumes:
-      - /DATA/AppData/metawatch/metacore:/meta-core:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metawatch/metacore:/meta-core:rw
     environment:
       - BASE_URL=http://metawatch-core:9000
       - ENABLE_FILE_WATCHER=false
@@ -84,12 +84,12 @@ services:
       # libp2p TCP — host-published so the swarm can dial this peer.
       - "4004:4001"
     volumes:
-      - /DATA/AppData/metawatch/metacore:/meta-core:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metawatch/metacore:/meta-core:rw
       # META_SHARE_DATA (default /data/meta-share): prefs.json (language prefs)
       # + the redb blockstore holding poster/thumbnail blocks recovered off the
       # swarm. Without this mount both are on the container's writable layer and
       # every image bump loses the prefs and re-fetches every poster.
-      - /DATA/AppData/metawatch/search-data:/data:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metawatch/search-data:/data:rw
     environment:
       P2P_LISTEN: "/ip4/0.0.0.0/tcp/4001"
       # Public IPFS DHT bootstraps by explicit /dns4/.../tcp/4001 (the nested
@@ -152,17 +152,17 @@ services:
     ports:
       - "4003:4001"
     volumes:
-      - /DATA/AppData/metawatch/metacore:/meta-core:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metawatch/metacore:/meta-core:rw
       # Operator settings written by the dashboard Settings panel (settings.json,
       # e.g. optional direct-NNTP/Usenet credentials). Persisted on disk so
       # dashboard edits survive container recreation — this stack has no separate
       # credentialed gateway peer to forward to, so config lives here.
-      - /DATA/AppData/metawatch/metashare-config:/config:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metawatch/metashare-config:/config:rw
       # Seeded/fetched bytes (META_SHARE_DATA, default /data/meta-share): redb
       # blockstore, seed manifest, librqbit sparse files, NZB cache. This is the
       # playback cache — without the mount every recreate re-downloads the lot
       # from a cold swarm, and the peer seeds nothing back.
-      - /DATA/AppData/metawatch/share-data:/data:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metawatch/share-data:/data:rw
     environment:
       P2P_LISTEN: "/ip4/0.0.0.0/tcp/4001"
       # Advertise the routable address (published host port 4003) so remote
@@ -209,7 +209,7 @@ services:
     expose:
       - 3000
     volumes:
-      - /DATA/AppData/metawatch/data:/app/data
+      - ${DATA_ROOT:-/DATA}/AppData/metawatch/data:/app/data
     environment:
       META_SHARE_URL: "http://metawatch-share:3000"
       META_SEARCH_URL: "http://metawatch-search:3000"
@@ -241,7 +241,8 @@ services:
   # `metawatch-<user>.<domain>`.
   # ---------------------------------------------------------------------------
   metawatch:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:2.0.9
+    cpu_shares: 80
     container_name: metawatch
     hostname: metawatch
     restart: unless-stopped
@@ -254,7 +255,6 @@ services:
       BACKEND_PORT: "3000"
       LISTEN_PORT: "80"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
-      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
     depends_on:
       - metawatch-app
     labels:
@@ -294,7 +294,8 @@ services:
   # metagatewaycore / metagatewayshare gates.
   # ---------------------------------------------------------------------------
   metawatchshare:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:2.0.9
+    cpu_shares: 80
     container_name: metawatchshare
     hostname: metawatchshare
     restart: unless-stopped
@@ -303,7 +304,6 @@ services:
     environment:
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
-      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
       BACKEND_HOST: "metawatch-share"
       BACKEND_PORT: "3000"
       LISTEN_PORT: "80"
@@ -323,7 +323,8 @@ services:
       - pcs
 
   metawatchsearch:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:2.0.9
+    cpu_shares: 80
     container_name: metawatchsearch
     hostname: metawatchsearch
     restart: unless-stopped
@@ -332,7 +333,6 @@ services:
     environment:
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
-      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
       BACKEND_HOST: "metawatch-search"
       BACKEND_PORT: "3000"
       LISTEN_PORT: "80"
@@ -354,8 +354,9 @@ services:
 networks:
   metawatch:
     name: metawatch
+    driver: bridge
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -364,6 +365,10 @@ x-casaos:
     - arm64
   author: Worph Team
   category: Media
+  # `needs-public-ip` is the reserved functional tag: this app publishes a raw
+  # libp2p TCP port that remote peers must dial inbound. Behind CGNAT or the
+  # mesh-router tunnel it still installs and starts, but peers cannot reach it.
+  tags: ["media", "needs-public-ip"]
   developer: Aptero Team
 
   description:
@@ -453,7 +458,30 @@ x-casaos:
         2. Sign in via the Authelia portal
         3. Browse the rows or search; results stream in as gateways respond
 
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/metawatch/metacore
-    mkdir -p /DATA/AppData/metawatch/data
-    mkdir -p /DATA/AppData/metawatch/metashare-config
+# Maison (Yundera dashboard) configuration. Read in preference to x-casaos.
+# schema_version 2 is required for `folders`: an older Maison refuses the app
+# outright rather than starting it without its directories.
+x-compose-app:
+  schema_version: 2
+  # Created and chowned by Maison before any image is pulled, before any hook
+  # runs and before the containers start — on the first boot and every one after.
+  # Compose would otherwise create a missing bind source as a root-owned dir.
+  folders:
+    - path: /DATA/AppData/metawatch/metacore
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metawatch/search-data
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metawatch/metashare-config
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metawatch/share-data
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metawatch/data
+      user: $PUID
+      group: $PGID
+  # Same string as the caddy_0 label, so the tile link and the route agree.
+  webui-host: metawatch-${domain}
+  webui-path: "/"

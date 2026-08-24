@@ -47,7 +47,7 @@ services:
       - 3000
     volumes:
       # gateway-config.json (source definitions, feeder URLs) + dispatcher state.
-      - /DATA/AppData/metagateway/state:/data/meta-gateway:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metagateway/state:/data/meta-gateway:rw
     environment:
       META_GATEWAY_BASE_URL: "http://metagateway-app:3000"
       META_GATEWAY_PEER_ID: "metagateway"
@@ -88,7 +88,7 @@ services:
     expose:
       - 8080
     volumes:
-      - /DATA/AppData/metagateway/card:/data/meta-feeder:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metagateway/card:/data/meta-feeder:rw
     environment:
       RUST_LOG: "info"
       TZ: "$TZ"
@@ -113,7 +113,7 @@ services:
   # by name on that network.
   # ---------------------------------------------------------------------------
   metagateway:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:2.0.9
     container_name: metagateway
     hostname: metagateway
     restart: unless-stopped
@@ -127,7 +127,6 @@ services:
       BACKEND_PORT: "3000"
       LISTEN_PORT: "80"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
-      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
     depends_on:
       - metagateway-app
     labels:
@@ -162,8 +161,9 @@ services:
 networks:
   metagateway:
     name: metagateway
+    driver: bridge
   pcs:
-    name: ${APP_NET}
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -240,6 +240,22 @@ x-casaos:
         card queries that fill MetaWatch's home wall. Without it the dispatcher
         still works for search, but every connected MetaWatch shows an empty
         wall.
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/metagateway/state
-    mkdir -p /DATA/AppData/metagateway/card
+
+# Maison (Yundera dashboard) configuration. Read in preference to x-casaos.
+# schema_version 2 is required for `folders`: an older Maison refuses the app
+# outright rather than starting it without its directories.
+x-compose-app:
+  schema_version: 2
+  # Created and chowned by Maison before any image is pulled, before any hook
+  # runs and before the containers start — on the first boot and every one after.
+  # Compose would otherwise create a missing bind source as a root-owned dir.
+  folders:
+    - path: /DATA/AppData/metagateway/state
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metagateway/card
+      user: 10001
+      group: 999
+  # Same string as the caddy_0 label, so the tile link and the route agree.
+  webui-host: metagateway-${domain}
+  webui-path: "/"

@@ -48,19 +48,19 @@ services:
     volumes:
       # Shared infrastructure state (leader election, Redis dump, service discovery)
       # Owned by MetaCore; mounted rw here so meta-share registers under services/.
-      - /DATA/AppData/metacore/meta-core:/meta-core:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metacore/meta-core:/meta-core:rw
       # Operator settings (META_SHARE_CONFIG_DIR, default /config): settings.json
       # holds the NNTP credentials + per-indexer API keys entered in the dashboard.
       # MUST be persisted — without this mount they live on the container's
       # writable layer and are lost on every image bump / recreate, forcing the
       # operator to re-enter their credentials after each update.
-      - /DATA/AppData/metashare/config:/config:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metashare/config:/config:rw
       # Seeded bytes + the seed index (META_SHARE_DATA, default /data/meta-share):
       # the redb IPFS blockstore, seed manifest, librqbit sparse torrent files
       # (bt-temp/), the NZB cache and the ipfs-seed cursor. Recomputable, but a
       # peer whose job is "fetch implies seed" comes back seeding NOTHING after a
       # recreate without this, and re-downloads everything from a cold swarm.
-      - /DATA/AppData/metashare/data:/data:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metashare/data:/data:rw
 
     # Note: no /files mounts — meta-share resolves file paths through MetaCore's
     # WebDAV URL (Architecture V3). META_SHARE_FILES_PATH is only used as the
@@ -125,7 +125,8 @@ services:
   # Naming: container_name MUST equal the URL-prefix of the public hostname so
   # the registrar's redirect-URI allowlist accepts `metashare-<user>.<domain>`.
   metashare:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:2.0.9
+    cpu_shares: 80
     container_name: metashare
     hostname: metashare
     restart: unless-stopped
@@ -140,7 +141,6 @@ services:
       BACKEND_PORT: "3000"
       LISTEN_PORT: "80"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
-      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
 
     depends_on:
       - metashare-app
@@ -209,7 +209,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -218,6 +218,10 @@ x-casaos:
     - arm64
   author: Worph Team
   category: Media
+  # `needs-public-ip` is the reserved functional tag: this app publishes a raw
+  # libp2p TCP port that remote peers must dial inbound. Behind CGNAT or the
+  # mesh-router tunnel it still installs and starts, but peers cannot reach it.
+  tags: ["media", "needs-public-ip"]
   developer: Aptero Team
 
   description:
@@ -305,9 +309,24 @@ x-casaos:
         (`/api/peers`, `/api/peer/*`, `/api/file/*`, `/api/search*`) is intentionally
         bypassed so other peers can reach it without an OIDC session.
 
-  pre-install-cmd: |
-    if [ ! -d /DATA/AppData/metacore/meta-core ]; then
-      echo "ERROR: MetaCore must be installed before MetaShare." >&2 &&
-      echo "Missing: /DATA/AppData/metacore/meta-core (install MetaCore first)" >&2 &&
-      exit 1;
-    fi
+# Maison (Yundera dashboard) configuration. Read in preference to x-casaos.
+# schema_version 2 is required for `folders`: an older Maison refuses the app
+# outright rather than starting it without its directories.
+x-compose-app:
+  schema_version: 2
+  # Created and chowned by Maison before any image is pulled, before any hook
+  # runs and before the containers start — on the first boot and every one after.
+  # Compose would otherwise create a missing bind source as a root-owned dir.
+  folders:
+    - path: /DATA/AppData/metacore/meta-core
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metashare/config
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metashare/data
+      user: $PUID
+      group: $PGID
+  # Same string as the caddy_0 label, so the tile link and the route agree.
+  webui-host: metashare-${domain}
+  webui-path: "/"

@@ -63,12 +63,12 @@ services:
     volumes:
       # The STANDALONE MetaCore's directory: this peer reads the leader info /
       # identity keystore written by metacore-app. Not a private core.
-      - /DATA/AppData/metacore/meta-core:/meta-core:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metacore/meta-core:/meta-core:rw
       # META_SHARE_DATA (default /data/meta-share): prefs.json (language prefs)
       # + the redb blockstore holding poster/thumbnail blocks recovered off the
       # swarm. Without this mount both are on the container's writable layer and
       # every image bump loses the prefs and re-fetches every poster.
-      - /DATA/AppData/metawatch/search-data:/data:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metawatch/search-data:/data:rw
     environment:
       P2P_LISTEN: "/ip4/0.0.0.0/tcp/4001"
       # Public IPFS DHT bootstraps by explicit /dns4/.../tcp/4001 (the nested
@@ -117,7 +117,7 @@ services:
     expose:
       - 3000
     volumes:
-      - /DATA/AppData/metawatch/data:/app/data
+      - ${DATA_ROOT:-/DATA}/AppData/metawatch/data:/app/data
     environment:
       # The STANDALONE MetaShare app — this variant ships no transport peer.
       META_SHARE_URL: "http://metashare-app:3000"
@@ -168,7 +168,8 @@ services:
   # looks healthy, but every OIDC login fails.
   # ---------------------------------------------------------------------------
   metawatchsearch:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:2.0.9
+    cpu_shares: 80
     container_name: metawatchsearch
     hostname: metawatchsearch
     restart: unless-stopped
@@ -181,7 +182,6 @@ services:
       BACKEND_PORT: "3000"
       LISTEN_PORT: "80"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
-      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
     depends_on:
       - metawatch-search
     labels:
@@ -204,8 +204,9 @@ services:
 networks:
   metawatch:
     name: metawatch
+    driver: bridge
   pcs:
-    name: ${APP_NET}
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -214,6 +215,10 @@ x-casaos:
     - arm64
   author: Worph Team
   category: Media
+  # `needs-public-ip` is the reserved functional tag: this app publishes a raw
+  # libp2p TCP port that remote peers must dial inbound. Behind CGNAT or the
+  # mesh-router tunnel it still installs and starts, but peers cannot reach it.
+  tags: ["media", "needs-public-ip"]
   developer: Aptero Team
   hostname: metawatch-${APP_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaWatch/icon.png
@@ -306,6 +311,25 @@ x-casaos:
         1. Open `https://metawatch-<your-domain>/`
         2. Create a profile (or paste your secret key to sign in)
         3. Browse the rows or search; results stream in as gateways respond
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/metawatch/data
-    mkdir -p /DATA/AppData/metawatch/search-data
+
+# Maison (Yundera dashboard) configuration. Read in preference to x-casaos.
+# schema_version 2 is required for `folders`: an older Maison refuses the app
+# outright rather than starting it without its directories.
+x-compose-app:
+  schema_version: 2
+  # Created and chowned by Maison before any image is pulled, before any hook
+  # runs and before the containers start — on the first boot and every one after.
+  # Compose would otherwise create a missing bind source as a root-owned dir.
+  folders:
+    - path: /DATA/AppData/metacore/meta-core
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metawatch/search-data
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metawatch/data
+      user: $PUID
+      group: $PGID
+  # Same string as the caddy_0 label, so the tile link and the route agree.
+  webui-host: metawatch-${domain}
+  webui-path: "/"

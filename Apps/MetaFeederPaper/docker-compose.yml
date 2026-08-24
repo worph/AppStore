@@ -13,6 +13,7 @@ name: metafeederpaper
 services:
   metafeederpaper-feeder:
     image: ghcr.io/worph/meta-feeder-paper:1.0.1
+    cpu_shares: 30
     container_name: metafeederpaper-feeder
     hostname: metafeederpaper-feeder
     restart: unless-stopped
@@ -27,7 +28,7 @@ services:
       # SCIHUB_MIRRORS: "https://sci-hub.se,https://sci-hub.st"
       TZ: "$TZ"
     volumes:
-      - /DATA/AppData/metafeederpaper/state:/data/meta-feeder:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metafeederpaper/state:/data/meta-feeder:rw
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
       interval: 5s
@@ -39,7 +40,8 @@ services:
       - pcs
 
   metafeederpaper:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:2.0.9
+    cpu_shares: 80
     container_name: metafeederpaper
     hostname: metafeederpaper
     restart: unless-stopped
@@ -49,7 +51,6 @@ services:
     environment:
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
-      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
       BACKEND_HOST: "metafeederpaper-feeder"
       BACKEND_PORT: "8080"
       LISTEN_PORT: "80"
@@ -71,8 +72,9 @@ services:
 networks:
   metafeederpaper:
     name: metafeederpaper
+    driver: bridge
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -129,5 +131,18 @@ x-casaos:
 
         **Authentication:** the config UI is protected by Yundera's Authelia (OIDC).
 
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/metafeederpaper/state
+# Maison (Yundera dashboard) configuration. Read in preference to x-casaos.
+# schema_version 2 is required for `folders`: an older Maison refuses the app
+# outright rather than starting it without its directories.
+x-compose-app:
+  schema_version: 2
+  # Created and chowned by Maison before any image is pulled, before any hook
+  # runs and before the containers start — on the first boot and every one after.
+  # Compose would otherwise create a missing bind source as a root-owned dir.
+  folders:
+    - path: /DATA/AppData/metafeederpaper/state
+      user: $PUID
+      group: $PGID
+  # Same string as the caddy_0 label, so the tile link and the route agree.
+  webui-host: metafeederpaper-${domain}
+  webui-path: "/config"

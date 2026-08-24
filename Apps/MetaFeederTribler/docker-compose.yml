@@ -35,7 +35,10 @@ services:
   # pre-install-cmd-written seed file. IPv8 overlay on UDP 8090.
   # ---------------------------------------------------------------------------
   tribler-instance:
-    image: ghcr.io/tribler/tribler:latest
+    # Pinned: v8.4.2 is the digest `:latest` resolved to when this was pinned
+    # (sha256:e5f0ff1f…), so this is a tag change only, not a version bump.
+    image: ghcr.io/tribler/tribler:v8.4.2
+    cpu_shares: 30
     container_name: metafeedertribler-instance
     hostname: tribler-instance
     restart: unless-stopped
@@ -55,8 +58,8 @@ services:
     expose:
       - 8085
     volumes:
-      - /DATA/AppData/metafeedertribler/tribler-state:/root/.Tribler
-      - /DATA/AppData/metafeedertribler/tribler-seed/configuration.json:/seed/configuration.json:ro
+      - ${DATA_ROOT:-/DATA}/AppData/metafeedertribler/tribler-state:/root/.Tribler
+      - ${DATA_ROOT:-/DATA}/AppData/metafeedertribler/tribler-seed/configuration.json:/seed/configuration.json:ro
     networks:
       - metafeedertribler
 
@@ -69,6 +72,7 @@ services:
   # ---------------------------------------------------------------------------
   metafeedertribler-feeder:
     image: ghcr.io/worph/meta-feeder-tribler:1.0.3
+    cpu_shares: 30
     container_name: metafeedertribler-feeder
     hostname: metafeedertribler-feeder
     restart: unless-stopped
@@ -92,7 +96,7 @@ services:
     volumes:
       # Persist feeder config (config.json pre-seeded + editable via UI) + redb
       # cache. config.json lives at gateway/tribler/config.json under this dir.
-      - /DATA/AppData/metafeedertribler/state:/data/meta-feeder:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metafeedertribler/state:/data/meta-feeder:rw
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
       interval: 5s
@@ -120,6 +124,7 @@ services:
   # ---------------------------------------------------------------------------
   metafeedertribler-filename-parser:
     image: ghcr.io/worph/metamesh-plugin-filename-parser:1.0.1
+    cpu_shares: 30
     container_name: metafeedertribler-filename-parser
     hostname: metafeedertribler-filename-parser
     restart: unless-stopped
@@ -133,6 +138,7 @@ services:
 
   metafeedertribler-tmdb:
     image: ghcr.io/worph/metamesh-plugin-tmdb:1.0.0
+    cpu_shares: 30
     container_name: metafeedertribler-tmdb
     hostname: metafeedertribler-tmdb
     restart: unless-stopped
@@ -144,7 +150,7 @@ services:
       # Posters land in the shared meta-core (over pcs) so the ingester seeds them.
       WEBDAV_URL: "http://metacore-app:9000/webdav"
     volumes:
-      - /DATA/AppData/metafeedertribler/tmdb-cache:/cache
+      - ${DATA_ROOT:-/DATA}/AppData/metafeedertribler/tmdb-cache:/cache
     networks:
       - metafeedertribler
       - pcs
@@ -156,7 +162,8 @@ services:
   # human only); index → /config.
   # ---------------------------------------------------------------------------
   metafeedertribler:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:2.0.9
+    cpu_shares: 80
     container_name: metafeedertribler
     hostname: metafeedertribler
     restart: unless-stopped
@@ -166,7 +173,6 @@ services:
     environment:
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
-      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
       BACKEND_HOST: "metafeedertribler-feeder"
       BACKEND_PORT: "8080"
       LISTEN_PORT: "80"
@@ -188,8 +194,9 @@ services:
 networks:
   metafeedertribler:
     name: metafeedertribler
+    driver: bridge
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -267,10 +274,6 @@ x-casaos:
         **Authentication:** the config UI is protected by Yundera's Authelia (OIDC).
 
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/metafeedertribler/state/gateway/tribler
-    mkdir -p /DATA/AppData/metafeedertribler/tmdb-cache
-    mkdir -p /DATA/AppData/metafeedertribler/tribler-state
-    mkdir -p /DATA/AppData/metafeedertribler/tribler-seed
     # Seed the bundled Tribler core config (api on 0.0.0.0:8085, key `changeme`).
     if [ ! -f /DATA/AppData/metafeedertribler/tribler-seed/configuration.json ]; then
       cat > /DATA/AppData/metafeedertribler/tribler-seed/configuration.json <<'TRIBLER_CFG'
@@ -284,3 +287,28 @@ x-casaos:
     {"meta_core_url":"http://metacore-app:9000","sidecar_url":"http://tribler-instance:8085","api_key":"changeme"}
     FEEDER_CFG
     fi
+
+# Maison (Yundera dashboard) configuration. Read in preference to x-casaos.
+# schema_version 2 is required for `folders`: an older Maison refuses the app
+# outright rather than starting it without its directories.
+x-compose-app:
+  schema_version: 2
+  # Created and chowned by Maison before any image is pulled, before any hook
+  # runs and before the containers start — on the first boot and every one after.
+  # Compose would otherwise create a missing bind source as a root-owned dir.
+  folders:
+    - path: /DATA/AppData/metafeedertribler/state/gateway/tribler
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metafeedertribler/tmdb-cache
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metafeedertribler/tribler-state
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metafeedertribler/tribler-seed
+      user: $PUID
+      group: $PGID
+  # Same string as the caddy_0 label, so the tile link and the route agree.
+  webui-host: metafeedertribler-${domain}
+  webui-path: "/config"

@@ -16,10 +16,10 @@ services:
     volumes:
       # Shared infrastructure state (leader election, Redis dump, service discovery)
       # Owned by MetaCore; mounted rw here for service registration + leader reads.
-      - /DATA/AppData/metacore/meta-core:/meta-core:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metacore/meta-core:/meta-core:rw
 
       # Application cache storage
-      - /DATA/AppData/metasort/cache:/data/cache
+      - ${DATA_ROOT:-/DATA}/AppData/metasort/cache:/data/cache
 
       # Docker socket for container plugin management
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -53,7 +53,8 @@ services:
   # Naming: container_name MUST equal the URL-prefix of the public hostname so
   # the registrar's redirect-URI allowlist accepts `metasort-<user>.<domain>`.
   metasort:
-    image: ghcr.io/yundera/nginx-hash-lock:1.0.7
+    image: ghcr.io/yundera/appshield:2.0.9
+    cpu_shares: 80
     container_name: metasort
     hostname: metasort
     restart: unless-stopped
@@ -67,6 +68,7 @@ services:
       BACKEND_HOST: "metasort-app"
       BACKEND_PORT: "80"
       LISTEN_PORT: "80"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
 
     depends_on:
       - metasort-app
@@ -105,7 +107,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -179,9 +181,21 @@ x-casaos:
         MetaSort connects to MetaCore for metadata storage. The dashboard is protected by
         Yundera's built-in Authelia via OIDC — sign in with your existing Yundera account.
 
-  pre-install-cmd: |
-    if [ ! -d /DATA/AppData/metacore/meta-core ]; then
-      echo "ERROR: MetaCore must be installed before MetaSort." >&2 &&
-      echo "Missing: /DATA/AppData/metacore/meta-core (install MetaCore first)" >&2 &&
-      exit 1;
-    fi
+# Maison (Yundera dashboard) configuration. Read in preference to x-casaos.
+# schema_version 2 is required for `folders`: an older Maison refuses the app
+# outright rather than starting it without its directories.
+x-compose-app:
+  schema_version: 2
+  # Created and chowned by Maison before any image is pulled, before any hook
+  # runs and before the containers start — on the first boot and every one after.
+  # Compose would otherwise create a missing bind source as a root-owned dir.
+  folders:
+    - path: /DATA/AppData/metacore/meta-core
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metasort/cache
+      user: $PUID
+      group: $PGID
+  # Same string as the caddy_0 label, so the tile link and the route agree.
+  webui-host: metasort-${domain}
+  webui-path: "/"

@@ -49,8 +49,8 @@ services:
     expose:
       - 9000
     volumes:
-      - /DATA/AppData/metagateway/metacore:/meta-core:rw
-      - /DATA/AppData/metagateway/files:/files:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metagateway/metacore:/meta-core:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metagateway/files:/files:rw
     environment:
       - BASE_URL=http://metagateway-core:9000
       - TZ=$TZ
@@ -93,15 +93,15 @@ services:
     ports:
       - "4005:4001"
     volumes:
-      - /DATA/AppData/metagateway/metacore:/meta-core:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metagateway/metacore:/meta-core:rw
       # Operator settings (settings.json — NNTP creds + indexer API keys). This
       # is the CREDENTIALED peer of the pair: it materialises NZB postings for
       # credential-less clients. Losing settings.json on an update means the
       # gateway silently stops serving nzb-release bytes until re-entered.
-      - /DATA/AppData/metagateway/share-config:/config:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metagateway/share-config:/config:rw
       # Blockstore + seed manifest + NZB cache (META_SHARE_DATA=/data/meta-share).
       # Without it the gateway's seeded corpus is wiped on every recreate.
-      - /DATA/AppData/metagateway/share-data:/data:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metagateway/share-data:/data:rw
     environment:
       P2P_LISTEN: "/ip4/0.0.0.0/tcp/4001"
       # Advertise the routable address (published host port 4005) so kad
@@ -169,7 +169,7 @@ services:
     volumes:
       # gateway-config.json (feeders map) + gateway-enabled.json, written by
       # pre-install-cmd. Runtime redb caches also live here.
-      - /DATA/AppData/metagateway/state:/data/meta-gateway:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metagateway/state:/data/meta-gateway:rw
     environment:
       # NOTE: `meta_core_url` (and `meta_share_url`) live in gateway-config.json
       # since v1.0.12 — no longer read from env. The pre-install-cmd below seeds
@@ -217,7 +217,8 @@ services:
   # URL prefix (`metagateway`) for the registrar's redirect-URI allowlist.
   # ===========================================================================
   metagateway:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:2.0.9
+    cpu_shares: 80
     container_name: metagateway
     hostname: metagateway
     restart: unless-stopped
@@ -230,7 +231,6 @@ services:
       BACKEND_PORT: "3000"
       LISTEN_PORT: "80"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
-      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
     depends_on:
       - metagateway-app
     labels:
@@ -273,7 +273,8 @@ services:
   # feeders reach them over `pcs`, so there's no gate for them here.
   # ===========================================================================
   metagatewaycore:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:2.0.9
+    cpu_shares: 80
     container_name: metagatewaycore
     hostname: metagatewaycore
     restart: unless-stopped
@@ -282,7 +283,6 @@ services:
     environment:
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
-      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
       BACKEND_HOST: "metagateway-core"
       BACKEND_PORT: "80"
       LISTEN_PORT: "80"
@@ -302,7 +302,8 @@ services:
       - pcs
 
   metagatewayshare:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:2.0.9
+    cpu_shares: 80
     container_name: metagatewayshare
     hostname: metagatewayshare
     restart: unless-stopped
@@ -311,7 +312,6 @@ services:
     environment:
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
-      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
       BACKEND_HOST: "metagateway-share"
       BACKEND_PORT: "3000"
       LISTEN_PORT: "80"
@@ -333,8 +333,9 @@ services:
 networks:
   metagateway:
     name: metagateway
+    driver: bridge
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -343,6 +344,10 @@ x-casaos:
     - arm64
   author: Worph Team
   category: Media
+  # `needs-public-ip` is the reserved functional tag: this app publishes a raw
+  # libp2p TCP port that remote peers must dial inbound. Behind CGNAT or the
+  # mesh-router tunnel it still installs and starts, but peers cannot reach it.
+  tags: ["media", "needs-public-ip"]
   developer: Aptero Team
 
   description:
@@ -452,14 +457,15 @@ x-casaos:
         MetaWatch on the same box) works over mDNS without them.
 
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/metagateway/metacore
-    mkdir -p /DATA/AppData/metagateway/files
-    mkdir -p /DATA/AppData/metagateway/state
     # Feeders map: all feeders are now SEPARATE store apps, listed by their pcs
     # URLs (MetaFeeder · Books / Papers / Commons / Torrent-Usenet / Tribler). The
     # gateway soft-skips any feeder that isn't installed/reachable, and you can
     # add/remove feeders at runtime from the dashboard. Each key/URL MUST match
     # the corresponding app's feeder container hostname.
+    # Guarded: this hook reruns on every reinstall and every version upgrade, and
+    # the feeder map is editable from the dashboard — an unguarded `cat >` would
+    # silently discard the operator's feeders each time.
+    if [ ! -f /DATA/AppData/metagateway/state/gateway-config.json ]; then
     cat > /DATA/AppData/metagateway/state/gateway-config.json <<'JSON'
     {
       "meta_core_url":  "http://metagateway-core:9000",
@@ -473,9 +479,40 @@ x-casaos:
       }
     }
     JSON
+    fi
+    if [ ! -f /DATA/AppData/metagateway/state/gateway-enabled.json ]; then
     cat > /DATA/AppData/metagateway/state/gateway-enabled.json <<'JSON'
     {
       "disabled": [],
       "enabled_opt_in": ["torznab", "tribler"]
     }
     JSON
+    fi
+
+# Maison (Yundera dashboard) configuration. Read in preference to x-casaos.
+# schema_version 2 is required for `folders`: an older Maison refuses the app
+# outright rather than starting it without its directories.
+x-compose-app:
+  schema_version: 2
+  # Created and chowned by Maison before any image is pulled, before any hook
+  # runs and before the containers start — on the first boot and every one after.
+  # Compose would otherwise create a missing bind source as a root-owned dir.
+  folders:
+    - path: /DATA/AppData/metagateway/metacore
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metagateway/files
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metagateway/state
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metagateway/share-config
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metagateway/share-data
+      user: $PUID
+      group: $PGID
+  # Same string as the caddy_0 label, so the tile link and the route agree.
+  webui-host: metagateway-${domain}
+  webui-path: "/"

@@ -3,6 +3,7 @@ name: metastremio
 services:
   metastremio:
     image: ghcr.io/worph/meta-stremio:1.1.0
+    cpu_shares: 50
     container_name: metastremio
     restart: unless-stopped
 
@@ -17,10 +18,10 @@ services:
     volumes:
       # Shared infrastructure state (leader election, Redis dump, service discovery)
       # Owned by MetaCore; mounted rw here for service registration + leader reads.
-      - /DATA/AppData/metacore/meta-core:/meta-core:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metacore/meta-core:/meta-core:rw
 
       # Transcoding cache
-      - /DATA/AppData/metastremio/cache:/data/cache
+      - ${DATA_ROOT:-/DATA}/AppData/metastremio/cache:/data/cache
 
     # Note: no /files mounts — files are accessed via WebDAV from MetaCore
     # (Architecture V3). MetaCore is the single source of truth for media files.
@@ -53,7 +54,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -128,3 +129,22 @@ x-casaos:
         1. Open the dashboard at `https://metastremio-$APP_DOMAIN/`
         2. Copy the manifest URL
         3. Add it as an addon in Stremio
+
+# Maison (Yundera dashboard) configuration. Read in preference to x-casaos.
+# schema_version 2 is required for `folders`: an older Maison refuses the app
+# outright rather than starting it without its directories.
+x-compose-app:
+  schema_version: 2
+  # Created and chowned by Maison before any image is pulled, before any hook
+  # runs and before the containers start — on the first boot and every one after.
+  # Compose would otherwise create a missing bind source as a root-owned dir.
+  folders:
+    - path: /DATA/AppData/metacore/meta-core
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metastremio/cache
+      user: $PUID
+      group: $PGID
+  # Same string as the caddy_0 label, so the tile link and the route agree.
+  webui-host: metastremio-${domain}
+  webui-path: "/"

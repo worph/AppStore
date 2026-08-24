@@ -100,6 +100,7 @@ services:
   # ---------------------------------------------------------------------------
   metafeederusenet-db:
     image: mariadb:12.3
+    cpu_shares: 70
     container_name: metafeederusenet-db
     hostname: metafeederusenet-db
     restart: unless-stopped
@@ -116,7 +117,7 @@ services:
       MARIADB_PASSWORD: "$APP_DEFAULT_PASSWORD"
       MARIADB_RANDOM_ROOT_PASSWORD: "yes"
     volumes:
-      - /DATA/AppData/metafeederusenet/db:/var/lib/mysql
+      - ${DATA_ROOT:-/DATA}/AppData/metafeederusenet/db:/var/lib/mysql
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
@@ -132,6 +133,7 @@ services:
   # ---------------------------------------------------------------------------
   metafeederusenet-redis:
     image: redis:7-alpine
+    cpu_shares: 70
     container_name: metafeederusenet-redis
     hostname: metafeederusenet-redis
     restart: unless-stopped
@@ -149,6 +151,7 @@ services:
   # ---------------------------------------------------------------------------
   metafeederusenet-manticore:
     image: manticoresearch/manticore@sha256:032388dc77321e3ac898a14b9a0c3fc22ab8d08cd2582abd6c5b642d46b82181
+    cpu_shares: 50
     container_name: metafeederusenet-manticore
     hostname: metafeederusenet-manticore
     restart: unless-stopped
@@ -170,6 +173,7 @@ services:
     # `misc/update/*.php` command surface the "collate via tinker" tip below
     # depends on. Re-pin deliberately, re-verify the trap list above when you do.
     image: pyrowman/nntmux@sha256:7fc221f7a806fee3e4a2145159e1a147962edc095282bdc692806968f791fabe
+    cpu_shares: 50
     container_name: metafeederusenet-nntmux
     hostname: metafeederusenet-nntmux
     restart: unless-stopped
@@ -192,10 +196,10 @@ services:
       # The complete, hand-filled .env (trap #1) — a full-file mount rather
       # than individual `environment:` keys. Writable: `nntmux:install`
       # persists a generated APP_KEY back into it on first boot.
-      - /DATA/AppData/metafeederusenet/nntmux-env/nntmux.env:/app/.env:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metafeederusenet/nntmux-env/nntmux.env:/app/.env:rw
       # The .nzb store — shared with metafeederusenet-feeder below,
       # read-write here (nntmux writes), read-only there (feeder only reads).
-      - /DATA/AppData/metafeederusenet/nntmux-storage/nzb:/app/storage/nzb:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metafeederusenet/nntmux-storage/nzb:/app/storage/nzb:rw
     healthcheck:
       test: ["CMD", "curl", "-sf", "-o", "/dev/null", "http://localhost/"]
       interval: 10s
@@ -244,6 +248,7 @@ services:
     # containers share one `/app/.env` and one database schema, and the script
     # below calls `misc/update/*.php` + `Blacklight\` classes by name.
     image: pyrowman/nntmux@sha256:7fc221f7a806fee3e4a2145159e1a147962edc095282bdc692806968f791fabe
+    cpu_shares: 20
     container_name: metafeederusenet-scanner
     hostname: metafeederusenet-scanner
     restart: unless-stopped
@@ -281,11 +286,11 @@ services:
     volumes:
       # The same .env the web container filled in — one credential set, one
       # APP_KEY. Read-write only because Laravel's .env handling expects it.
-      - /DATA/AppData/metafeederusenet/nntmux-env/nntmux.env:/app/.env:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metafeederusenet/nntmux-env/nntmux.env:/app/.env:rw
       # nntmux writes .nzb.gz here; the feeder reads them read-only.
-      - /DATA/AppData/metafeederusenet/nntmux-storage/nzb:/app/storage/nzb:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metafeederusenet/nntmux-storage/nzb:/app/storage/nzb:rw
       # The loop itself, provisioned by pre-install-cmd below.
-      - /DATA/AppData/metafeederusenet/scanner/scanner.sh:/scanner.sh:ro
+      - ${DATA_ROOT:-/DATA}/AppData/metafeederusenet/scanner/scanner.sh:/scanner.sh:ro
     depends_on:
       # Not just `started`: the loop's very first action is an artisan call, so
       # it must not race the web container's install/migrate step.
@@ -303,6 +308,7 @@ services:
   # ---------------------------------------------------------------------------
   metafeederusenet-feeder:
     image: ghcr.io/worph/meta-feeder-usenet:1.0.1
+    cpu_shares: 30
     container_name: metafeederusenet-feeder
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM instead
     # of swap. Mirrors the dev sub-stack limits.
@@ -334,9 +340,9 @@ services:
       TZ: "$TZ"
     volumes:
       # Persist feeder config (config.json saved via the config UI) + redb cache.
-      - /DATA/AppData/metafeederusenet/feeder-state:/data/meta-feeder:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metafeederusenet/feeder-state:/data/meta-feeder:rw
       # Same volume nntmux writes .nzb.gz into — read-only here.
-      - /DATA/AppData/metafeederusenet/nntmux-storage/nzb:/nntmux-nzb:ro
+      - ${DATA_ROOT:-/DATA}/AppData/metafeederusenet/nntmux-storage/nzb:/nntmux-nzb:ro
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
       interval: 5s
@@ -362,6 +368,7 @@ services:
   # ---------------------------------------------------------------------------
   metafeederusenet-filename-parser:
     image: ghcr.io/worph/metamesh-plugin-filename-parser:1.0.1
+    cpu_shares: 30
     container_name: metafeederusenet-filename-parser
     mem_limit: 256m
     memswap_limit: 256m
@@ -376,6 +383,7 @@ services:
 
   metafeederusenet-tmdb:
     image: ghcr.io/worph/metamesh-plugin-tmdb:1.0.1
+    cpu_shares: 30
     container_name: metafeederusenet-tmdb
     mem_limit: 384m
     memswap_limit: 384m
@@ -390,7 +398,7 @@ services:
       # this, unlike the source build the dev stack runs).
       WEBDAV_URL: "http://metacore-app:9000/webdav"
     volumes:
-      - /DATA/AppData/metafeederusenet/tmdb-cache:/cache
+      - ${DATA_ROOT:-/DATA}/AppData/metafeederusenet/tmdb-cache:/cache
     networks:
       - metafeederusenet
       - pcs
@@ -402,7 +410,8 @@ services:
   # human only); index → /config.
   # ---------------------------------------------------------------------------
   metafeederusenet:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:2.0.9
+    cpu_shares: 80
     container_name: metafeederusenet
     hostname: metafeederusenet
     restart: unless-stopped
@@ -412,7 +421,6 @@ services:
     environment:
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
-      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
       BACKEND_HOST: "metafeederusenet-feeder"
       BACKEND_PORT: "8080"
       LISTEN_PORT: "80"
@@ -434,8 +442,9 @@ services:
 networks:
   metafeederusenet:
     name: metafeederusenet
+    driver: bridge
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -618,13 +627,6 @@ x-casaos:
         Authelia (OIDC); nntmux uses its own login (seeded above).
 
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/metafeederusenet/db
-    mkdir -p /DATA/AppData/metafeederusenet/nntmux-env
-    mkdir -p /DATA/AppData/metafeederusenet/nntmux-storage/nzb
-    mkdir -p /DATA/AppData/metafeederusenet/nntmux-storage/covers
-    mkdir -p /DATA/AppData/metafeederusenet/feeder-state
-    mkdir -p /DATA/AppData/metafeederusenet/tmdb-cache
-    mkdir -p /DATA/AppData/metafeederusenet/scanner
     # Seed nntmux's .env (trap #1 — must be a complete file, see header).
     # NNTP_* are deliberately left blank; fill them in per the install tips.
     if [ ! -f /DATA/AppData/metafeederusenet/nntmux-env/nntmux.env ]; then
@@ -873,3 +875,34 @@ x-casaos:
     done
     SCANNER_SH
     chmod 755 /DATA/AppData/metafeederusenet/scanner/scanner.sh
+
+# Maison (Yundera dashboard) configuration. Read in preference to x-casaos.
+# schema_version 2 is required for `folders`: an older Maison refuses the app
+# outright rather than starting it without its directories.
+x-compose-app:
+  schema_version: 2
+  # Created and chowned by Maison before any image is pulled, before any hook
+  # runs and before the containers start — on the first boot and every one after.
+  # Compose would otherwise create a missing bind source as a root-owned dir.
+  folders:
+    - path: /DATA/AppData/metafeederusenet/db
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metafeederusenet/nntmux-env
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metafeederusenet/nntmux-storage/nzb
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metafeederusenet/feeder-state
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metafeederusenet/tmdb-cache
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metafeederusenet/scanner
+      user: $PUID
+      group: $PGID
+  # Same string as the caddy_0 label, so the tile link and the route agree.
+  webui-host: metafeederusenet-${domain}
+  webui-path: "/config"

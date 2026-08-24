@@ -58,7 +58,7 @@ services:
       POSTGRES_DB: metamcp
       TZ: $TZ
     volumes:
-      - /DATA/AppData/metamcp/pgdata/:/var/lib/postgresql/data/
+      - ${DATA_ROOT:-/DATA}/AppData/metamcp/pgdata/:/var/lib/postgresql/data/
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U metamcp -d metamcp"]
       interval: 10s
@@ -72,8 +72,9 @@ services:
 networks:
   metamcp:
     name: metamcp
+    driver: bridge
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -208,3 +209,20 @@ x-casaos:
         **Connexion des applications IA :** Après la configuration, configurez vos applications IA (Claude, Cursor, etc.) pour se connecter au point d'accès SSE de MetaMCP.
 
         **Clés API :** Générez des clés API depuis l'interface web pour l'accès programmatique.
+
+# Maison (Yundera dashboard) configuration. Read in preference to x-casaos.
+# schema_version 2 is required for `folders`: an older Maison refuses the app
+# outright rather than starting it without its directories.
+x-compose-app:
+  schema_version: 2
+  # Created and chowned by Maison before any image is pulled, before any hook
+  # runs and before the containers start — on the first boot and every one after.
+  # Compose would otherwise create a missing bind source as a root-owned dir.
+  folders:
+    - path: /DATA/AppData/metamcp/pgdata
+      user: $PUID
+      group: $PGID
+      mode: "0700"
+  # Same string as the caddy_0 label, so the tile link and the route agree.
+  webui-host: metamcp-${domain}
+  webui-path: "/"
