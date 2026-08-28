@@ -48,6 +48,13 @@ another MetaShare archivist) must be reachable on the swarm. Install
 
 ## Images
 
-Pulls `ghcr.io/worph/{meta-watch,meta-search,meta-share,meta-core}:1.0.0` and
-`ghcr.io/yundera/nginx-hash-lock:1.0.7`. Publish the `worph/*` tags before
-listing the app.
+| Image | Tag |
+|-------|-----|
+| `ghcr.io/worph/meta-watch` | `1.0.34` |
+| `ghcr.io/worph/meta-search` | `1.1.0` |
+| `ghcr.io/worph/meta-share` | `1.0.26` |
+| `ghcr.io/worph/meta-core` | `1.0.12` |
+| `ghcr.io/yundera/appshield` | `2.0.9` |
+
+Publish the `worph/*` tags before listing the app — `:latest` tracks the newest
+`v*` git tag, not `main`, so an untagged fix is a no-op for a `docker compose pull`.

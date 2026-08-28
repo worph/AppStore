@@ -35,7 +35,7 @@ services:
   # ===========================================================================
   metagateway-core:
     # 1.0.1 carries the new meta-core API (records cids/ set, identity).
-    image: ghcr.io/worph/meta-core:1.0.7
+    image: ghcr.io/worph/meta-core:1.0.12
     container_name: metagateway-core
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
     # instead of swap. Mirrors the dev sub-stack limits.
@@ -75,7 +75,7 @@ services:
   metagateway-share:
     # 1.0.8 = rsa-enabled libp2p (joins the public IPFS DHT — see metagateway-app)
     # + P2P_ANNOUNCE support so remote peers can dial this bitswap seeder.
-    image: ghcr.io/worph/meta-share:1.0.22
+    image: ghcr.io/worph/meta-share:1.0.26
     container_name: metagateway-share
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
     # instead of swap. Mirrors the dev sub-stack limits.
@@ -108,7 +108,10 @@ services:
       # provider records + identify carry a dialable multiaddr for remote
       # bitswap fetches. Behind Docker NAT the swarm otherwise only sees
       # container-internal addresses.
-      P2P_ANNOUNCE: "/ip4/${APP_PUBLIC_IP}/tcp/4005"
+      # ${APP_PUBLIC_IPV4}, NOT ${APP_PUBLIC_IP} — see the note on the
+      # gateway-app below: APP_PUBLIC_IP is the v6 address on an
+      # IPv6-primary PCS, and `/ip4/<v6>/tcp/...` fails to parse.
+      PUBLIC_ADDR: "/ip4/${APP_PUBLIC_IPV4}/tcp/4005"
       # Public IPFS DHT bootstraps by explicit /dns4/.../tcp/4001 (the nested
       # dnsaddr form resolves to wss-only in some container resolvers). rsa
       # feature required to complete the noise handshake with these RSA-keyed
@@ -117,11 +120,10 @@ services:
       META_CORE_URL: "http://metagateway-core:9000"
       META_CORE_PATH: "/meta-core"
       BASE_URL: "http://metagateway-share:3000"
-      # Deprecated name, kept ON PURPOSE: the current name is INTERNAL_BASE_URL, but
-      # meta-share:1.0.8 / meta-search:1.0.2 don't know it yet. Renaming now would
-      # leave peer_url unset (no service registration, peer stops advertising its API
-      # URL). Rename together with the next image bump.
-      META_SHARE_PEER_API_URL: "http://metagateway-share:3000"
+      # Renamed at the 1.0.26 bump (2026-08-26), as the old note here said to do:
+      # META_SHARE_PEER_API_URL was the pre-1.0.8 spelling and now only logs a
+      # deprecation warning. Do NOT set both.
+      INTERNAL_BASE_URL: "http://metagateway-share:3000"
       TZ: "$TZ"
     depends_on:
       metagateway-core:
@@ -149,7 +151,7 @@ services:
     # P2P listen/announce so it's discoverable + dialable off-host + the
     # 2026-07 discovery/filters fixes that make the meta-search fan-out
     # actually route `fileType:video` queries here.
-    image: ghcr.io/worph/meta-gateway:1.0.23
+    image: ghcr.io/worph/meta-gateway:1.0.25
     container_name: metagateway-app
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
     # instead of swap. Mirrors the dev sub-stack limits.
@@ -181,8 +183,26 @@ services:
       META_GATEWAY_BASE_URL: "http://metagateway-app:3000"
       # Fixed libp2p port + advertise the routable address (published host
       # port 4002) so provider records + identify carry a dialable multiaddr.
+      # Ceiling on established libp2p connections (new in meta-gateway 1.0.25).
+      # Joining the public DHT is otherwise UNBOUNDED: at 1.0.24 this peer
+      # climbed to ~600 connections and was OOM-killed by the memory limit
+      # below roughly once a minute, and because each boot minted a fresh
+      # peer-id, every provider record it published was stale within seconds —
+      # remote peers only ever got "Unexpected peer ID". 128 is the default;
+      # raise it only together with the memory limit.
+      META_GATEWAY_MAX_CONNECTIONS: "128"
       META_GATEWAY_P2P_LISTEN: "/ip4/0.0.0.0/tcp/4002"
-      META_GATEWAY_P2P_ANNOUNCE: "/ip4/${APP_PUBLIC_IP}/tcp/4002"
+      # Setting a PUBLIC_ADDR is what flips the gateway out of local/mDNS-only
+      # mode. Unset, meta-gateway pulls in NO kad bootstraps and sets
+      # kad_provide_enabled=false, so it never publishes its `metamesh-gateway`
+      # provider record and no off-host meta-search can discover it (it also
+      # binds an ephemeral /tcp/0, leaving the `ports` mapping below with
+      # nothing to forward to). See meta-gateway config.rs::resolve_network.
+      # ${APP_PUBLIC_IPV4}, NOT ${APP_PUBLIC_IP}: on an IPv6-primary PCS,
+      # APP_PUBLIC_IP holds the v6 address and `/ip4/<v6>/tcp/...` is not a
+      # parseable multiaddr — the gateway refuses to start rather than
+      # announce a lie. APP_PUBLIC_IPV4 is the v4 spelling, set on every box.
+      META_GATEWAY_PUBLIC_ADDR: "/ip4/${APP_PUBLIC_IPV4}/tcp/4002"
       # Public IPFS DHT bootstraps via explicit /dns4/.../tcp/4001 (the nested
       # dnsaddr default resolves to wss-only in some container resolvers).
       KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb"

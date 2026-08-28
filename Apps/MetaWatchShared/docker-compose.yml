@@ -45,7 +45,7 @@ services:
   # core of its own.
   # ---------------------------------------------------------------------------
   metawatch-search:
-    image: ghcr.io/worph/meta-search:1.0.9
+    image: ghcr.io/worph/meta-search:1.1.0
     container_name: metawatch-search
     hostname: metawatch-search
     restart: unless-stopped
@@ -103,7 +103,7 @@ services:
   # owns the caddy_* labels directly and Caddy proxies straight to :3000.
   # ---------------------------------------------------------------------------
   metawatch-app:
-    image: ghcr.io/worph/meta-watch:1.0.25
+    image: ghcr.io/worph/meta-watch:1.0.34
     container_name: metawatch-app
     hostname: metawatch-app
     restart: unless-stopped

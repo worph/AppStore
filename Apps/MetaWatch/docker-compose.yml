@@ -29,7 +29,7 @@ services:
   metawatch-core:
     # 1.0.1 carries the identity API (commit 52f5b5c) required for MetaWatch
     # sign-in / keypair generation; 1.0.0 predates it.
-    image: ghcr.io/worph/meta-core:1.0.7
+    image: ghcr.io/worph/meta-core:1.0.12
     container_name: metawatch-core
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
     # instead of swap. Mirrors the dev sub-stack limits.
@@ -68,7 +68,7 @@ services:
     # RSA-keyed bootstrap.libp2p.io nodes) and therefore to DISCOVER remote
     # gateways via the kad `metamesh-gateway` provider namespace. Without it
     # this peer only ever sees same-host mDNS peers.
-    image: ghcr.io/worph/meta-search:1.0.9
+    image: ghcr.io/worph/meta-search:1.1.0
     container_name: metawatch-search
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
     # instead of swap. Mirrors the dev sub-stack limits.
@@ -94,22 +94,25 @@ services:
       P2P_LISTEN: "/ip4/0.0.0.0/tcp/4001"
       # Public IPFS DHT bootstraps by explicit /dns4/.../tcp/4001 (the nested
       # dnsaddr default resolves to wss-only in some container resolvers).
-      # NOTE: meta-search has no P2P_ANNOUNCE yet, so it discovers gateways
-      # (outbound) but isn't itself dialable off-host until that lands.
+      # NOTE: no PUBLIC_ADDR here ON PURPOSE. meta-search supports it, but this
+      # peer only needs to WALK the DHT: with the bootstraps below it discovers
+      # remote gateways (kad `metamesh-gateway` provider records) and dials them
+      # outbound. Announcing would publish this client's index to the swarm for
+      # no benefit. The gateway is the peer that must be dialable — see
+      # MetaGateway's META_GATEWAY_PUBLIC_ADDR.
       KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb"
-      # LOAD-BEARING at meta-search:1.0.2 — do NOT "clean up" as a default.
-      # That build defaults SEARCH_TIMEOUT_SECS to 8s (300 only became the default
-      # later). At 8s the gateway fan-out (Prowlarr -> public indexers) never
-      # finishes and search returns empty. Droppable only after bumping meta-search.
+      # Was LOAD-BEARING up to meta-search:1.0.2, which defaulted this to 8s — too
+      # short for the gateway fan-out (Prowlarr -> public indexers), so search
+      # returned empty. 300 is the default on the 1.1.0 pin; kept explicit so a
+      # future default change can't silently shorten it again.
       SEARCH_TIMEOUT_SECS: "300"
       META_CORE_URL: "http://metawatch-core:9000"
       META_CORE_PATH: "/meta-core"
       BASE_URL: "http://metawatch-search:3000"
-      # Deprecated name, kept ON PURPOSE: the current name is INTERNAL_BASE_URL, but
-      # meta-share:1.0.8 / meta-search:1.0.2 don't know it yet. Renaming now would
-      # leave peer_url unset (no service registration, peer stops advertising its API
-      # URL). Rename together with the next image bump.
-      META_SHARE_PEER_API_URL: "http://metawatch-search:3000"
+      # Renamed at the 1.1.0 bump (2026-08-26), as the old note here said to do:
+      # META_SHARE_PEER_API_URL was the pre-1.0.8 spelling and now only logs a
+      # deprecation warning. Do NOT set both.
+      INTERNAL_BASE_URL: "http://metawatch-search:3000"
       # NOTE: KAD_NAMESPACE was dropped — it merely restated the default cohort
       # (`metamesh-share-default`). Set it to a non-default value on EVERY peer
       # to scope a private cohort; they must all agree or search returns zero.
@@ -137,7 +140,7 @@ services:
     # the 1.0.8 floor: rsa-enabled libp2p (joins the public IPFS DHT) +
     # P2P_ANNOUNCE so remote peers can dial this transport peer to fetch the
     # bytes it seeds (fetch-implies-seed). Without rsa it never reaches the DHT.
-    image: ghcr.io/worph/meta-share:1.0.22
+    image: ghcr.io/worph/meta-share:1.0.26
     container_name: metawatch-share
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
     # instead of swap. Mirrors the dev sub-stack limits.
@@ -168,14 +171,18 @@ services:
       # Advertise the routable address (published host port 4003) so remote
       # peers can dial this transport peer for the bytes it seeds. Behind
       # Docker NAT the swarm otherwise only sees container-internal addresses.
-      P2P_ANNOUNCE: "/ip4/${APP_PUBLIC_IP}/tcp/4003"
+      # Use the IPV4 spelling, NOT the bare APP_PUBLIC_IP: on an IPv6-primary
+      # PCS that variable holds the v6 address, and `/ip4/<v6>/tcp/...` is not a
+      # parseable multiaddr — meta-share REFUSES TO START rather than announce
+      # a lie (config.rs: "PUBLIC_ADDR is not a valid multiaddr").
+      PUBLIC_ADDR: "/ip4/${APP_PUBLIC_IPV4}/tcp/4003"
       # Public IPFS DHT bootstraps by explicit /dns4/.../tcp/4001 (the nested
       # dnsaddr default resolves to wss-only in some container resolvers).
       KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb"
       META_CORE_URL: "http://metawatch-core:9000"
       META_CORE_PATH: "/meta-core"
       BASE_URL: "http://metawatch-share:3000"
-      META_SHARE_PEER_API_URL: "http://metawatch-share:3000"
+      INTERNAL_BASE_URL: "http://metawatch-share:3000"
       TZ: "$TZ"
     depends_on:
       metawatch-core:
@@ -196,7 +203,7 @@ services:
   # My List + Continue Watching persist in /DATA/AppData/metawatch/data.
   # ---------------------------------------------------------------------------
   metawatch-app:
-    image: ghcr.io/worph/meta-watch:1.0.25
+    image: ghcr.io/worph/meta-watch:1.0.34
     container_name: metawatch-app
     hostname: metawatch-app
     restart: unless-stopped

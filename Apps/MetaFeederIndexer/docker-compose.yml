@@ -30,13 +30,17 @@ name: metafeederindexer
 
 services:
   # ---------------------------------------------------------------------------
-  # metafeederindexer-feeder — the feeder (meta-feeder-indexer) running the
+  # metafeederindexer-feeder — the feeder (meta-feeder-torznab) running the
   # Prowlarr/Torznab source. The gateway reaches it directly on `pcs` for
   # discovery/query/compute; the human configures it through the AppShield gate
   # below.
   # ---------------------------------------------------------------------------
   metafeederindexer-feeder:
-    image: ghcr.io/worph/meta-feeder-indexer:1.0.23
+    # Image name is `meta-feeder-torznab` — the repo (and therefore the ghcr
+    # package, published as ${{ github.repository }}) was renamed. The old
+    # `meta-feeder-indexer` package still exists but is frozen at 1.0.23 and
+    # receives no further pushes. The APP keeps the `metafeederindexer` name.
+    image: ghcr.io/worph/meta-feeder-torznab:1.0.26
     cpu_shares: 30
     container_name: metafeederindexer-feeder
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
@@ -97,7 +101,7 @@ services:
   # No healthcheck: these plugin images don't ship one (curl absent).
   # ---------------------------------------------------------------------------
   metafeederindexer-filename-parser:
-    image: ghcr.io/worph/metamesh-plugin-filename-parser:1.0.1
+    image: ghcr.io/worph/metamesh-plugin-filename-parser:1.0.2
     cpu_shares: 30
     container_name: metafeederindexer-filename-parser
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
@@ -114,7 +118,7 @@ services:
       - metafeederindexer
 
   metafeederindexer-tmdb:
-    image: ghcr.io/worph/metamesh-plugin-tmdb:1.0.1
+    image: ghcr.io/worph/metamesh-plugin-tmdb:1.0.2
     cpu_shares: 30
     container_name: metafeederindexer-tmdb
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM

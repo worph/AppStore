@@ -307,7 +307,7 @@ services:
   # AppShield gate below.
   # ---------------------------------------------------------------------------
   metafeederusenet-feeder:
-    image: ghcr.io/worph/meta-feeder-usenet:1.0.1
+    image: ghcr.io/worph/meta-feeder-usenet:1.0.2
     cpu_shares: 30
     container_name: metafeederusenet-feeder
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM instead
@@ -367,7 +367,7 @@ services:
   # images don't ship one (curl absent).
   # ---------------------------------------------------------------------------
   metafeederusenet-filename-parser:
-    image: ghcr.io/worph/metamesh-plugin-filename-parser:1.0.1
+    image: ghcr.io/worph/metamesh-plugin-filename-parser:1.0.2
     cpu_shares: 30
     container_name: metafeederusenet-filename-parser
     mem_limit: 256m
@@ -382,7 +382,7 @@ services:
       - metafeederusenet
 
   metafeederusenet-tmdb:
-    image: ghcr.io/worph/metamesh-plugin-tmdb:1.0.1
+    image: ghcr.io/worph/metamesh-plugin-tmdb:1.0.2
     cpu_shares: 30
     container_name: metafeederusenet-tmdb
     mem_limit: 384m

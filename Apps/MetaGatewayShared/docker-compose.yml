@@ -33,7 +33,7 @@ services:
   # co-located metashare-app then seeds the resolved CIDs.
   # ---------------------------------------------------------------------------
   metagateway-app:
-    image: ghcr.io/worph/meta-gateway:1.0.23
+    image: ghcr.io/worph/meta-gateway:1.0.25
     container_name: metagateway-app
     hostname: metagateway-app
     restart: unless-stopped
@@ -45,12 +45,47 @@ services:
     memswap_limit: 1g
     expose:
       - 3000
+    # Public libp2p listener. This is the peer a remote MetaWatch's meta-search
+    # discovers via the kad `metamesh-gateway` provider namespace and dials for
+    # live gateway fan-out. Must be host-published AND reachable inbound.
+    ports:
+      - "4002:4002"
     volumes:
       # gateway-config.json (source definitions, feeder URLs) + dispatcher state.
       - ${DATA_ROOT:-/DATA}/AppData/metagateway/state:/data/meta-gateway:rw
     environment:
       META_GATEWAY_BASE_URL: "http://metagateway-app:3000"
       META_GATEWAY_PEER_ID: "metagateway"
+      # --- cross-node discoverability (added 2026-08-26) ---------------------
+      # WITHOUT META_GATEWAY_PUBLIC_ADDR meta-gateway starts in local/mDNS-only
+      # mode: it loads NO kad bootstraps, sets kad_provide_enabled=false, and so
+      # never publishes its `metamesh-gateway` provider record — no off-host
+      # MetaWatch can EVER discover it, however open the firewall is. It also
+      # binds an ephemeral /tcp/0, so the `ports` mapping above would have
+      # nothing to forward to. It says so in its own first three log lines:
+      #   network_mode="local" kad_bootstrap_count=0 kad_provide_enabled=false
+      # Verify after install: /api/peers → network_mode "public" + a non-empty
+      # external_addrs. (This is the gap that made watch.nsl.sh invisible to the
+      # wisera MetaWatch until 2026-08-26 — the self-contained MetaGateway
+      # listing always had it; this shared-backend variant did not.)
+      #
+      # Use the IPV4 spelling, NOT the bare APP_PUBLIC_IP: on an IPv6-primary
+      # PCS that variable holds the v6 address, and `/ip4/<v6>/tcp/...` is not a
+      # parseable multiaddr — the gateway REFUSES TO START rather than announce
+      # a lie. watch.nsl.sh is exactly such a box.
+      # Ceiling on established libp2p connections (new in meta-gateway 1.0.25).
+      # Joining the public DHT is otherwise UNBOUNDED: at 1.0.24 this peer
+      # climbed to ~600 connections and was OOM-killed by the memory limit
+      # below roughly once a minute, and because each boot minted a fresh
+      # peer-id, every provider record it published was stale within seconds —
+      # remote peers only ever got "Unexpected peer ID". 128 is the default;
+      # raise it only together with the memory limit.
+      META_GATEWAY_MAX_CONNECTIONS: "128"
+      META_GATEWAY_P2P_LISTEN: "/ip4/0.0.0.0/tcp/4002"
+      META_GATEWAY_PUBLIC_ADDR: "/ip4/${APP_PUBLIC_IPV4}/tcp/4002"
+      # Public IPFS DHT bootstraps by explicit /dns4/.../tcp/4001 (the nested
+      # dnsaddr default resolves to wss-only in some container resolvers).
+      KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb"
       TZ: "$TZ"
     depends_on:
       metagateway-card:

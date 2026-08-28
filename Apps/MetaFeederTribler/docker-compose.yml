@@ -71,7 +71,7 @@ services:
   # gate below.
   # ---------------------------------------------------------------------------
   metafeedertribler-feeder:
-    image: ghcr.io/worph/meta-feeder-tribler:1.0.3
+    image: ghcr.io/worph/meta-feeder-tribler:1.0.4
     cpu_shares: 30
     container_name: metafeedertribler-feeder
     hostname: metafeedertribler-feeder
@@ -123,7 +123,7 @@ services:
   # images don't ship one (curl absent).
   # ---------------------------------------------------------------------------
   metafeedertribler-filename-parser:
-    image: ghcr.io/worph/metamesh-plugin-filename-parser:1.0.1
+    image: ghcr.io/worph/metamesh-plugin-filename-parser:1.0.2
     cpu_shares: 30
     container_name: metafeedertribler-filename-parser
     hostname: metafeedertribler-filename-parser
@@ -137,7 +137,7 @@ services:
       - metafeedertribler
 
   metafeedertribler-tmdb:
-    image: ghcr.io/worph/metamesh-plugin-tmdb:1.0.0
+    image: ghcr.io/worph/metamesh-plugin-tmdb:1.0.2
     cpu_shares: 30
     container_name: metafeedertribler-tmdb
     hostname: metafeedertribler-tmdb

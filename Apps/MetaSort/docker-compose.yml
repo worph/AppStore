@@ -4,7 +4,7 @@ services:
   # Backend service. Reachable on the pcs network as `metasort-app`.
   # Public ingress goes through the `metasort` hash-lock proxy below.
   metasort-app:
-    image: ghcr.io/worph/meta-sort:1.0.2
+    image: ghcr.io/worph/meta-sort:1.0.3
     container_name: metasort-app
     hostname: metasort-app
     restart: unless-stopped

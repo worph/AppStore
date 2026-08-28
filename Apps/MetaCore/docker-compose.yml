@@ -5,12 +5,17 @@ services:
   # Public ingress goes through the `metacore` hash-lock proxy below — this
   # service has no public Caddy labels and no exposed host ports.
   metacore-app:
-    image: ghcr.io/worph/meta-core:1.0.9
+    image: ghcr.io/worph/meta-core:1.0.12
     container_name: metacore-app
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
-    # instead of swap. Mirrors the dev sub-stack limits.
-    mem_limit: 768m
-    memswap_limit: 768m
+    # instead of swap. Both values must move together or swap comes back.
+    #
+    # Raised 768m -> 1536m (2026-08-26): on watch.nsl.sh the Redis working set
+    # ran at 73-97% of 768m, i.e. one indexing burst away from an OOM kill that
+    # takes the record store (and every service reading it) down with it.
+    # 1536m puts steady state near 30%.
+    mem_limit: 1536m
+    memswap_limit: 1536m
     hostname: metacore-app
     restart: unless-stopped
     privileged: true

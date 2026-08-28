@@ -16,9 +16,9 @@ services:
     # top of the 1.0.8 floor this pin still requires: rsa-enabled libp2p
     # (required to join the public IPFS DHT — the bootstrap.libp2p.io nodes are
     # RSA-keyed; without `rsa` the noise handshake fails and this peer never
-    # actually reaches the DHT) + P2P_ANNOUNCE support so remote archivists can
+    # actually reaches the DHT) + PUBLIC_ADDR support so remote archivists can
     # dial this seeder.
-    image: ghcr.io/worph/meta-share:1.0.24
+    image: ghcr.io/worph/meta-share:1.0.26
     container_name: metashare-app
     # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM
     # instead of swap. Mirrors the dev sub-stack limits.
@@ -72,7 +72,11 @@ services:
       # provider records + identify carry a dialable multiaddr — otherwise,
       # behind Docker NAT, the swarm only sees container-internal addresses
       # and remote archivists can't dial in to fetch seeded blocks.
-      - P2P_ANNOUNCE=/ip4/${APP_PUBLIC_IP}/tcp/4001
+      # ${APP_PUBLIC_IPV4}, NOT ${APP_PUBLIC_IP}: on an IPv6-primary PCS
+      # APP_PUBLIC_IP holds the v6 address, and `/ip4/<v6>/tcp/...` is not a
+      # parseable multiaddr — meta-share REFUSES TO START rather than announce
+      # a lie (config.rs: "PUBLIC_ADDR is not a valid multiaddr").
+      - PUBLIC_ADDR=/ip4/${APP_PUBLIC_IPV4}/tcp/4001
       # Public IPFS DHT bootstraps by explicit /dns4/.../tcp/4001. The default
       # nested-dnsaddr form resolves to wss-only in some container resolvers
       # (no ws transport → no bootstrap); these direct addresses avoid that.

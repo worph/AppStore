@@ -56,19 +56,37 @@ container-name or data-path collisions.
 
 ## Federation
 
-`metagateway-share` joins the **public** libp2p swarm (kad-DHT, cohort
-`metamesh-share-default`) on TCP **4002** + mDNS on `pcs`; Tribler's IPv8
-overlay is UDP **8092**. Open them inbound for best cross-node reach; same-host
-MetaWatch discovery works over mDNS without them.
+Two peers join the **public** libp2p swarm, on two different ports:
+
+| Peer | Port | Role |
+|------|------|------|
+| `metagateway-app` | TCP **4002** | gateway **discovery** — publishes the kad provider record under the `metamesh-gateway` namespace; this is the peer a remote meta-search finds and dials for live fan-out |
+| `metagateway-share` | TCP **4005** | the ingester's records + bitswap byte-serving (cohort `metamesh-share-default`) |
+
+Tribler's IPv8 overlay is UDP **8092**.
+
+**Cross-node discovery needs both the port open inbound AND a public address
+set.** Without `META_GATEWAY_PUBLIC_ADDR` the gateway starts in local/mDNS-only
+mode: it pulls in no kad bootstraps, publishes no provider record, and binds an
+ephemeral port — so no off-host MetaWatch can ever find it, however open the
+firewall is. The compose sets it from `${APP_PUBLIC_IPV4}`; on a PCS whose
+public IP is not the v4 one, override it. Same-host MetaWatch discovery works
+over mDNS on `pcs` regardless.
 
 ## Images
 
 | Image | Tag |
 |-------|-----|
-| `ghcr.io/worph/meta-gateway`, `meta-core`, `meta-feeder-{book,paper,common,torrent}`, `metamesh-plugin-tmdb` | `1.0.0` |
-| `ghcr.io/worph/meta-share` | `1.0.1` |
-| `ghcr.io/worph/metamesh-plugin-filename-parser` | `1.0.1` |
-| `ghcr.io/tribler/tribler` | `latest` (upstream) |
+| `ghcr.io/worph/meta-gateway` | `1.0.25` |
+| `ghcr.io/worph/meta-share` | `1.0.26` |
+| `ghcr.io/worph/meta-core` | `1.0.12` |
+| `ghcr.io/worph/meta-feeder-card` | `1.0.1` |
+| `ghcr.io/yundera/appshield` | `2.0.9` |
+
+No feeder images are listed here any more: every content source is a **separate
+store app** (MetaFeeder · Books / Papers / Commons / Torznab / Tribler), each
+pinning its own images. The gateway discovers them by URL over `pcs` and
+soft-skips any that aren't installed.
 | `lscr.io/linuxserver/prowlarr` | `latest` |
 | `ghcr.io/yundera/nginx-hash-lock` | `1.0.7` |
 
