@@ -73,7 +73,14 @@ services:
       P2P_LISTEN: "/ip4/0.0.0.0/tcp/4001"
       # Public IPFS DHT bootstraps by explicit /dns4/.../tcp/4001 (the nested
       # dnsaddr default resolves to wss-only in some container resolvers).
-      KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb"
+      # Includes mars.i.ipfs.io — the only surviving legacy *.i.ipfs.io
+      # bootstrapper (neptune/pluto/uranus/earth/saturn/venus are all NXDOMAIN).
+      # It is here for resilience: the four IPFS-Foundation bootstrappers can
+      # refuse an individual IP, and when they do a peer cannot join the DHT AT
+      # ALL — no provider record, no discovery, no gateway fan-out. Observed on
+      # watch.nsl.sh 2026-09-01: 2 connections with the four alone, 126 once a
+      # reachable fifth was added. Costs nothing when the four work.
+      KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb,/dns4/mars.i.ipfs.io/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ"
       # The standalone MetaCore app. Port 80 is its hash-lock/appshield-free
       # backend port on `pcs` — NOT 9000 (that is the self-contained variant's
       # private core).

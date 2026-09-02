@@ -54,7 +54,21 @@ services:
       # gateway-config.json (source definitions, feeder URLs) + dispatcher state.
       - ${DATA_ROOT:-/DATA}/AppData/metagateway/state:/data/meta-gateway:rw
     environment:
-      META_GATEWAY_BASE_URL: "http://metagateway-app:3000"
+      # Advertised verbatim in this peer's libp2p identify `agent_version`
+      # (`baseUrl=...`) and used for NOTHING else in-process — see
+      # meta-gateway `main.rs`: "prod compose would set it to the public
+      # hostname behind whatever perimeter is in front."
+      #
+      # It MUST be resolvable BY A REMOTE PEER. It used to be
+      # `http://metagateway-app:3000`, a docker-internal name, which made the
+      # gateway useless off-host even once discovery worked: a remote
+      # meta-search reads the served file_types/content_kinds by plain HTTP
+      # `GET {baseUrl}/api/gateway/plugins` (the contract in the mirrored
+      # `gateway_discovery.rs`), and an empty capability snapshot means
+      # `upstreams_for_query_from_raw` fans out to NOBODY — every remote
+      # typed query silently returns zero gateway hits. The `/api/gateway/plugins`
+      # carve-out in the Caddy labels below is what makes this URL answerable.
+      META_GATEWAY_BASE_URL: "https://metagateway-${APP_DOMAIN}"
       META_GATEWAY_PEER_ID: "metagateway"
       # --- cross-node discoverability (added 2026-08-26) ---------------------
       # WITHOUT META_GATEWAY_PUBLIC_ADDR meta-gateway starts in local/mDNS-only
@@ -85,7 +99,14 @@ services:
       META_GATEWAY_PUBLIC_ADDR: "/ip4/${APP_PUBLIC_IPV4}/tcp/4002"
       # Public IPFS DHT bootstraps by explicit /dns4/.../tcp/4001 (the nested
       # dnsaddr default resolves to wss-only in some container resolvers).
-      KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb"
+      # Includes mars.i.ipfs.io — the only surviving legacy *.i.ipfs.io
+      # bootstrapper (neptune/pluto/uranus/earth/saturn/venus are all NXDOMAIN).
+      # It is here for resilience: the four IPFS-Foundation bootstrappers can
+      # refuse an individual IP, and when they do a peer cannot join the DHT AT
+      # ALL — no provider record, no discovery, no gateway fan-out. Observed on
+      # watch.nsl.sh 2026-09-01: 2 connections with the four alone, 126 once a
+      # reachable fifth was added. Costs nothing when the four work.
+      KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb,/dns4/mars.i.ipfs.io/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ"
       TZ: "$TZ"
     depends_on:
       metagateway-card:
@@ -170,23 +191,47 @@ services:
       caddy_0.import: gateway_tls
       caddy_0.0_handle: "/health"
       caddy_0.0_handle.reverse_proxy: "metagateway-app:3000"
-      caddy_0.1_handle: ""
-      caddy_0.1_handle.reverse_proxy: "{{upstreams 80}}"
+      # Gateway capability contract, read by REMOTE meta-search/meta-share
+      # peers that have no session and never will. Exact-match path (no
+      # trailing `*`), so the mutating `PUT /api/gateway/plugins/:id` and
+      # every `/api/metadata/*` write stay behind AppShield.
+      # Response is capability-only: plugin ids + file_types/content_kinds
+      # + nzbFetch + nzbIndexers (indexer HOSTNAMES, no API keys).
+      caddy_0.1_handle: "/api/gateway/plugins"
+      caddy_0.1_handle.reverse_proxy: "metagateway-app:3000"
+      caddy_0.2_handle: ""
+      caddy_0.2_handle.reverse_proxy: "{{upstreams 80}}"
 
       # ---- metagateway-IP.nip.io (gateway TLS) ----
       caddy_1: metagateway-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.0_handle: "/health"
       caddy_1.0_handle.reverse_proxy: "metagateway-app:3000"
-      caddy_1.1_handle: ""
-      caddy_1.1_handle.reverse_proxy: "{{upstreams 80}}"
+      # Gateway capability contract, read by REMOTE meta-search/meta-share
+      # peers that have no session and never will. Exact-match path (no
+      # trailing `*`), so the mutating `PUT /api/gateway/plugins/:id` and
+      # every `/api/metadata/*` write stay behind AppShield.
+      # Response is capability-only: plugin ids + file_types/content_kinds
+      # + nzbFetch + nzbIndexers (indexer HOSTNAMES, no API keys).
+      caddy_1.1_handle: "/api/gateway/plugins"
+      caddy_1.1_handle.reverse_proxy: "metagateway-app:3000"
+      caddy_1.2_handle: ""
+      caddy_1.2_handle.reverse_proxy: "{{upstreams 80}}"
 
       # ---- metagateway-IP.sslip.io (Let's Encrypt) ----
       caddy_2: metagateway-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.0_handle: "/health"
       caddy_2.0_handle.reverse_proxy: "metagateway-app:3000"
-      caddy_2.1_handle: ""
-      caddy_2.1_handle.reverse_proxy: "{{upstreams 80}}"
+      # Gateway capability contract, read by REMOTE meta-search/meta-share
+      # peers that have no session and never will. Exact-match path (no
+      # trailing `*`), so the mutating `PUT /api/gateway/plugins/:id` and
+      # every `/api/metadata/*` write stay behind AppShield.
+      # Response is capability-only: plugin ids + file_types/content_kinds
+      # + nzbFetch + nzbIndexers (indexer HOSTNAMES, no API keys).
+      caddy_2.1_handle: "/api/gateway/plugins"
+      caddy_2.1_handle.reverse_proxy: "metagateway-app:3000"
+      caddy_2.2_handle: ""
+      caddy_2.2_handle.reverse_proxy: "{{upstreams 80}}"
 
       icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaGateway/icon.png
     networks:

@@ -80,7 +80,12 @@ services:
       # Public IPFS DHT bootstraps by explicit /dns4/.../tcp/4001. The default
       # nested-dnsaddr form resolves to wss-only in some container resolvers
       # (no ws transport → no bootstrap); these direct addresses avoid that.
-      - KAD_BOOTSTRAP_PEERS=/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb
+      # Includes mars.i.ipfs.io — the only surviving legacy *.i.ipfs.io
+      # bootstrapper. Resilience: the four IPFS-Foundation bootstrappers can refuse
+      # an individual IP, and when they do a peer cannot join the DHT AT ALL.
+      # Observed on watch.nsl.sh 2026-09-01: 2 connections with the four alone,
+      # 126 once a reachable fifth was added.
+      - KAD_BOOTSTRAP_PEERS=/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb,/dns4/mars.i.ipfs.io/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ
 
       # Service registration into /meta-core/services/
       - META_CORE_PATH=/meta-core

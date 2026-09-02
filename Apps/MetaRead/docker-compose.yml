@@ -1,0 +1,472 @@
+name: metaread
+
+# =============================================================================
+# MetaRead — the READING client for the MetaMesh network.
+#
+# Comics and manga, books, papers and scanned documents. The third client on the
+# mesh after MetaWatch (video) and MetaListen (audio), and it is built the same
+# way: a self-contained stack with its OWN discovery (meta-search), transport
+# (meta-share) and meta-core, so it installs alongside MetaGateway and the
+# standalone Meta* apps with zero container-name / data-path collisions.
+#
+#   metaread-core   →  /DATA/AppData/metaread/metacore   (per-stack meta-core)
+#   metaread-search →  discovery (Kamilata federated search, identity proxy)
+#   metaread-share  →  pure content transport (byte Range, bitswap, BT)
+#   metaread-app    →  the reader UI/back-end (behind OIDC)
+#
+# ⚠ **Distinct libp2p host ports.** MetaWatch already publishes 4003/4004; this
+# stack uses 4005/4006. Two peers cannot share a host port, and the failure is
+# a container that will not start rather than anything subtle — but if you run
+# MetaListen too, keep walking the pairs upward.
+#
+# ── What it needs to actually show you something ─────────────────────────────
+# A client is a window onto the swarm; it holds no catalogue of its own. To see
+# comics you need a gateway peer running the literature feeders:
+#
+#   **MetaFeeder · Comic** — AniList (names the works) + Suwayomi (supplies the
+#   chapters). Install it beside **MetaGateway** and register both feeders in
+#   the gateway's config.
+#
+#   **MetaFeeder · Book** — Project Gutenberg, for public-domain books.
+#
+# Without either, MetaRead runs perfectly and shows an empty library — which is
+# the honest state of a mesh nobody has fed yet, not a fault.
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # metaread-core — dedicated meta-core for this client: the identity keystore
+  # (profiles are secp256k1 keypairs), the User Data Layer op-log, and whatever
+  # records meta-search ingests off the swarm. File watcher OFF — MetaRead is a
+  # consumer, not a library indexer.
+  # ---------------------------------------------------------------------------
+  metaread-core:
+    image: ghcr.io/worph/meta-core:1.0.14
+    container_name: metaread-core
+    # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM instead of
+    # swap.
+    mem_limit: 768m
+    memswap_limit: 768m
+    hostname: metaread-core
+    restart: unless-stopped
+    privileged: true
+    user: "0:0"
+    cpu_shares: 30
+    expose:
+      - 9000
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/metaread/metacore:/meta-core:rw
+    environment:
+      - BASE_URL=http://metaread-core:9000
+      - ENABLE_FILE_WATCHER=false
+      - TZ=$TZ
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+    networks:
+      - metaread
+
+  # ---------------------------------------------------------------------------
+  # metaread-search — DISCOVERY. Federated search (Kamilata Bloom routing), the
+  # gateway fan-out, cover recovery over bitswap, the shared prefs and the User
+  # Data Layer. Public libp2p on host port 4006; mDNS on `pcs` for same-host
+  # peers.
+  #
+  # ⚠ This is the peer that reaches MetaGateway. An empty MetaRead library with
+  # a healthy gateway usually means this peer never joined the DHT — check its
+  # peer count before suspecting the feeders.
+  # ---------------------------------------------------------------------------
+  metaread-search:
+    image: ghcr.io/worph/meta-search:1.1.0
+    container_name: metaread-search
+    mem_limit: 1g
+    memswap_limit: 1g
+    hostname: metaread-search
+    restart: unless-stopped
+    user: "0:0"
+    cpu_shares: 30
+    expose:
+      - 3000
+    ports:
+      - "4006:4001"
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/metaread/metacore:/meta-core:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metaread/search-data:/data:rw
+    environment:
+      P2P_LISTEN: "/ip4/0.0.0.0/tcp/4001"
+      # ⚠ The IPV4 spelling, never the bare APP_PUBLIC_IP: on an IPv6-primary
+      # PCS that variable holds the v6 address, and `/ip4/<v6>/tcp/...` is not a
+      # parseable multiaddr — the peer REFUSES TO START rather than announce a
+      # lie.
+      PUBLIC_ADDR: "/ip4/${APP_PUBLIC_IPV4}/tcp/4006"
+      # Explicit /dns4/ bootstraps: the nested dnsaddr default resolves to
+      # wss-only in some container resolvers. mars.i.ipfs.io is the only
+      # surviving legacy *.i.ipfs.io bootstrapper and is here for resilience —
+      # the four IPFS-Foundation nodes can refuse an individual IP, and when they
+      # do a peer cannot join the DHT AT ALL (no provider record, no discovery,
+      # no gateway fan-out). Measured on watch.nsl.sh 2026-09-01: 2 connections
+      # with the four alone, 126 once a reachable fifth was added.
+      KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb,/dns4/mars.i.ipfs.io/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ"
+      META_CORE_URL: "http://metaread-core:9000"
+      META_CORE_PATH: "/meta-core"
+      BASE_URL: "http://metaread-search:3000"
+      INTERNAL_BASE_URL: "http://metaread-search:3000"
+      TZ: "$TZ"
+    depends_on:
+      metaread-core:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - metaread
+      - pcs
+
+  # ---------------------------------------------------------------------------
+  # metaread-share — PURE CONTENT TRANSPORT. Fetches and serves bytes by CID
+  # over bitswap + a BitTorrent tier, and seeds whatever it fetches. Public
+  # libp2p on host port 4005.
+  #
+  # ⚠ It must be reachable by whatever holds the pages. A comic chapter from the
+  # aggregator tier is a list of per-page URL locators redeemed HERE, so a
+  # Suwayomi behind auth or on a LAN this peer cannot reach yields a chapter
+  # that lists correctly and will not open.
+  # ---------------------------------------------------------------------------
+  metaread-share:
+    image: ghcr.io/worph/meta-share:1.0.27
+    container_name: metaread-share
+    # Smaller than MetaWatch's 3 GB on purpose: a chapter is tens of megabytes
+    # where a film is gigabytes, and this peer never holds a whole video.
+    mem_limit: 1500m
+    memswap_limit: 1500m
+    hostname: metaread-share
+    restart: unless-stopped
+    user: "0:0"
+    cpu_shares: 30
+    expose:
+      - 3000
+    ports:
+      - "4005:4001"
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/metaread/metacore:/meta-core:rw
+      - ${DATA_ROOT:-/DATA}/AppData/metaread/metashare-config:/config:rw
+      # The read cache: redb blockstore, seed manifest, sparse files. Without
+      # this mount every recreate re-downloads from a cold swarm and the peer
+      # seeds nothing back.
+      - ${DATA_ROOT:-/DATA}/AppData/metaread/share-data:/data:rw
+    environment:
+      P2P_LISTEN: "/ip4/0.0.0.0/tcp/4001"
+      PUBLIC_ADDR: "/ip4/${APP_PUBLIC_IPV4}/tcp/4005"
+      KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb,/dns4/mars.i.ipfs.io/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ"
+      META_CORE_URL: "http://metaread-core:9000"
+      META_CORE_PATH: "/meta-core"
+      BASE_URL: "http://metaread-share:3000"
+      INTERNAL_BASE_URL: "http://metaread-share:3000"
+      TZ: "$TZ"
+    depends_on:
+      metaread-core:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - metaread
+      - pcs
+
+  # ---------------------------------------------------------------------------
+  # metaread-app — the reader. Zero page work server-side: a flat Range/206 byte
+  # proxy to metaread-share, with the CBZ/EPUB/PDF decoding done in the browser.
+  # My List, Continue Reading and reading positions live in the User Data Layer.
+  # ---------------------------------------------------------------------------
+  metaread-app:
+    image: ghcr.io/worph/meta-read:1.0.0
+    container_name: metaread-app
+    hostname: metaread-app
+    restart: unless-stopped
+    cpu_shares: 30
+    mem_limit: 512m
+    memswap_limit: 512m
+    expose:
+      - 3000
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/metaread/data:/app/data
+    environment:
+      META_SHARE_URL: "http://metaread-share:3000"
+      META_SEARCH_URL: "http://metaread-search:3000"
+      # Browser-reachable topbar chips — the AppShield gates below expose the
+      # co-located transport and discovery peers behind Yundera OIDC.
+      META_SHARE_PUBLIC_URL: "https://metareadshare-${APP_DOMAIN}"
+      META_SEARCH_PUBLIC_URL: "https://metareadsearch-${APP_DOMAIN}"
+      TZ: "$TZ"
+    depends_on:
+      metaread-search:
+        condition: service_healthy
+      metaread-share:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - metaread
+
+  # ---------------------------------------------------------------------------
+  # OIDC perimeter for the reader UI. container_name MUST equal the URL prefix
+  # so the registrar's redirect-URI allowlist matches `metaread-<user>.<domain>`.
+  # ---------------------------------------------------------------------------
+  metaread:
+    image: ghcr.io/yundera/appshield:2.0.9
+    cpu_shares: 80
+    container_name: metaread
+    hostname: metaread
+    restart: unless-stopped
+    user: "0:0"
+    expose:
+      - 80
+    environment:
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      BACKEND_HOST: "metaread-app"
+      BACKEND_PORT: "3000"
+      LISTEN_PORT: "80"
+    labels:
+      caddy_0: metaread-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: metaread-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: metaread-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - metaread-app
+    networks:
+      - metaread
+      - pcs
+
+  # ---------------------------------------------------------------------------
+  # Gates for the two co-located peers, so the reader's topbar chips resolve to
+  # something a browser can open. Diagnostics only — nothing routes through them.
+  # ---------------------------------------------------------------------------
+  metareadshare:
+    image: ghcr.io/yundera/appshield:2.0.9
+    cpu_shares: 50
+    container_name: metareadshare
+    hostname: metareadshare
+    restart: unless-stopped
+    user: "0:0"
+    expose:
+      - 80
+    environment:
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      BACKEND_HOST: "metaread-share"
+      BACKEND_PORT: "3000"
+      LISTEN_PORT: "80"
+    labels:
+      caddy_0: metareadshare-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: metareadshare-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: metareadshare-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - metaread-share
+    networks:
+      - metaread
+      - pcs
+
+  metareadsearch:
+    image: ghcr.io/yundera/appshield:2.0.9
+    cpu_shares: 50
+    container_name: metareadsearch
+    hostname: metareadsearch
+    restart: unless-stopped
+    user: "0:0"
+    expose:
+      - 80
+    environment:
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      BACKEND_HOST: "metaread-search"
+      BACKEND_PORT: "3000"
+      LISTEN_PORT: "80"
+    labels:
+      caddy_0: metareadsearch-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: metareadsearch-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: metareadsearch-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - metaread-search
+    networks:
+      - metaread
+      - pcs
+
+networks:
+  metaread:
+    name: metaread
+    driver: bridge
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  author: Worph Team
+  category: Media
+  developer: Aptero Team
+  main: metaread
+  webui_port: 80
+  index: /
+
+  description:
+    en_us: |
+      **A reading client for the MetaMesh network — comics and manga, books,
+      papers and scanned documents.**
+
+      MetaRead is to reading what **MetaWatch** is to video: a library you browse
+      by *work* rather than by filename. Search returns a grid of covers, a work
+      opens to its chapter or edition list, and a chapter opens in a reader that
+      does the page decoding **in your browser** — the server is a flat byte
+      proxy and never unpacks an archive on your behalf.
+
+      **What it reads.** CBZ and CBR comics, EPUB and PDF books, and the
+      per-page image lists that a manga aggregator serves for a chapter nobody
+      has downloaded yet. Reading direction, page layout and spread are per-work
+      and remembered.
+
+      **How the catalogue works.** The depth of the hierarchy is a property of
+      the item, not of the app. A manga is *work → volume → chapter*, with
+      several scanlations per chapter and a chooser to pick between them. A
+      Gutenberg novel is one work and one file — its page *is* the reader entry
+      point, with no synthetic chapter 1 invented to pad it out.
+
+      **Languages.** Pick the languages you read once, in the top bar, and every
+      view honours it — the same preference MetaWatch and the meta-share
+      dashboard already speak. An item that declares no language is always
+      shown: absence means *unknown*, never *not yours*.
+
+      **Self-contained.** Ships its own discovery, transport and meta-core, so it
+      installs beside **MetaGateway** and the other Meta* apps with no
+      collisions. Your profile is a keypair, and your list, positions and
+      ratings live in the User Data Layer rather than on someone's server.
+
+      **Requires a feeder to have anything to show:** **MetaFeeder · Comic**
+      (AniList + Suwayomi) for comics and manga, **MetaFeeder · Book** for
+      public-domain books. Without one it runs perfectly and shows an empty
+      library — the honest state of a mesh nobody has fed.
+
+    fr_fr: |
+      **Un client de lecture pour le réseau MetaMesh — BD et manga, livres,
+      articles et documents numérisés.**
+
+      MetaRead est à la lecture ce que **MetaWatch** est à la vidéo : une
+      bibliothèque que l'on parcourt par *œuvre* plutôt que par nom de fichier.
+      La recherche renvoie une grille de couvertures, une œuvre s'ouvre sur sa
+      liste de chapitres ou d'éditions, et un chapitre s'ouvre dans un lecteur
+      qui décode les pages **dans votre navigateur** — le serveur n'est qu'un
+      relais d'octets et n'ouvre jamais une archive à votre place.
+
+      **Ce qu'il lit.** BD en CBZ et CBR, livres en EPUB et PDF, et les listes
+      d'images par page qu'un agrégateur de manga sert pour un chapitre que
+      personne n'a encore téléchargé. Sens de lecture, mise en page et double
+      page sont propres à chaque œuvre et mémorisés.
+
+      **La profondeur du catalogue appartient à l'œuvre, pas à l'app.** Un manga
+      est *œuvre → volume → chapitre*, avec plusieurs scanlations par chapitre et
+      un sélecteur pour choisir. Un roman de Gutenberg est une œuvre et un
+      fichier — sa page *est* le point d'entrée du lecteur, sans chapitre 1
+      artificiel inventé pour meubler.
+
+      **Langues.** Choisissez une fois les langues que vous lisez, dans la barre
+      du haut, et toutes les vues la respectent. Un élément sans langue déclarée
+      reste affiché : l'absence signifie *inconnu*, jamais *pas pour vous*.
+
+      **Autonome.** Embarque sa propre découverte, son transport et son
+      meta-core. Votre profil est une paire de clés ; listes, positions et notes
+      vivent dans la User Data Layer.
+
+      **Nécessite un feeder** pour avoir quelque chose à afficher :
+      **MetaFeeder · Comic** (AniList + Suwayomi) pour la BD et le manga,
+      **MetaFeeder · Book** pour les livres du domaine public.
+
+  tagline:
+    en_us: Read comics, manga and books from the MetaMesh network
+    fr_fr: Lisez BD, manga et livres depuis le réseau MetaMesh
+
+  title:
+    en_us: MetaRead
+
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaRead/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaRead/thumbnail.png
+
+  store_app_id: metaread
+  is_uncontrolled: false
+
+  tips:
+    before_install:
+      en_us: |
+        **Ports.** This stack publishes libp2p on host ports **4005** and
+        **4006**. MetaWatch already uses 4003/4004 — if you run another Meta*
+        client, keep walking the pairs upward. Two peers cannot share a host
+        port.
+
+        **Install order:**
+        1. **MetaGateway** — the peer that runs the feeders and announces what
+           they find.
+        2. **MetaFeeder · Comic** and/or **MetaFeeder · Book**, then register
+           each in the gateway's *Add a feeder* box. Gateway feeder discovery is
+           **startup-only**, so the gateway restarts itself afterwards.
+        3. This app.
+
+        **First run.** Open MetaRead and create a profile — it is a keypair
+        generated in your browser, and the secret key is shown once. Save it: it
+        is the only way back in, and nobody can reset it for you.
+
+        **An empty library is not a fault.** MetaRead holds no catalogue of its
+        own. If the grid is empty, the question is whether a feeder is attached
+        and whether this stack's discovery peer has joined the DHT — the
+        *meta-search* chip in the top bar shows its peer count.
+
+        **Authentication:** the UI is behind Yundera's Authelia (OIDC), and your
+        reading profile is a second, separate identity inside it.
+
+x-compose-app:
+  schema_version: 2
+  folders:
+    - path: /DATA/AppData/metaread/metacore
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metaread/data
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metaread/share-data
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metaread/search-data
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/metaread/metashare-config
+      user: $PUID
+      group: $PGID
+  webui-host: metaread-${domain}
+  webui-path: "/"
