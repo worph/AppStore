@@ -12,8 +12,14 @@ name: metafeedercomic
 #                              anchors on. Keyless, cheap, no config.
 #   metafeedercomic-feeder   → the RETRIEVAL tier. Turns that id into actual
 #                              chapters by searching the operator's Suwayomi.
-#   metafeedercomic-suwayomi → Suwayomi (Tachidesk) itself, where the operator
-#                              installs the source extensions.
+#
+# ⚠ **Suwayomi itself is a SEPARATE app — install it first.** It used to ride
+# inside this stack as an embedded service; it was split out so that a manga
+# library is a thing you own rather than an implementation detail of a feeder,
+# and so it can carry a FlareSolverr sidecar without this app growing a headless
+# browser. This feeder ships pointed at `suwayomi:4567`, the container the
+# **Suwayomi** store app publishes on the shared `pcs` network — install
+# Suwayomi, install this, done.
 #
 # ── Why the two feeders are one app ──────────────────────────────────────────
 # The retrieval tier cannot name a work and the identity tier has no bytes. A
@@ -36,9 +42,21 @@ name: metafeedercomic
 # the aggregator's design; not something a feeder can opt out of.
 #
 # It needs, over the shared `pcs` network:
-#   - the **MetaGateway** app, which must list BOTH feeder URLs in its feeders
-#     config. Discovery is startup-only, so the gateway restarts after you add
-#     them.
+#   1. the **Suwayomi** store app (`suwayomi:4567`) — the chapter source. Its
+#      `AUTH_MODE` must stay `none`: see below.
+#   2. the **MetaGateway** app, which must list BOTH feeder URLs in its feeders
+#      config. Discovery is startup-only, so the gateway restarts after you add
+#      them.
+#
+# ── ⚠ Suwayomi must be reachable UNAUTHENTICATED ─────────────────────────────
+# An undownloaded chapter is served as a list of per-page URLs pointing at the
+# Suwayomi container, and those are redeemed by the READER's meta-share peer,
+# which sends no credentials. Suwayomi's `simple_login` leaves `/api/graphql`
+# open (so this feeder still searches) but 401s the `/api/v1/…` page routes —
+# giving a library that lists every chapter and can open none. The Suwayomi
+# store app therefore runs `AUTH_MODE: none` behind an AppShield/OIDC gate. A
+# Suwayomi behind its own auth, or on a LAN the reader is not on, will not work
+# and no config here can fix it.
 #
 # Everything is scoped under `metafeedercomic-*` + its own network +
 # /DATA/AppData/metafeedercomic/, so it installs beside the other Meta* apps
@@ -83,40 +101,6 @@ services:
       - pcs
 
   # ---------------------------------------------------------------------------
-  # metafeedercomic-suwayomi — the aggregator. Holds the installed extensions,
-  # the library database, and the `local/` tree the built-in Local source reads.
-  #
-  # ⚠ Its address must be reachable BY THE READER'S meta-share peer, not just by
-  # the feeder: an undownloaded chapter is served as a list of per-page URLs
-  # pointing at this container, and those are redeemed on whichever peer the
-  # reader is using. On one PCS over `pcs` that holds. A Suwayomi behind auth or
-  # on a LAN the reader is not on will not, and no config here can fix it.
-  # ---------------------------------------------------------------------------
-  metafeedercomic-suwayomi:
-    image: ghcr.io/suwayomi/tachidesk:latest
-    cpu_shares: 50
-    container_name: metafeedercomic-suwayomi
-    mem_limit: 1g
-    memswap_limit: 1g
-    hostname: metafeedercomic-suwayomi
-    restart: unless-stopped
-    expose:
-      - 4567
-    volumes:
-      # The whole data dir: library database, extensions, downloads, and the
-      # `local/` tree.
-      - ${DATA_ROOT:-/DATA}/AppData/metafeedercomic/suwayomi:/home/suwayomi/.local/share/Tachidesk
-    environment:
-      TZ: "$TZ"
-    # ⚠ No healthcheck: the image is a bare JRE runtime with neither `wget` nor
-    # `curl`, so every HTTP-shaped probe fails regardless of server state and the
-    # container reports permanently "unhealthy". The feeder waits only for START
-    # and degrades cleanly against a not-yet-listening Suwayomi.
-    networks:
-      - metafeedercomic
-      - pcs
-
-  # ---------------------------------------------------------------------------
   # metafeedercomic-feeder — the retrieval tier. Takes `anilistid:NNN` from a
   # reader opening a work, resolves it to titles, searches every installed
   # source, and returns the chapters.
@@ -128,18 +112,21 @@ services:
   # "strictly on click" default.
   # ---------------------------------------------------------------------------
   metafeedercomic-feeder:
-    # ⚠ **1.0.1 is the lazy-chapter build, and it needs meta-gateway ≥ 1.0.28.**
+    # ⚠ **Needs meta-gateway ≥ 1.0.28.**
     #
     # From 1.0.1 every chapter is emitted UNRESOLVED and its page list arrives
     # later as an `EnrichPatch`. A gateway older than 1.0.28 drops a patch whose
     # `Base` was de-duplicated against its own corpus — which is every chapter of
     # any work it has already seen — so chapters list correctly and then cannot
-    # be opened at all. 1.0.0 (eager) is the safe pairing with an older gateway.
+    # be opened at all. 1.0.0 (eager) is the safe pairing with an older gateway,
+    # and there SUWAYOMI_MAX_CHAPTERS is an EAGER page-fetch cap rather than a
+    # list bound — do not carry a large value back to it.
     #
-    # The same release changes what SUWAYOMI_MAX_CHAPTERS means: a LIST bound
-    # here, an EAGER page-fetch cap on 1.0.0. Do not carry the 500 below back to
-    # 1.0.0 — there it is up to 500 upstream fetches per work.
-    image: ghcr.io/worph/meta-feeder-suwayomi:1.0.1
+    # 1.0.2 drops the default list cap from 500 to unbounded, which is what the
+    # note on SUWAYOMI_MAX_CHAPTERS below is arguing for: on 1.0.1 a 501-chapter
+    # series silently listed 500. It also reworks the `domain` field that
+    # MetaRead's retrieval query filters on (`domain:literature`).
+    image: ghcr.io/worph/meta-feeder-suwayomi:1.0.2
     cpu_shares: 30
     container_name: metafeedercomic-feeder
     mem_limit: 256m
@@ -150,9 +137,12 @@ services:
     expose:
       - 8080
     environment:
-      # INFRA-ONLY env. SUWAYOMI_URL is an internal container address, not
-      # operator config — there is no secret here and nothing to type.
-      SUWAYOMI_URL: "http://metafeedercomic-suwayomi:4567"
+      # INFRA-ONLY env, and only a FIRST-BOOT SEED: `base_url` is a field on
+      # this feeder's own config page (the dashboard link), and a value saved
+      # there wins. `suwayomi` is the container the Suwayomi store app publishes
+      # on `pcs` — change it only to point at a Suwayomi somewhere else, and see
+      # the reachability warning in the header before you do.
+      SUWAYOMI_URL: "http://suwayomi:4567"
       # Listing chapters is cheap (one call returns them all); RESOLVING a
       # chapter's page list is what costs. 0 = fetch nothing until a reader
       # clicks. Raise it to pre-warm the first N ordinals per work.
@@ -167,8 +157,6 @@ services:
       TZ: "$TZ"
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/metafeedercomic/feeder-state:/data/meta-feeder:rw
-    depends_on:
-      - metafeedercomic-suwayomi
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
       interval: 5s
@@ -180,9 +168,12 @@ services:
       - pcs
 
   # ---------------------------------------------------------------------------
-  # AppShield gate — Suwayomi's OWN web UI behind Yundera OIDC SSO. That is the
-  # surface an operator actually needs: installing source extensions and adding
-  # local CBZ files. The two feeders need no configuration, so they get no gate.
+  # AppShield gate — the Suwayomi FEEDER's own config page behind Yundera OIDC
+  # SSO (`/config`: Suwayomi URL, chapters per work, chapters pre-loaded).
+  #
+  # It used to front Suwayomi's web UI, which now lives in the Suwayomi app and
+  # has its own gate there — install that app to manage extensions and local
+  # CBZ files. The AniList feeder is keyless and gets no gate.
   # container_name == subdomain prefix.
   # ---------------------------------------------------------------------------
   metafeedercomic:
@@ -197,8 +188,8 @@ services:
     environment:
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
-      BACKEND_HOST: "metafeedercomic-suwayomi"
-      BACKEND_PORT: "4567"
+      BACKEND_HOST: "metafeedercomic-feeder"
+      BACKEND_PORT: "8080"
       LISTEN_PORT: "80"
     labels:
       caddy_0: metafeedercomic-${APP_DOMAIN}
@@ -210,7 +201,7 @@ services:
       caddy_2: metafeedercomic-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     depends_on:
-      - metafeedercomic-suwayomi
+      - metafeedercomic-feeder
     networks:
       - metafeedercomic
       - pcs
@@ -232,20 +223,25 @@ x-casaos:
   developer: Aptero Team
   main: metafeedercomic
   webui_port: 80
-  index: /
+  # The feeder's config page, matching webui-path below — the tile used to open
+  # Suwayomi's UI, which is now its own app.
+  index: /config
 
   description:
     en_us: |
       **The comics and manga tier for MetaMesh — what gives MetaRead something
       to read.**
 
-      Two feeders and the aggregator they read, in one app because they are
-      useless apart:
+      Two feeders, in one app because they are useless apart:
 
       - **AniList** names the *work* — title, cover, synopsis, author, reading
         direction, and the id everything else anchors on. Keyless and cheap.
       - **Suwayomi** supplies the *chapters*, from whichever source extensions
-        you install.
+        you installed in the **Suwayomi** app.
+
+      **Install Suwayomi first.** It is a separate app in this store (with a
+      FlareSolverr sidecar, so Cloudflare-protected sources work). This feeder
+      arrives pointed at it and needs no wiring.
 
       **Why they ship together.** A chapter record is stamped with the AniList
       id so that several sources converge on **one** work page instead of
@@ -256,10 +252,9 @@ x-casaos:
 
       **You own the sources.** Suwayomi ships exactly one built-in source —
       *Local source*, which reads CBZ/CBR from its own folder. Everything else
-      is an extension **you** install through Suwayomi's UI (the dashboard link
-      on this app). That is deliberate: it keeps the scraping and the legal
-      surface outside MetaMesh, exactly as **MetaFeeder · Indexer** keeps
-      indexers outside it. Drop CBZ files into the Local source folder and they
+      is an extension **you** install through the Suwayomi app's own UI. That is
+      deliberate: it keeps the scraping and the legal surface outside MetaMesh,
+      exactly as **MetaFeeder · Indexer** keeps indexers outside it. Drop CBZ files into the Local source folder and they
       work with no extension at all.
 
       **Multi-source by design.** Every installed source that carries a work
@@ -322,8 +317,11 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        **Install order:** install **MetaGateway** first — its meta-core stores
-        and announces what these feeders find.
+        **Install order:** **MetaGateway** first (its meta-core stores and
+        announces what these feeders find), then **Suwayomi** — the separate
+        store app this feeder reads. This app arrives pointed at `suwayomi:4567`
+        and needs no wiring; without that app installed it stays healthy and
+        simply finds no chapters.
 
         **After installing this app:**
         1. In **MetaGateway**, add BOTH feeders from the dashboard's *Add a
@@ -334,14 +332,16 @@ x-casaos:
            The gateway restarts itself and picks up the `anilist` and `suwayomi`
            upstreams. Feeder discovery is **startup-only** — a feeder added
            without that restart is simply never queried.
-        2. Open this app (the dashboard link) — that is **Suwayomi's own UI** —
-           and install the source extensions you want, under *Extensions*.
-           Nothing is installed by default.
+        2. Open the **Suwayomi** app and install the source extensions you want,
+           under *Extensions*. Nothing is installed by default.
         3. Optionally drop `.cbz` / `.cbr` files into
-           `/DATA/AppData/metafeedercomic/suwayomi/local/<Series Name>/` — the
-           built-in *Local source* picks them up with no extension at all. Name
-           the folder as the series is known to AniList, or the anchor cannot
-           match it.
+           `/DATA/AppData/suwayomi/data/local/<Series Name>/` — the built-in
+           *Local source* picks them up with no extension at all. Name the
+           folder as the series is known to AniList, or the anchor cannot match
+           it.
+
+        This app's own dashboard link opens the **feeder's config page**
+        (Suwayomi URL, chapters per work, chapters pre-loaded) — not Suwayomi.
 
         **⚠ Querying Suwayomi writes to it.** Its search and chapter calls are
         mutations that cache source results into its library database, so rows
@@ -353,14 +353,14 @@ x-casaos:
         still appear (AniList works on its own); they just have nothing behind
         them.
 
-        **Authentication:** the Suwayomi UI is behind Yundera's Authelia (OIDC).
+        **Authentication:** this config page is behind Yundera's Authelia (OIDC),
+        as is the Suwayomi app's UI. Suwayomi's *own* login must stay off — the
+        reader fetches chapter pages from it unauthenticated, so enabling it
+        gives a library that lists every chapter and can open none.
 
 x-compose-app:
   schema_version: 2
   folders:
-    - path: /DATA/AppData/metafeedercomic/suwayomi
-      user: $PUID
-      group: $PGID
     - path: /DATA/AppData/metafeedercomic/anilist-state
       user: $PUID
       group: $PGID
@@ -368,4 +368,4 @@ x-compose-app:
       user: $PUID
       group: $PGID
   webui-host: metafeedercomic-${domain}
-  webui-path: "/"
+  webui-path: "/config"

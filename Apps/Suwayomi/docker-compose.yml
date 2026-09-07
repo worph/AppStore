@@ -1,33 +1,57 @@
 name: suwayomi
 
+# =============================================================================
+# Suwayomi (Tachidesk) — the manga SOURCE AGGREGATOR, with FlareSolverr.
+#
+# Standalone on purpose: it is a perfectly good self-hosted manga reader on its
+# own, AND it is the chapter tier **MetaFeeder · Comic** reads. Install this
+# first, then that app — the feeder ships preconfigured for `suwayomi:4567`
+# over the shared `pcs` network, so the pair needs no wiring.
+#
+# ── ⚠ Why AUTH_MODE is `none` + an AppShield gate ────────────────────────────
+# Suwayomi's own `simple_login` does NOT gate `/api/graphql` (200 unauth) but
+# DOES gate the `/api/v1/…` REST routes (401). Those REST routes are exactly
+# where an undownloaded chapter's per-page locators point, and meta-share
+# redeems them on the READER's peer with no credentials — so `simple_login`
+# yields a library that lists every chapter and cannot open one. Measured, not
+# assumed (tachidesk v2.3.2243).
+#
+# So auth is moved OUT of Suwayomi and onto the Yundera perimeter: the server
+# itself is unauthenticated on the internal network, and the only route into it
+# from outside is the `suwayomi-gate` AppShield sidecar, which is OIDC SSO —
+# strictly stronger than the shared admin password it replaces.
+#
+# ⚠ Corollary: do NOT publish `suwayomi:4567` through Caddy directly, and do not
+# re-enable AUTH_MODE while MetaFeeder · Comic is installed.
+#
+# ── FlareSolverr ─────────────────────────────────────────────────────────────
+# Several sources (Mangakakalot among them) sit behind a Cloudflare interstitial
+# and fail every search with "Cloudflare bypass currently disabled" unless a
+# solver is wired in. The sidecar answers that challenge (~11 s the first time,
+# then cached for the session TTL). It is on a PRIVATE network — it is a
+# headless browser and has no business being reachable from `pcs`.
+# =============================================================================
+
 services:
   suwayomi:
-    image: ghcr.io/suwayomi/tachidesk:v2.1.2087
+    image: ghcr.io/suwayomi/tachidesk:v2.3.2243
     user: $PUID:$PGID
     container_name: suwayomi
+    hostname: suwayomi
     restart: unless-stopped
     expose:
-      - 80
-    labels:
-      caddy_0: suwayomi-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: suwayomi-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: suwayomi-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
+      - 4567
     networks:
       - pcs
+      - suwayomi-internal
     environment:
       PUID: $PUID
       PGID: $PGID
       TZ: $TZ
       BIND_IP: 0.0.0.0
-      BIND_PORT: 80
-      AUTH_MODE: simple_login
-      AUTH_USERNAME: admin
-      AUTH_PASSWORD: $APP_DEFAULT_PASSWORD
+      BIND_PORT: 4567
+      # See the header. `none` is load-bearing for MetaFeeder · Comic.
+      AUTH_MODE: none
       DOWNLOAD_AS_CBZ: true
       AUTO_DOWNLOAD_CHAPTERS: false
       WEB_UI_CHANNEL: bundled
@@ -37,53 +61,96 @@ services:
       FLARESOLVERR_ENABLED: true
       FLARESOLVERR_URL: http://suwayomi-flaresolverr:8191
     volumes:
-      - /DATA/Media/Mangas/:/home/suwayomi/.local/share/Tachidesk/downloads
-      - /DATA/AppData/$AppID/data/:/home/suwayomi/.local/share/Tachidesk
+      - ${DATA_ROOT:-/DATA}/Media/Mangas/:/home/suwayomi/.local/share/Tachidesk/downloads
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/data/:/home/suwayomi/.local/share/Tachidesk
     depends_on:
       - flaresolverr
+    # ⚠ No healthcheck: the image is a bare JRE runtime with neither `wget` nor
+    # `curl`, so every HTTP-shaped probe fails regardless of server state.
     cpu_shares: 50
-    deploy:
-      resources:
-        limits:
-          memory: 1G
+    mem_limit: 2g
+    memswap_limit: 2g
 
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:v3.4.6
     container_name: suwayomi-flaresolverr
+    hostname: suwayomi-flaresolverr
     user: 0:0
     restart: unless-stopped
+    expose:
+      - 8191
+    networks:
+      - suwayomi-internal
     environment:
       TZ: $TZ
+      LOG_LEVEL: info
     cpu_shares: 20
-    deploy:
-      resources:
-        limits:
-          memory: 512M
+    mem_limit: 512m
+    memswap_limit: 512m
+
+  # ---------------------------------------------------------------------------
+  # AppShield gate — the ONLY public route to Suwayomi's UI, behind Yundera OIDC
+  # SSO. container_name == subdomain prefix.
+  # ---------------------------------------------------------------------------
+  suwayomi-gate:
+    image: ghcr.io/yundera/appshield:2.0.9
+    container_name: suwayomi-gate
+    hostname: suwayomi-gate
+    user: "0:0"
+    restart: unless-stopped
+    expose:
+      - 80
+    environment:
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      BACKEND_HOST: "suwayomi"
+      BACKEND_PORT: "4567"
+      LISTEN_PORT: "80"
+    labels:
+      caddy_0: suwayomi-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: suwayomi-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: suwayomi-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - suwayomi
+    networks:
+      - suwayomi-internal
+      - pcs
+    cpu_shares: 20
 
 networks:
+  suwayomi-internal:
+    driver: bridge
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
-  main: suwayomi
+  # The gate, not the server: `suwayomi` is unauthenticated and must never be
+  # the published surface. See the AUTH_MODE note in the header.
+  main: suwayomi-gate
   index: /
+  webui_port: 80
+  hostname: suwayomi-${APP_DOMAIN}
+  scheme: https
+  port_map: "443"
   store_app_id: suwayomi
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/suwayomi/data &&
-    mkdir -p /DATA/Media/Mangas
   architectures:
     - amd64
     - arm64
   author: Yundera Team
   category: Media
   developer: Suwayomi Project
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Suwayomi/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Suwayomi/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Suwayomi/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Suwayomi/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/Suwayomi/screenshot-1.png
   title:
     en_us: Suwayomi
   tagline:
@@ -144,22 +211,28 @@ x-casaos:
     before_install:
       en_us: |
         **Getting Started**
-        | Username | Password               |
-        | -------- | ---------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+
+        Sign in with your Yundera account — the app is behind the same SSO as
+        every other app on this server, so there is no separate password.
 
         **How to use:**
-        1. Open the app and log in
-        2. Click "Browse" to find manga sources
-        3. Search for your favorite manga titles
+        1. Open the app and sign in
+        2. Under *Extensions*, install the sources you want — none are installed
+           by default, and Cloudflare-protected ones work thanks to the bundled
+           FlareSolverr
+        3. Click "Browse" to search those sources
         4. Start reading — your progress saves automatically
+
+        **Pairing with MetaMesh:** install **MetaFeeder · Comic** and the sources
+        you enable here become readable in **MetaRead**. That app ships pointed
+        at `suwayomi:4567`, so there is nothing to configure.
 
         **Tip:** Download chapters on WiFi, then read offline during commutes!
       fr_fr: |
         **Pour commencer**
-        | Utilisateur | Mot de passe           |
-        | ----------- | ---------------------- |
-        | `admin`     | `$APP_DEFAULT_PASSWORD` |
+
+        Connectez-vous avec votre compte Yundera — l'app est derrière le même SSO
+        que les autres, il n'y a donc pas de mot de passe séparé.
 
         **Comment utiliser :**
         1. Ouvrez l'app et connectez-vous
@@ -168,9 +241,9 @@ x-casaos:
         4. Commencez à lire — votre progression se sauvegarde automatiquement
       es_es: |
         **Para empezar**
-        | Usuario  | Contraseña             |
-        | -------- | ---------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+
+        Inicia sesión con tu cuenta de Yundera — la app está detrás del mismo SSO
+        que las demás, así que no hay una contraseña aparte.
 
         **Cómo usar:**
         1. Abre la app e inicia sesión
@@ -179,9 +252,9 @@ x-casaos:
         4. Comienza a leer — tu progreso se guarda automáticamente
       zh_cn: |
         **开始使用**
-        | 用户名   | 密码                   |
-        | -------- | ---------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+
+        使用您的 Yundera 账户登录 — 本应用与服务器上其他应用共用同一套 SSO，
+        因此没有单独的密码。
 
         **使用方法：**
         1. 打开应用并登录
@@ -190,12 +263,28 @@ x-casaos:
         4. 开始阅读 — 进度自动保存
       ko_kr: |
         **시작하기**
-        | 사용자명 | 비밀번호               |
-        | -------- | ---------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+
+        Yundera 계정으로 로그인하세요 — 이 앱은 서버의 다른 앱과 동일한 SSO 뒤에
+        있으므로 별도의 비밀번호가 없습니다.
 
         **사용 방법:**
         1. 앱을 열고 로그인
         2. "찾아보기"를 클릭하여 소스 찾기
         3. 좋아하는 만화 검색
         4. 읽기 시작 — 진행 상황이 자동 저장됩니다
+
+x-compose-app:
+  schema_version: 2
+  # Created and chowned by Maison before any image is pulled and before the
+  # containers start — compose would otherwise create a missing bind source as a
+  # root-owned dir, which the $PUID:$PGID server then cannot write.
+  folders:
+    - path: /DATA/AppData/$AppID/data
+      user: $PUID
+      group: $PGID
+    - path: /DATA/Media/Mangas
+      user: $PUID
+      group: $PGID
+  # Same string as the caddy_0 label, so the tile link and the route agree.
+  webui-host: suwayomi-${domain}
+  webui-path: "/"
