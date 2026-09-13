@@ -6,6 +6,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is the Worph-AppStore, a fork of the Yundera CasaOS 3rd-Party AppStore that provides a curated collection of Docker Compose applications compatible with CasaOS. The key difference from the main Yundera AppStore is that this fork uses the CDN URL `https://cdn.jsdelivr.net/gh/Worph/AppStore@main/` for assets instead of the standard Yundera URLs.
 
+## Scope — the MetaMesh apps live elsewhere
+
+The **MetaMesh** app family (MetaCore, MetaSort, MetaFuse, MetaShare,
+MetaStremio, MetaGateway(Shared), MetaWatch(Shared), MetaRead and every
+`MetaFeeder*`) was split out of this repo into
+[Worph/MetaAppStore](https://github.com/Worph/MetaAppStore) — a separate
+CasaOS store source with its own `cdn.jsdelivr.net/gh/Worph/MetaAppStore@main/`
+asset URLs. Do not re-add them here; edit them in that repo (vendored in
+`MetaMesh/meta-root-v2` as `packages/MetaAppStore`).
+
+`Apps/MetaMCP` is **not** part of that family — it is third-party
+`metatool-ai` software that merely shares the name prefix, and it stays here.
+`Apps/Suwayomi` and `Apps/SegmentPlayer` also stay: they are standalone apps
+that the MetaMesh stack happens to pair with.
+
 ## Architecture & Structure
 
 ### Core Components

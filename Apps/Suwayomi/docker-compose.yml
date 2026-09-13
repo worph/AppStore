@@ -8,6 +8,10 @@ name: suwayomi
 # first, then that app — the feeder ships preconfigured for `suwayomi:4567`
 # over the shared `pcs` network, so the pair needs no wiring.
 #
+# The MetaMesh apps moved to their own store: add
+# https://github.com/Worph/MetaAppStore/archive/refs/heads/main.zip as a source
+# to install MetaFeeder · Suwayomi and MetaRead.
+#
 # ── ⚠ Why AUTH_MODE is `none` + an AppShield gate ────────────────────────────
 # Suwayomi's own `simple_login` does NOT gate `/api/graphql` (200 unauth) but
 # DOES gate the `/api/v1/…` REST routes (401). Those REST routes are exactly
@@ -225,7 +229,8 @@ x-casaos:
 
         **Pairing with MetaMesh:** install **MetaFeeder · Suwayomi** and the sources
         you enable here become readable in **MetaRead**. That app ships pointed
-        at `suwayomi:4567`, so there is nothing to configure.
+        at `suwayomi:4567`, so there is nothing to configure. Both live in the
+        separate **MetaAppStore** source.
 
         **Tip:** Download chapters on WiFi, then read offline during commutes!
       fr_fr: |
