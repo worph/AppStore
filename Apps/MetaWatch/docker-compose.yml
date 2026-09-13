@@ -44,6 +44,10 @@ services:
       - 9000
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/metawatch/metacore:/meta-core:rw
+      # Subtitle store: player-uploaded subtitles land in /files/plugin/subtitles
+      # (WebDAV PUT + POST /api/files/register, needs meta-core with that route).
+      # Plugin output only — no /files/watch mount, watcher stays off.
+      - ${DATA_ROOT:-/DATA}/AppData/metawatch/files/plugin:/files/plugin:rw
     environment:
       - BASE_URL=http://metawatch-core:9000
       - ENABLE_FILE_WATCHER=false
@@ -240,6 +244,8 @@ services:
       META_SHARE_PUBLIC_URL:  "https://metawatchshare-${APP_DOMAIN}"
       META_SEARCH_PUBLIC_URL: "https://metawatchsearch-${APP_DOMAIN}"
       META_WATCH_SYNC_PEERS: "http://metawatch-search:3000"
+      # This box's own core — subtitle store only (uploads + curated matches).
+      META_CORE_URL: "http://metawatch-core:9000"
       TZ: "$TZ"
     depends_on:
       metawatch-search:

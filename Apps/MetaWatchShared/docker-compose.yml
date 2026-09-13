@@ -134,6 +134,10 @@ services:
       META_SHARE_PUBLIC_URL: "https://metashare-${APP_DOMAIN}"
       META_SEARCH_PUBLIC_URL: "https://metawatchsearch-${APP_DOMAIN}"
       META_WATCH_SYNC_PEERS: "http://metawatch-search:3000"
+      # Subtitle store (player uploads + curated subtitleSync matches). This
+      # variant has no private core: it writes to the standalone MetaCore app,
+      # which already mounts /files and runs the watcher.
+      META_CORE_URL: "http://metacore-app:80"
       TZ: "$TZ"
     depends_on:
       metawatch-search:

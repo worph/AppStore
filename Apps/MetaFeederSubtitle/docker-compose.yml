@@ -1,0 +1,246 @@
+name: metafeedersubtitle
+
+# =============================================================================
+# MetaFeeder · Subtitle — subtitle SEARCH for MetaMesh, from OpenSubtitles.
+#
+# Answers `fileType:subtitle` queries, two ways (the client picks):
+#   keyword   `matrix fileType:subtitle`
+#   anchored  `imdbid:tt0133093` · `tmdbid:1399 season:1 episode:1` ·
+#             `moviehash:<16 hex>` — each optionally narrowed by `languages:fre`
+# Each result is ONE subtitle file — language, release name, download count,
+# hearing-impaired / machine-translated / exact-hash flags — addressed by a
+# `provider-file` locator ("opensubtitles", "file:<file_id>").
+#
+# Search only: it never calls OpenSubtitles' /download, so it spends none of the
+# account's download quota and needs only an API key, no login. Fetching the
+# subtitle FILES through the mesh is a later MetaShare tier — not available yet.
+#
+# Self-contained: calls OpenSubtitles directly (rate-limited, 24 h search cache),
+# holds no bytes, runs no enrichment sidecars. It does NOT talk to meta-core —
+# the MetaGateway core stores and announces the records it returns.
+#
+# Not the same thing as the `metamesh-plugin-opensubtitle` meta-sort plugin,
+# which attaches subtitles to files you already have. This app answers searches.
+#
+# It needs, over the shared `pcs` network:
+#   - the **MetaGateway** app — which must list this feeder's URL
+#     (`http://metafeedersubtitle-feeder:8080`) in its feeders config so it gets
+#     discovered. Discovery is startup-only, so restart the gateway afterwards.
+#
+# Everything is scoped under the `metafeedersubtitle-*` prefix + the per-stack
+# `metafeedersubtitle` network + /DATA/AppData/metafeedersubtitle/ data root, so
+# it installs alongside the other Meta* apps with zero collisions.
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # metafeedersubtitle-feeder — the feeder (meta-feeder-opensubtitles) hosting
+  # the `opensubtitles` upstream. The gateway core reaches it directly on `pcs`
+  # for discovery/query; the human configures it through the AppShield gate below.
+  # ---------------------------------------------------------------------------
+  metafeedersubtitle-feeder:
+    image: ghcr.io/worph/meta-feeder-opensubtitles:1.0.0
+    cpu_shares: 30
+    container_name: metafeedersubtitle-feeder
+    # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM instead of
+    # swap. One HTTP client + a redb search cache; generous, not tight.
+    mem_limit: 256m
+    memswap_limit: 256m
+    hostname: metafeedersubtitle-feeder
+    restart: unless-stopped
+    # Unlike the other feeders this one never writes into MetaCore's root-owned
+    # tree — its only write is its own state dir below, which Maison creates as
+    # $PUID:$PGID (x-compose-app.folders). So no root is needed.
+    user: $PUID:$PGID
+    expose:
+      - 8080
+    environment:
+      # INFRA-ONLY env (the "config: no env if in webui" rule). The OpenSubtitles
+      # API key and User-Agent are read from the persisted config.json written by
+      # this feeder's config page (behind the AppShield gate below).
+      # OPENSUBTITLES_API_KEY / OPENSUBTITLES_USER_AGENT exist only as first-boot
+      # seeds; don't set them here. META_FEEDER_STATE_DIR is left at its default
+      # (/data/meta-feeder), which is what the volume below mounts.
+      RUST_LOG: "info"
+      TZ: "$TZ"
+    volumes:
+      # Persist feeder config (config.json saved via the config UI) + the redb
+      # search cache. Wiping the cache is safe; it only costs upstream calls.
+      - ${DATA_ROOT:-/DATA}/AppData/metafeedersubtitle/state:/data/meta-feeder:rw
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - metafeedersubtitle
+      - pcs
+
+  # ---------------------------------------------------------------------------
+  # AppShield gate — the feeder's config UI (set the OpenSubtitles API key)
+  # behind Yundera OIDC SSO. container_name == subdomain prefix. The gateway
+  # still reaches the feeder directly on `pcs` (this gate is for the human
+  # only); index → /config.
+  # ---------------------------------------------------------------------------
+  metafeedersubtitle:
+    image: ghcr.io/yundera/appshield:2.0.9
+    cpu_shares: 80
+    container_name: metafeedersubtitle
+    hostname: metafeedersubtitle
+    restart: unless-stopped
+    user: "0:0"
+    expose:
+      - 80
+    environment:
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      BACKEND_HOST: "metafeedersubtitle-feeder"
+      BACKEND_PORT: "8080"
+      LISTEN_PORT: "80"
+    labels:
+      caddy_0: metafeedersubtitle-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: metafeedersubtitle-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: metafeedersubtitle-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - metafeedersubtitle-feeder
+    networks:
+      - metafeedersubtitle
+      - pcs
+
+networks:
+  metafeedersubtitle:
+    name: metafeedersubtitle
+    driver: bridge
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  author: Worph Team
+  category: Media
+  developer: Aptero Team
+  main: metafeedersubtitle
+  webui_port: 80
+  index: /config
+
+  description:
+    en_us: |
+      **Subtitle search for MetaMesh, from OpenSubtitles.**
+
+      MetaFeeder · Subtitle answers subtitle searches across the mesh — by
+      **keyword** (*"matrix"*) or **anchored on a work**: an IMDb or TMDB id,
+      a season and episode, or the exact file you are playing (its OpenSubtitles
+      *moviehash*). Every search can be narrowed to your languages.
+
+      Each result is **one subtitle file** with its language, release name,
+      download count and flags — hearing-impaired, machine-translated, and
+      whether it was timed against your exact file. Results come back best-first:
+      exact file matches, then the most downloaded.
+
+      **Search only.** It never downloads, so it spends none of your
+      OpenSubtitles download quota and needs only a free API key — no account
+      login. Fetching the subtitle files through the mesh is a later MetaShare
+      feature and is **not available yet**.
+
+      **Cheap and self-contained:** calls OpenSubtitles directly (rate-limited,
+      searches cached for 24 h), holds no bytes, runs no enrichment sidecars.
+      ~256 MB RAM.
+
+      **Requires:** **MetaGateway** — its meta-core stores the results and
+      announces them to the swarm. The gateway must list this feeder in its
+      config. You also need a free **OpenSubtitles API key**.
+
+      **Pairs with:** **MetaWatch**.
+
+    fr_fr: |
+      **Recherche de sous-titres pour MetaMesh, depuis OpenSubtitles.**
+
+      MetaFeeder · Subtitle répond aux recherches de sous-titres sur le mesh —
+      par **mot-clé** (*« matrix »*) ou **ancrée sur une œuvre** : un identifiant
+      IMDb ou TMDB, une saison et un épisode, ou le fichier exact que vous lisez
+      (son *moviehash* OpenSubtitles). Chaque recherche peut être restreinte à vos
+      langues.
+
+      Chaque résultat est **un fichier de sous-titres** avec sa langue, le nom de
+      la release, le nombre de téléchargements et des indicateurs —
+      malentendants, traduction automatique, et synchronisation sur votre fichier
+      exact. Les meilleurs résultats d'abord : correspondances exactes, puis les
+      plus téléchargés.
+
+      **Recherche uniquement.** Aucun téléchargement : aucun quota OpenSubtitles
+      consommé, seule une clé d'API gratuite est nécessaire — pas de connexion au
+      compte. La récupération des fichiers via le mesh est une fonctionnalité
+      MetaShare à venir et **n'est pas encore disponible**.
+
+      **Léger et autonome :** appelle OpenSubtitles directement (débit limité,
+      recherches en cache 24 h), ne stocke aucun octet, aucun plugin
+      d'enrichissement. ~256 Mo de RAM.
+
+      **Nécessite :** l'app **MetaGateway** (son meta-core stocke et annonce les
+      résultats) et une **clé d'API OpenSubtitles** gratuite.
+
+  tagline:
+    en_us: OpenSubtitles search — find subtitles by keyword, work or exact file
+    fr_fr: Recherche OpenSubtitles — sous-titres par mot-clé, œuvre ou fichier exact
+
+  title:
+    en_us: MetaFeeder · Subtitle
+
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederSubtitle/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederSubtitle/thumbnail.png
+
+  store_app_id: metafeedersubtitle
+  is_uncontrolled: false
+
+  tips:
+    before_install:
+      en_us: |
+        **Install order:** install **MetaGateway** first (its meta-core stores
+        and announces the subtitle records this feeder finds).
+
+        **After installing this app:**
+        1. Get a free **OpenSubtitles API key** — opensubtitles.com → sign in →
+           *API consumers* → create a consumer and copy its key. No account
+           password is needed here: this feeder only searches.
+        2. Open this app's config UI (the dashboard link), paste it into
+           **OpenSubtitles API key** and save. Leave **User-Agent** blank unless
+           OpenSubtitles asks you to use your registered app name. The feeder
+           restarts itself to apply the key.
+        3. In **MetaGateway**, add this feeder to its feeders config —
+           name `opensubtitles-feeder`, URL `http://metafeedersubtitle-feeder:8080`
+           — from the gateway dashboard's *Add a feeder* box. The gateway
+           restarts itself and picks up the `opensubtitles` upstream (tag
+           SUBTITLE).
+
+        **Without an API key** the feeder stays up but reports degraded, and
+        subtitle searches simply return nothing. That is by design, not a failure.
+
+        **Searches must ask for subtitles** (`fileType:subtitle`). A plain search
+        box query never reaches this feeder.
+
+        **Authentication:** the config UI is protected by Yundera's Authelia (OIDC).
+
+# Maison (Yundera dashboard) configuration. Read in preference to x-casaos.
+# schema_version 2 is required for `folders`: an older Maison refuses the app
+# outright rather than starting it without its directories.
+x-compose-app:
+  schema_version: 2
+  # Created and chowned by Maison before any image is pulled, before any hook
+  # runs and before the containers start — on the first boot and every one after.
+  # The feeder runs as $PUID:$PGID, so this ownership is what lets it write.
+  folders:
+    - path: /DATA/AppData/metafeedersubtitle/state
+      user: $PUID
+      group: $PGID
+  # Same string as the caddy_0 label, so the tile link and the route agree.
+  webui-host: metafeedersubtitle-${domain}
+  webui-path: "/config"
