@@ -3,7 +3,7 @@ name: metafeederusenet
 # =============================================================================
 # MetaFeeder · Usenet — a STANDALONE, self-hosted Usenet feeder for MetaMesh.
 #
-# Unlike MetaFeeder - Indexer (which proxies an EXTERNAL Newznab/Torznab
+# Unlike MetaFeeder · Prowlarr (which proxies an EXTERNAL Newznab/Torznab
 # indexer and mints an `nzb-release` (0x1005) cid embedding that indexer's
 # host), this app runs its OWN header scan (an `nntmux` — newznab-tmux fork —
 # sidecar) so it can mint a PORTABLE `nzb-posting` (0x1003) cid: a digest over
@@ -467,7 +467,7 @@ x-casaos:
       Because it finds article Message-IDs itself at scan time, it mints a
       **portable** posting reference — no indexer host baked in, redeemable by
       any peer with a plain NNTP provider account. It adds a Usenet source
-      alongside **MetaFeeder - Indexer**; it doesn't replace it.
+      alongside **MetaFeeder · Prowlarr**; it doesn't replace it.
 
       **Self-contained:** ships its own nntmux scanner (MariaDB + Redis +
       Manticore) + filename-parser + TMDB enrichment, so each release gets a

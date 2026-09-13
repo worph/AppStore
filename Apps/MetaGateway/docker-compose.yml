@@ -6,11 +6,11 @@ name: metagateway
 # A single gateway peer — the bridging tier ONLY. Every content source is now a
 # SEPARATE store app (install whichever you want); the gateway discovers each by
 # URL over `pcs`, stores its resolved records, and soft-skips any not installed:
-#   MetaFeeder · Books      Project Gutenberg
-#   MetaFeeder · Papers     arXiv / PubMed (+ Sci-Hub if configured)
-#   MetaFeeder · Commons    Wikimedia Commons (+ Giphy if configured)
-#   MetaFeeder · Torznab    Prowlarr indexers (video/torrent) — own enrichment
-#   MetaFeeder · Tribler    Tribler IPv8 overlay (video/torrent) — own enrichment
+#   MetaFeeder · Gutenberg          Project Gutenberg (+ Open Library cards)
+#   MetaFeeder · arXiv / Europe PMC academic papers (Sci-Hub: separate opt-in app)
+#   MetaFeeder · Wikimedia Commons  open-licensed media (Giphy: separate opt-in app)
+#   MetaFeeder · Prowlarr           Prowlarr indexers (video/torrent) — own enrichment
+#   MetaFeeder · Tribler            Tribler IPv8 overlay (video/torrent) — own enrichment
 # Plus a dedicated meta-core, and a co-located meta-share INGESTER that announces the
 # gateway's resolved records on the swarm.
 #
@@ -246,9 +246,9 @@ services:
       - metagateway
       - pcs
 
-  # NOTE: ALL feeders are now SEPARATE store apps — the generic ones
-  # (MetaFeeder · Books / Papers / Commons) and the torrent ones
-  # (MetaFeeder · Torznab / Tribler). The gateway is purely the bridging tier:
+  # NOTE: ALL feeders are now SEPARATE store apps, one per provider — e.g.
+  # MetaFeeder · Gutenberg / arXiv / Europe PMC / Wikimedia Commons and the torrent
+  # ones (MetaFeeder · Prowlarr / Tribler). The gateway is purely the bridging tier:
   # it discovers every feeder by URL (feeders config / dashboard) over `pcs`,
   # stores their resolved records in its meta-core, and announces them on the
   # swarm. Install whichever feeders you want; the gateway soft-skips any not
@@ -416,15 +416,17 @@ x-casaos:
       MetaShare peers) can find and stream it. It's the **bridging tier only**:
       a dedicated meta-core that stores resolved records, plus a co-located
       meta-share ingester that announces them on the swarm. Every content source
-      is a **separate MetaFeeder app** (Books, Papers, Commons, Torrent-Usenet)
+      is a **separate MetaFeeder app**, one per provider (Prowlarr, Tribler, Usenet,
+      Gutenberg, arXiv, Europe PMC, Wikimedia Commons, …)
       — install whichever you want; the gateway discovers each over the shared
       network and soft-skips any not installed.
 
       **Sources (each a separate store app):**
-      - **Torrent-Usenet** - Torznab/Newznab indexers via the separate Prowlarr app, plus decentralized Tribler discovery (video/torrent/usenet)
-      - **Project Gutenberg** - Public-domain books
-      - **arXiv / PubMed** - Academic papers (optional Sci-Hub mirror)
-      - **Wikimedia Commons** - Open-licensed images (optional Giphy)
+      - **Prowlarr** - Torznab/Newznab indexers via the separate Prowlarr app (video/torrent/usenet)
+      - **Tribler** - Decentralized Tribler discovery (video/torrent)
+      - **Project Gutenberg** - Public-domain books (+ Open Library work cards)
+      - **arXiv / Europe PMC** - Academic papers (Sci-Hub: separate opt-in app)
+      - **Wikimedia Commons** - Open-licensed images (Giphy: separate opt-in app)
 
       **How it fits:** MetaGateway is the *producer*; **MetaWatch** is the
       *consumer*. Install MetaGateway to populate the network, then browse it in
@@ -446,10 +448,11 @@ x-casaos:
       ingesteur meta-share co-localisé qui annonce les enregistrements résolus.
 
       **Sources (chacune une app du store) :**
-      - **Torrent-Usenet** - Indexeurs Torznab/Newznab via l'app Prowlarr, plus la découverte décentralisée Tribler (vidéo/torrent/usenet)
-      - **Project Gutenberg** - Livres du domaine public
-      - **arXiv / PubMed** - Articles académiques (miroir Sci-Hub optionnel)
-      - **Wikimedia Commons** - Images sous licence libre (Giphy optionnel)
+      - **Prowlarr** - Indexeurs Torznab/Newznab via l'app Prowlarr (vidéo/torrent/usenet)
+      - **Tribler** - Découverte décentralisée Tribler (vidéo/torrent)
+      - **Project Gutenberg** - Livres du domaine public (+ fiches Open Library)
+      - **arXiv / Europe PMC** - Articles académiques (Sci-Hub : app optionnelle séparée)
+      - **Wikimedia Commons** - Images sous licence libre (Giphy : app optionnelle séparée)
 
       **Place dans l'écosystème :** MetaGateway est le *producteur* ; **MetaWatch**
       est le *consommateur*. Installez MetaGateway pour alimenter le réseau, puis
@@ -515,7 +518,8 @@ x-casaos:
 
   pre-install-cmd: |
     # Feeders map: all feeders are now SEPARATE store apps, listed by their pcs
-    # URLs (MetaFeeder · Books / Papers / Commons / Torrent-Usenet / Tribler). The
+    # URLs (MetaFeeder · Gutenberg / arXiv / Europe PMC / Wikimedia Commons /
+    # Prowlarr / Tribler — the opt-in Sci-Hub and Giphy apps are not seeded). The
     # gateway soft-skips any feeder that isn't installed/reachable, and you can
     # add/remove feeders at runtime from the dashboard. Each key/URL MUST match
     # the corresponding app's feeder container hostname.
@@ -528,11 +532,12 @@ x-casaos:
       "meta_core_url":  "http://metagateway-core:9000",
       "meta_share_url": "http://metagateway-share:3000",
       "feeders": {
-        "metafeederbook-feeder":            { "url": "http://metafeederbook-feeder:8080" },
-        "metafeederpaper-feeder":           { "url": "http://metafeederpaper-feeder:8080" },
-        "metafeedercommon-feeder":          { "url": "http://metafeedercommon-feeder:8080" },
-        "metafeedertorrentusenet-feeder":   { "url": "http://metafeedertorrentusenet-feeder:8080" },
-        "metafeedertribler-feeder":         { "url": "http://metafeedertribler-feeder:8080" }
+        "gutenberg-feeder":   { "url": "http://metafeedergutenberg-feeder:8080" },
+        "arxiv-feeder":       { "url": "http://metafeederarxiv-feeder:8080" },
+        "europepmc-feeder":   { "url": "http://metafeedereuropepmc-feeder:8080" },
+        "wikicommons-feeder": { "url": "http://metafeederwikicommons-feeder:8080" },
+        "prowlarr-feeder":    { "url": "http://metafeederprowlarr-feeder:8080" },
+        "tribler-feeder":     { "url": "http://metafeedertribler-feeder:8080" }
       }
     }
     JSON

@@ -80,11 +80,11 @@ over mDNS on `pcs` regardless.
 | `ghcr.io/worph/meta-gateway` | `1.0.25` |
 | `ghcr.io/worph/meta-share` | `1.0.26` |
 | `ghcr.io/worph/meta-core` | `1.0.12` |
-| `ghcr.io/worph/meta-feeder-card` | `1.0.1` |
 | `ghcr.io/yundera/appshield` | `2.0.9` |
 
 No feeder images are listed here any more: every content source is a **separate
-store app** (MetaFeeder · Books / Papers / Commons / Torznab / Tribler), each
+store app**, one per provider (MetaFeeder · Gutenberg / arXiv / Europe PMC /
+Wikimedia Commons / Prowlarr / Tribler / …), each
 pinning its own images. The gateway discovers them by URL over `pcs` and
 soft-skips any that aren't installed.
 | `lscr.io/linuxserver/prowlarr` | `latest` |

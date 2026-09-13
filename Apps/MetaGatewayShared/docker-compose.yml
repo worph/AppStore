@@ -23,7 +23,7 @@ name: metagateway
 #   - MetaShare → provides metashare-app (seeds the CIDs the gateway resolves)
 # Indexer sources (torznab/Prowlarr and friends) are configured at runtime in
 # gateway-config.json under /DATA/AppData/metagateway/state — not here. Install
-# the separate **Prowlarr** and **MetaFeederIndexer** apps to feed it.
+# the separate **Prowlarr** and **MetaFeederProwlarr** apps to feed it.
 # =============================================================================
 
 services:
@@ -130,10 +130,10 @@ services:
   # anchoring). Optional: the dispatcher starts without it, but the wall on
   # every connected MetaWatch stays empty.
   #
-  # Runs as 10001:999 — the uid/gid baked into the meta-feeder-card image.
+  # Runs as 10001:999 — the uid/gid baked into the meta-feeder-tmdb image.
   # ---------------------------------------------------------------------------
   metagateway-card:
-    image: ghcr.io/worph/meta-feeder-card:1.0.1
+    image: ghcr.io/worph/meta-feeder-tmdb:1.0.2
     container_name: metagateway-card
     hostname: metagateway-card
     restart: unless-stopped
@@ -286,7 +286,7 @@ x-casaos:
       MetaWatch.
 
       **Sources** are configured at runtime in `gateway-config.json`; install
-      **Prowlarr** and **MetaFeederIndexer** (and optionally
+      **Prowlarr** and **MetaFeederProwlarr** (and optionally
       **MetaFeederUsenet**) to supply them.
     fr_fr: |
       **La couche de passerelle de sources pour le réseau MetaMesh.**
@@ -313,7 +313,7 @@ x-casaos:
 
         **Sources are runtime config.** After install, define your sources in
         `/DATA/AppData/metagateway/state/gateway-config.json` (or through the
-        dispatcher UI). Install **Prowlarr** + **MetaFeederIndexer** to give it
+        dispatcher UI). Install **Prowlarr** + **MetaFeederProwlarr** to give it
         something to query.
 
         **The card feeder matters.** `metagateway-card` answers the curated-row

@@ -23,11 +23,12 @@ name: metaread
 # A client is a window onto the swarm; it holds no catalogue of its own. To see
 # comics you need a gateway peer running the literature feeders:
 #
-#   **MetaFeeder · Comic** — AniList (names the works) + Suwayomi (supplies the
-#   chapters). Install it beside **MetaGateway** and register both feeders in
-#   the gateway's config.
+#   **MetaFeeder · Suwayomi** — the chapters (and its own work cards), plus
+#   optionally **MetaFeeder · AniList** to name the works. Install them beside
+#   **MetaGateway** and register each feeder in the gateway's config.
 #
-#   **MetaFeeder · Book** — Project Gutenberg, for public-domain books.
+#   **MetaFeeder · Gutenberg** — Project Gutenberg (+ Open Library cards), for
+#   public-domain books.
 #
 # Without either, MetaRead runs perfectly and shows an empty library — which is
 # the honest state of a mesh nobody has fed yet, not a fault.
@@ -370,9 +371,9 @@ x-casaos:
       collisions. Your profile is a keypair, and your list, positions and
       ratings live in the User Data Layer rather than on someone's server.
 
-      **Requires a feeder to have anything to show:** **MetaFeeder · Comic**
-      (AniList + Suwayomi) for comics and manga, **MetaFeeder · Book** for
-      public-domain books. Without one it runs perfectly and shows an empty
+      **Requires a feeder to have anything to show:** **MetaFeeder · Suwayomi**
+      (with **MetaFeeder · AniList**) for comics and manga, **MetaFeeder · Gutenberg**
+      for public-domain books. Without one it runs perfectly and shows an empty
       library — the honest state of a mesh nobody has fed.
 
     fr_fr: |
@@ -406,8 +407,8 @@ x-casaos:
       vivent dans la User Data Layer.
 
       **Nécessite un feeder** pour avoir quelque chose à afficher :
-      **MetaFeeder · Comic** (AniList + Suwayomi) pour la BD et le manga,
-      **MetaFeeder · Book** pour les livres du domaine public.
+      **MetaFeeder · Suwayomi** (avec **MetaFeeder · AniList**) pour la BD et le manga,
+      **MetaFeeder · Gutenberg** pour les livres du domaine public.
 
   tagline:
     en_us: Read comics, manga and books from the MetaMesh network
@@ -433,7 +434,8 @@ x-casaos:
         **Install order:**
         1. **MetaGateway** — the peer that runs the feeders and announces what
            they find.
-        2. **MetaFeeder · Comic** and/or **MetaFeeder · Book**, then register
+        2. **MetaFeeder · Suwayomi** (+ **MetaFeeder · AniList**) and/or
+           **MetaFeeder · Gutenberg**, then register
            each in the gateway's *Add a feeder* box. Gateway feeder discovery is
            **startup-only**, so the gateway restarts itself afterwards.
         3. This app.

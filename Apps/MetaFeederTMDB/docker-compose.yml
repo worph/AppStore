@@ -1,0 +1,263 @@
+name: metafeedertmdb
+
+# =============================================================================
+# MetaFeeder · TMDB — the CARD TIER feeder for MetaMesh.
+#
+# A "card" is a metadata-only record identifying a *work* (a series, a film) —
+# title, poster, description and an id bag (tmdb/imdb/…). It has no bytes and by
+# design never will. This feeder resolves cards from **TMDB** so a free-text
+# search in **MetaWatch** returns a clean poster grid of *works* instead of a
+# wall of raw release names.
+#
+# Why it is its own tier: search is split in two halves.
+#   Phase 1 — CARD (this app):     <free text>  → one cached TMDB search
+#                                  → a poster grid of works
+#   Phase 2 — RETRIEVAL (indexer / usenet / tribler feeders): the user clicks a
+#                                  card → the full indexer budget is spent on
+#                                  that ONE work → the episode / version list.
+# Previously a single query resolved ten speculative candidate works *and*
+# searched every indexer for all of them against one shared rate bucket, so the
+# work the user actually wanted got a tenth of the budget. Installing this app
+# is what makes the first half cheap.
+#
+# Cheap and self-contained: it calls TMDB directly, holds no bytes, runs no
+# enrichment sidecars, and never touches an indexer. It also does NOT talk to
+# meta-core itself — the MetaGateway core stores and announces the cards it
+# returns.
+#
+# It needs, over the shared `pcs` network:
+#   - the **MetaGateway** app — which must list this feeder's URL
+#     (`http://metafeedertmdb-feeder:8080`) in its feeders config so it gets
+#     discovered. Discovery is startup-only, so restart the gateway afterwards.
+#
+# Everything is scoped under the `metafeedertmdb-*` prefix + the per-stack
+# `metafeedertmdb` network + /DATA/AppData/metafeedertmdb/ data root, so it
+# installs alongside the other Meta* apps with zero collisions.
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # metafeedertmdb-feeder — the feeder (meta-feeder-tmdb) hosting the `tmdb`
+  # upstream. The gateway core reaches it directly on `pcs` for
+  # discovery/query/compute; the human configures it through the AppShield gate
+  # below.
+  # ---------------------------------------------------------------------------
+  metafeedertmdb-feeder:
+    image: ghcr.io/worph/meta-feeder-tmdb:1.0.2
+    cpu_shares: 30
+    container_name: metafeedertmdb-feeder
+    # Hard RAM cap, swap disabled (memswap_limit == mem_limit) → OOM instead of
+    # swap. This feeder holds no bytes and does far less than the indexer feeder
+    # (one TMDB call + a redb cache), so this is generous, not tight.
+    mem_limit: 256m
+    memswap_limit: 256m
+    hostname: metafeedertmdb-feeder
+    restart: unless-stopped
+    user: "0:0"
+    expose:
+      - 8080
+    environment:
+      # INFRA-ONLY env (the "config: no env if in webui" rule). Operator config —
+      # TMDB token, rate/burst, cards-per-search — is read from the persisted
+      # config.json written by this feeder's config page (behind the AppShield
+      # gate below). TMDB_TOKEN / TMDB_RATE_PER_SEC / TMDB_BURST / CARD_TOP_N
+      # exist only as deprecated first-boot seeds; don't set them here.
+      # META_FEEDER_STATE_DIR is left at its default (/data/meta-feeder), which
+      # is what the volume below mounts.
+      RUST_LOG: "info,meta_feeder=info,card_feeder=info"
+      TZ: "$TZ"
+    volumes:
+      # Persist feeder config (config.json saved via the config UI) + the redb
+      # TMDB response cache. Wiping the cache is safe but re-burns TMDB budget
+      # on every card the swarm re-discovers.
+      - ${DATA_ROOT:-/DATA}/AppData/metafeedertmdb/state:/data/meta-feeder:rw
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - metafeedertmdb
+      - pcs
+
+  # ---------------------------------------------------------------------------
+  # AppShield gate — the feeder's config UI (set the TMDB token, tune the rate
+  # and cards-per-search) behind Yundera OIDC SSO. container_name == subdomain
+  # prefix. The gateway still reaches the feeder directly on `pcs` (this gate is
+  # for the human only); index → /config.
+  # ---------------------------------------------------------------------------
+  metafeedertmdb:
+    image: ghcr.io/yundera/appshield:2.0.9
+    cpu_shares: 80
+    container_name: metafeedertmdb
+    hostname: metafeedertmdb
+    restart: unless-stopped
+    user: "0:0"
+    expose:
+      - 80
+    environment:
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      BACKEND_HOST: "metafeedertmdb-feeder"
+      BACKEND_PORT: "8080"
+      LISTEN_PORT: "80"
+    labels:
+      caddy_0: metafeedertmdb-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: metafeedertmdb-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: metafeedertmdb-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - metafeedertmdb-feeder
+    networks:
+      - metafeedertmdb
+      - pcs
+
+networks:
+  metafeedertmdb:
+    name: metafeedertmdb
+    driver: bridge
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  author: Worph Team
+  category: Media
+  developer: Aptero Team
+  main: metafeedertmdb
+  webui_port: 80
+  index: /config
+
+  description:
+    en_us: |
+      **The card tier — the half of MetaMesh search that makes it feel like a
+      streaming app.**
+
+      MetaFeeder · TMDB resolves **cards** from **TMDB**: metadata-only records
+      identifying a *work* — a series or a film — with title, poster, plot and a
+      bag of cross-source ids. A card carries no bytes. Its job is to turn a
+      free-text search in **MetaWatch** into a clean **poster grid of works**
+      instead of a wall of raw release names.
+
+      **Why it exists.** Search is split in two:
+
+      1. **Card** (this app) — one cached TMDB lookup → a grid of works. Costs
+         no indexer requests at all.
+      2. **Retrieval** (**MetaFeeder · Prowlarr**, **· Usenet**, **· Tribler**) —
+         you click a card, and the *entire* indexer budget is spent on that one
+         work → its episode and version list.
+
+      Before the split, a single query speculatively resolved ten candidate works
+      *and* searched every indexer for all of them against one shared rate
+      bucket — so the work you actually wanted got a tenth of the budget.
+
+      **Cheap and self-contained:** it calls TMDB directly, holds no bytes, runs
+      no enrichment sidecars, and never touches an indexer. ~256 MB RAM.
+
+      **Requires:** **MetaGateway** — its meta-core stores the resolved cards and
+      announces them to the swarm. The gateway must list this feeder in its
+      config. You also need a free **TMDB** read token.
+
+      **Pairs with:** any retrieval feeder (**Indexer**, **Usenet**, **Tribler**)
+      — cards are what you click *before* those do their work.
+
+    fr_fr: |
+      **La couche « card » — la moitié de la recherche MetaMesh qui lui donne des
+      allures d'app de streaming.**
+
+      MetaFeeder · TMDB résout des **cards** depuis **TMDB** : des enregistrements
+      purement métadonnées identifiant une *œuvre* — une série, un film — avec
+      titre, affiche, synopsis et un jeu d'identifiants inter-sources. Une card ne
+      contient aucun octet. Son rôle : transformer une recherche libre dans
+      **MetaWatch** en une **grille d'affiches d'œuvres** plutôt qu'en un mur de
+      noms de releases bruts.
+
+      **Pourquoi.** La recherche est scindée en deux :
+
+      1. **Card** (cette app) — une requête TMDB mise en cache → une grille
+         d'œuvres. Ne consomme aucune requête d'indexeur.
+      2. **Récupération** (**MetaFeeder · Prowlarr**, **· Usenet**, **· Tribler**)
+         — vous cliquez une card, et *tout* le budget d'indexation est dépensé sur
+         cette seule œuvre → la liste de ses épisodes et versions.
+
+      Auparavant, une seule requête résolvait spéculativement dix œuvres
+      candidates *et* interrogeait tous les indexeurs pour chacune, sur un même
+      seau de débit — l'œuvre réellement voulue n'obtenait qu'un dixième du
+      budget.
+
+      **Léger et autonome :** appelle TMDB directement, ne stocke aucun octet,
+      aucun plugin d'enrichissement, ne touche jamais un indexeur. ~256 Mo de RAM.
+
+      **Nécessite :** l'app **MetaGateway** (son meta-core stocke et annonce les
+      cards) et un jeton de lecture **TMDB** gratuit.
+
+  tagline:
+    en_us: TMDB card tier — turns MetaMesh search into a poster grid of works
+    fr_fr: Couche « card » TMDB — transforme la recherche MetaMesh en grille d'affiches
+
+  title:
+    en_us: MetaFeeder · TMDB
+
+  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederTMDB/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederTMDB/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederTMDB/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederTMDB/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/MetaFeederTMDB/thumbnail.png
+
+  store_app_id: metafeedertmdb
+  is_uncontrolled: false
+
+  tips:
+    before_install:
+      en_us: |
+        **Install order:** install **MetaGateway** first (its meta-core stores
+        and announces the cards this feeder resolves).
+
+        **After installing this app:**
+        1. Get a free **TMDB v4 read access token** — themoviedb.org →
+           Settings → API. (The v4 "Read Access Token", not the v3 API key.)
+        2. Open this app's config UI (the dashboard link) and paste it into
+           **TMDB v4 token**. Leave the rate, burst and cards-per-search fields
+           blank unless you have a reason — the defaults (20 req/s, burst 20,
+           10 cards per search) are sane. Save, then restart this app: the
+           feeder reads its config at startup, there is no hot reload.
+        3. In **MetaGateway**, add this feeder to its feeders config —
+           name `tmdb-feeder`, URL `http://metafeedertmdb-feeder:8080` — from
+           the gateway dashboard's *Add a feeder* box. The gateway restarts
+           itself and picks up the `tmdb` upstream (it will show **LIVE**, with
+           the tags CARD / MOVIE / SERIES).
+
+        **Without a TMDB token** the feeder stays healthy but soft-skips: card
+        searches simply return nothing. That is by design, not a failure.
+
+        **Cards vs. results.** This app only produces the poster grid. To
+        actually get episodes and streams behind a card you also need a
+        retrieval feeder — **MetaFeeder · Prowlarr**, **· Usenet** or
+        **· Tribler**.
+
+        **Authentication:** the config UI is protected by Yundera's Authelia (OIDC).
+
+# Maison (Yundera dashboard) configuration. Read in preference to x-casaos.
+# schema_version 2 is required for `folders`: an older Maison refuses the app
+# outright rather than starting it without its directories.
+x-compose-app:
+  schema_version: 2
+  # Created and chowned by Maison before any image is pulled, before any hook
+  # runs and before the containers start — on the first boot and every one after.
+  # Compose would otherwise create a missing bind source as a root-owned dir.
+  folders:
+    - path: /DATA/AppData/metafeedertmdb/state
+      user: $PUID
+      group: $PGID
+  # Same string as the caddy_0 label, so the tile link and the route agree.
+  webui-host: metafeedertmdb-${domain}
+  webui-path: "/config"

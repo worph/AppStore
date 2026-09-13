@@ -10,7 +10,7 @@
 
 ## Why it is necessary
 
-1. `10001:999` is the uid/gid the upstream meta-feeder-card image runs its application as;
+1. `10001:999` is the uid/gid the upstream meta-feeder-tmdb image runs its application as;
    its writable paths are baked to that owner. `/DATA/AppData/metagateway/card` is declared
    in `x-compose-app.folders` with `user: 10001` / `group: 999` so Maison creates it with
    the right ownership before the first start, instead of Compose creating it root-owned and

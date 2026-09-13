@@ -36,8 +36,8 @@ flat Range/206 byte proxy and never unpacks an archive on your behalf.
 MetaRead holds no catalogue. An empty library is the honest state of a mesh
 nobody has fed, not a fault. Install alongside **MetaGateway** plus:
 
-- **MetaFeeder · Comic** — AniList + Suwayomi, for comics and manga
-- **MetaFeeder · Book** — Project Gutenberg, for public-domain books
+- **MetaFeeder · Suwayomi** (+ **MetaFeeder · AniList**) — for comics and manga
+- **MetaFeeder · Gutenberg** — Project Gutenberg (+ Open Library cards), for public-domain books
 
 and register each feeder in the gateway's config. Gateway feeder discovery is
 **startup-only**.

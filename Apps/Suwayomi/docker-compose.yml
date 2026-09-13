@@ -4,7 +4,7 @@ name: suwayomi
 # Suwayomi (Tachidesk) — the manga SOURCE AGGREGATOR, with FlareSolverr.
 #
 # Standalone on purpose: it is a perfectly good self-hosted manga reader on its
-# own, AND it is the chapter tier **MetaFeeder · Comic** reads. Install this
+# own, AND it is the chapter tier **MetaFeeder · Suwayomi** reads. Install this
 # first, then that app — the feeder ships preconfigured for `suwayomi:4567`
 # over the shared `pcs` network, so the pair needs no wiring.
 #
@@ -22,7 +22,7 @@ name: suwayomi
 # strictly stronger than the shared admin password it replaces.
 #
 # ⚠ Corollary: do NOT publish `suwayomi:4567` through Caddy directly, and do not
-# re-enable AUTH_MODE while MetaFeeder · Comic is installed.
+# re-enable AUTH_MODE while MetaFeeder · Suwayomi is installed.
 #
 # ── FlareSolverr ─────────────────────────────────────────────────────────────
 # Several sources (Mangakakalot among them) sit behind a Cloudflare interstitial
@@ -50,7 +50,7 @@ services:
       TZ: $TZ
       BIND_IP: 0.0.0.0
       BIND_PORT: 4567
-      # See the header. `none` is load-bearing for MetaFeeder · Comic.
+      # See the header. `none` is load-bearing for MetaFeeder · Suwayomi.
       AUTH_MODE: none
       DOWNLOAD_AS_CBZ: true
       AUTO_DOWNLOAD_CHAPTERS: false
@@ -223,7 +223,7 @@ x-casaos:
         3. Click "Browse" to search those sources
         4. Start reading — your progress saves automatically
 
-        **Pairing with MetaMesh:** install **MetaFeeder · Comic** and the sources
+        **Pairing with MetaMesh:** install **MetaFeeder · Suwayomi** and the sources
         you enable here become readable in **MetaRead**. That app ships pointed
         at `suwayomi:4567`, so there is nothing to configure.
 
