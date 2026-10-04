@@ -751,6 +751,39 @@ x-compose-app:
     - path: /DATA/AppData/nntmux/install
       user: $PUID
       group: $PGID
+  # Shown from the tile menu after install (x-casaos `before_install` is only
+  # shown in the install dialog). `${VAR}`s resolve from this app's .env.
+  tips:
+    en_us: |
+      **Login:** user `admin`, password `${APP_DEFAULT_PASSWORD}`
+      (this app's default password). Change it after the first login.
+
+      **First steps:**
+      1. Put your Usenet provider in `/DATA/AppData/nntmux/nntmux-env/nntmux.env`
+         (`NNTP_SERVER`, `NNTP_PORT`, `NNTP_USERNAME`, `NNTP_PASSWORD`; keep
+         `NNTP_CONNECTIONS` at 1-2), then
+         `docker exec nntmux php artisan config:clear` and
+         `docker restart nntmux nntmux-scanner`.
+      2. Activate a group (database password: `${APP_DEFAULT_PASSWORD}`):
+         `docker exec nntmux-db mariadb -unntmux -p"<password>" nntmux -e "UPDATE usenet_groups SET active=1, backfill=1 WHERE name='alt.binaries.teevee';"`
+      3. Start the scheduler at **/admin/tmux-edit** (`running=1`, `binaries` /
+         `backfill`). Groups and scheduler revert on every restart: re-check
+         them after one. Watch it with `docker logs -f nntmux-scanner`.
+      4. Close open registration under *Site settings* if you don't want
+         sign-ups.
+
+      **MetaMesh:** MetaFeeder · Usenet searches as the auto-provisioned
+      `metamesh` user. Its API key:
+      `docker exec nntmux php artisan tinker --execute="echo App\Models\User::where('username','metamesh')->value('api_token');"`
+      → paste it in MetaGateway → usenet feeder → *configure*.
+    fr_fr: |
+      **Connexion :** utilisateur `admin`, mot de passe `${APP_DEFAULT_PASSWORD}`
+      (le mot de passe par défaut de l'app). Changez-le après la première connexion.
+
+      Ensuite : renseignez votre fournisseur Usenet dans
+      `/DATA/AppData/nntmux/nntmux-env/nntmux.env`, activez un groupe et lancez
+      le planificateur dans **/admin/tmux-edit** (détails dans les conseils
+      d'installation, en anglais).
   # Same string as the caddy_0 label, so the tile link and the route agree.
   webui-host: nntmux-${domain}
   webui-path: "/"
