@@ -186,6 +186,14 @@ services:
       TEMP_UNRAR_PATH: /app/storage/tmp/unrar/
       TEMP_UNZIP_PATH: /app/storage/tmp/unzip/
       ELASTICSEARCH_ENABLED: "false"
+      # Behind the box's Caddy (which terminates TLS) Laravel sees plain http and
+      # trusts no proxy header (it only trusts Cloudflare's ranges), so every
+      # redirect it builds — the login one first — is `http://…`, which the
+      # gateway then bounces to an IP host with no valid certificate: the UI is
+      # unreachable. The prepend (configs: below, loaded through a conf.d ini —
+      # this FrankenPHP 1.3 ignores `php_ini` in FRANKENPHP_CONFIG) marks a
+      # request secure when it ARRIVED as https; internal clients on `pcs`
+      # (http://nntmux) are untouched.
     volumes:
       # The complete, hand-filled .env (trap #1) — a full-file mount rather
       # than individual `environment:` keys. Writable: `nntmux:install`
@@ -201,6 +209,11 @@ services:
       # directory (it holds only `.gitignore` + `install.lock`) makes the first
       # install the only one. Observed: a catalog wiped by a plain recreate.
       - ${DATA_ROOT:-/DATA}/AppData/nntmux/install:/app/_install:rw
+    configs:
+      - source: forwarded-https
+        target: /etc/nntmux/forwarded-https.php
+      - source: forwarded-https-ini
+        target: /usr/local/etc/php/conf.d/zz-forwarded-https.ini
     healthcheck:
       test: ["CMD", "curl", "-sf", "-o", "/dev/null", "http://localhost/"]
       interval: 10s
@@ -299,6 +312,20 @@ services:
         condition: service_healthy
     networks:
       - nntmux-internal
+
+configs:
+  # `$$` is compose's escape for a literal `$` (else it interpolates `$_SERVER`).
+  forwarded-https:
+    content: |
+      <?php
+      // Prepended to every request (auto_prepend_file, see forwarded-https-ini).
+      if (($$_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https') {
+          $$_SERVER['HTTPS'] = 'on';
+      }
+  forwarded-https-ini:
+    content: |
+      ; zz- so it loads after the image's own conf.d files and wins.
+      auto_prepend_file = /etc/nntmux/forwarded-https.php
 
 networks:
   nntmux-internal:
