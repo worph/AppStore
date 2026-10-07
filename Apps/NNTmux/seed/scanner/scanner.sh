@@ -98,6 +98,16 @@ while true; do
         php artisan tinker --execute="(new Blacklight\\processing\\ProcessReleases)->processReleases(1, 1, \"$g\", new Blacklight\\NNTP);" 2>&1 | grep -iE "releases (ready|created)|Added [0-9]+ releases|NZB" | tail -3
     done
 
+    # Name fixing. Collation names a release after its post subject, which
+    # for most postings is a raw `[n/m] - "file.vol12+13.par2" yEnc` line or
+    # an obfuscated string, so ~85% of releases land uncategorised. This
+    # renames them from the subject's file name, else from the file names
+    # inside one par2 file (one article fetch per release, each release
+    # tried once). Bounded per pass so the scan keeps moving; a backlog
+    # drains over the following passes.
+    nntmux-setup prune 2>&1 | while IFS= read -r l; do log "$l"; done
+    nntmux-setup fixnames 300 2>&1 | while IFS= read -r l; do log "$l"; done
+
     delay="$(setting monitor_delay)"; [ -n "$delay" ] || delay=30
     log "pass complete; sleeping ${delay}s"
     sleep "$delay"

@@ -339,6 +339,7 @@ services:
       SETUP_NNTMUX_BACKFILL_QTY: "${NNTMUX_BACKFILL_QTY:-}"
       SETUP_NNTMUX_MONITOR_DELAY: "${NNTMUX_MONITOR_DELAY:-}"
       SETUP_NNTMUX_REGISTRATION: "${NNTMUX_REGISTRATION:-closed}"
+      SETUP_NNTMUX_MIN_RELEASE_MB: "${NNTMUX_MIN_RELEASE_MB:-20}"
     volumes:
       # The same .env the web container filled in — one credential set, one
       # APP_KEY. Read-write only because Laravel's .env handling expects it.
@@ -451,6 +452,9 @@ x-casaos:
           `NNTMUX_BACKFILL_DAYS` (how far back — start small, a deep backfill is
           hundreds of GB), `NNTMUX_MONITOR_DELAY` (seconds between passes).
         - `NNTMUX_REGISTRATION` — `closed` (default), `invite` or `open`.
+        - `NNTMUX_MIN_RELEASE_MB` — postings smaller than this never become
+          releases (default 20). Busy groups carry tens of thousands of
+          single-article posts under random names that no indexer can name.
 
         A blank setting is left to nntmux's own admin UI. Set ones are re-applied
         by the scanner before every pass, so they survive restarts (nntmux resets
@@ -505,6 +509,8 @@ x-compose-app:
       - `NNTMUX_SCAN=on` to scan; optional `NNTMUX_BACKFILL=on` +
         `NNTMUX_BACKFILL_DAYS`, `NNTMUX_MONITOR_DELAY`.
       - `NNTMUX_REGISTRATION`: `closed` (default) / `invite` / `open`.
+      - `NNTMUX_MIN_RELEASE_MB` (default 20): smaller postings are dropped —
+        random-named fragments that no indexer can name.
 
       **Check:** `docker exec nntmux-scanner nntmux-setup status` (says what is
       missing). Watch: `docker logs -f nntmux-scanner`.
@@ -665,7 +671,7 @@ x-compose-app:
       #    (blank = not managed). Registration defaults to closed.
       for kv in NNTP_SERVER= NNTP_PORT= NNTP_USERNAME= NNTP_PASSWORD= NNTP_CONNECTIONS= NNTP_SSLENABLED= \
                 NNTMUX_GROUPS= NNTMUX_SCAN= NNTMUX_BACKFILL= NNTMUX_BACKFILL_DAYS= NNTMUX_BACKFILL_QTY= \
-                NNTMUX_MONITOR_DELAY= NNTMUX_REGISTRATION=closed; do
+                NNTMUX_MONITOR_DELAY= NNTMUX_REGISTRATION=closed NNTMUX_MIN_RELEASE_MB=20; do
         k=$(echo "$kv" | cut -d= -f1)
         grep -q "^$k=" "$APP_DIR/.env" 2>/dev/null || echo "$kv" >> "$APP_DIR/.env"
       done

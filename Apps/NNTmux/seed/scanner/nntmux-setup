@@ -7,6 +7,8 @@
  *   docker exec nntmux-scanner nntmux-setup groups [text]   find usenet group names
  *   docker exec nntmux-scanner nntmux-setup api-user NAME   create/reuse an API user, print its key
  *   docker exec nntmux-scanner nntmux-setup apply           apply the app settings now
+ *   docker exec nntmux-scanner nntmux-setup prune           delete releases under the minimum size (scan loop runs it)
+ *   docker exec nntmux-scanner nntmux-setup fixnames [max]  rename uncategorised releases (scan loop runs it)
  *
  * The app's settings are the NNTP_* / NNTMUX_* keys of the app's `.env` (Maison:
  * App settings > Env). They reach this container prefixed (SETUP_*), never under
@@ -173,15 +175,21 @@ function cmd_apply(): void
     if ($backfill !== null && set_setting('backfill', (string) $backfill)) {
         $log[] = 'backfill: '.($backfill ? 'on' : 'off');
     }
-    foreach (['NNTMUX_BACKFILL_DAYS' => 'backfill_days', 'NNTMUX_BACKFILL_QTY' => 'backfill_qty', 'NNTMUX_MONITOR_DELAY' => 'monitor_delay'] as $k => $s) {
+    foreach (['NNTMUX_BACKFILL_DAYS' => 'backfill_days', 'NNTMUX_BACKFILL_QTY' => 'backfill_qty', 'NNTMUX_MONITOR_DELAY' => 'monitor_delay', 'NNTMUX_MIN_RELEASE_MB' => 'minsizetoformrelease'] as $k => $s) {
         $v = want($k);
         if ($v === '') {
             continue;
         }
         if (! ctype_digit($v)) {
             $log[] = "! $k=$v is not a whole number — ignored";
-        } elseif (set_setting($s, $v)) {
-            $log[] = "$s: $v";
+            continue;
+        }
+        // nntmux stores the release floor in bytes. It drops smaller collections
+        // before they become releases, and deletes existing smaller releases
+        // on the next collation.
+        $stored = $s === 'minsizetoformrelease' ? (string) ((int) $v * 1048576) : $v;
+        if (set_setting($s, $stored)) {
+            $log[] = $s === 'minsizetoformrelease' ? "minimum release size: $v MB" : "$s: $v";
         }
     }
 
@@ -248,11 +256,11 @@ function cmd_status(): void
     out('  active groups : '.($active ? implode(', ', $active) : 'none'));
     out('  scan (running): '.(setting('running') === '1' ? 'on' : 'off').'   header scan: '.(setting('binaries') === '1' ? 'on' : 'off').'   backfill: '.(setting('backfill') === '1' ? 'on (days '.setting('backfill_days').')' : 'off'));
     out('  pass delay    : '.setting('monitor_delay').'s');
-    out('  releases      : '.$DB::table('releases')->count());
+    out('  releases      : '.$DB::table('releases')->count().'   (smaller than '.round((int) setting('minsizetoformrelease') / 1048576).' MB dropped)');
     out('  registration  : '.$reg);
 
     out('Managed by the app settings (Env) — blank = not managed');
-    foreach (['NNTP_SERVER', 'NNTP_USERNAME', 'NNTP_PASSWORD', 'NNTMUX_GROUPS', 'NNTMUX_SCAN', 'NNTMUX_BACKFILL', 'NNTMUX_BACKFILL_DAYS', 'NNTMUX_BACKFILL_QTY', 'NNTMUX_MONITOR_DELAY', 'NNTMUX_REGISTRATION'] as $k) {
+    foreach (['NNTP_SERVER', 'NNTP_USERNAME', 'NNTP_PASSWORD', 'NNTMUX_GROUPS', 'NNTMUX_SCAN', 'NNTMUX_BACKFILL', 'NNTMUX_BACKFILL_DAYS', 'NNTMUX_BACKFILL_QTY', 'NNTMUX_MONITOR_DELAY', 'NNTMUX_REGISTRATION', 'NNTMUX_MIN_RELEASE_MB'] as $k) {
         $v = want($k);
         out(sprintf('  %-21s: %s', $k, $v === '' ? '-' : (str_contains($k, 'PASSWORD') ? 'set' : $v)));
     }
@@ -318,6 +326,205 @@ function cmd_api_user(string $name): void
     out($u->api_token);
 }
 
+/**
+ * Delete releases under the minimum release size (NNTMUX_MIN_RELEASE_MB) or
+ * file count, with their .nzb. Collation already refuses such collections, but
+ * only from the moment the floor is set: releases formed earlier stay, because
+ * the only caller of deletedReleasesByGroup() nntmux ships is a script under
+ * `.do_not_run/`.
+ */
+function cmd_prune(): void
+{
+    boot();
+    $count = fn () => Illuminate\Support\Facades\DB::table('releases')->count();
+    $before = $count();
+    config(['nntmux.echocli' => false]);
+    (new Blacklight\processing\ProcessReleases)->deletedReleasesByGroup();
+    $gone = $before - $count();
+    if ($gone > 0) {
+        out("prune: removed $gone releases under the minimum size");
+    }
+}
+
+/**
+ * The par2 file worth one fetch: the index (no `.volNN+NN`), else the smallest
+ * recovery volume. Every par2 file carries the file-description packets that
+ * hold the real file names, so either serves; the index is the cheapest.
+ */
+function par2_message_id(SimpleXMLElement $nzb): ?string
+{
+    $best = null;
+    foreach ($nzb->file as $f) {
+        $subject = (string) $f->attributes()->subject;
+        if (! preg_match('/\.par2"/i', $subject) || ! isset($f->segments->segment)) {
+            continue;
+        }
+        $bytes = 0;
+        foreach ($f->segments->segment as $s) {
+            $bytes += (int) $s->attributes()->bytes;
+        }
+        $rank = [preg_match('/\.vol\d+[+-]\d+\.par2"/i', $subject) ? 1 : 0, $bytes];
+        if ($best === null || $rank < $best[0]) {
+            $best = [$rank, (string) $f->segments->segment[0]];
+        }
+    }
+
+    return $best[1] ?? null;
+}
+
+/** First segment of the archive's first volume (`.part01.rar`, else a bare `.rar`). */
+function first_rar_message_id(SimpleXMLElement $nzb): ?string
+{
+    $plain = null;
+    foreach ($nzb->file as $f) {
+        $subject = (string) $f->attributes()->subject;
+        if (! isset($f->segments->segment)) {
+            continue;
+        }
+        if (preg_match('/\.part0*1\.rar"/i', $subject)) {
+            return (string) $f->segments->segment[0];
+        }
+        if ($plain === null && preg_match('/\.rar"/i', $subject) && ! preg_match('/\.part\d+\.rar"/i', $subject)) {
+            $plain = (string) $f->segments->segment[0];
+        }
+    }
+
+    return $plain;
+}
+
+/** `name.mkv` out of a raw subject such as `[61/63] - "name.mkv.vol127+128.par2" yEnc`. */
+function subject_file_name(string $name): ?string
+{
+    if (! preg_match('/"([^"]{8,})"/', $name, $m)) {
+        return null;
+    }
+    $f = $m[1];
+    $f = preg_replace('/(\.vol\d+[+-]\d+)?\.par2$/i', '', $f);
+    $f = preg_replace('/(\.part\d+)?\.rar$|\.r\d{2,3}$|\.\d{3}$|\.(sfv|nzb|nfo)$/i', '', $f);
+
+    return strlen($f) >= 8 ? $f : null;
+}
+
+/**
+ * Rename releases still in the "Other" categories. The scan loop collates and
+ * nothing else, so without this most releases keep the raw post subject (or an
+ * obfuscated name) as their title and stay uncategorised.
+ *
+ * nntmux's own runners cannot be used as they ship: groupfixrelnames.php has a
+ * SQL syntax error (trailing comma before FROM), fixReleaseNames.php never
+ * connects to usenet for its par2 mode (`$argv[1] === 7` compares a string with
+ * an int), and NZBContents::checkPAR2 fetches the first article of every file
+ * of a release until one parses. This drives the same NameFixer/PostProcess
+ * code with at most ONE article fetch per release:
+ *   1. the file name quoted in the post subject — no fetch;
+ *   2. the file names inside one par2 file — one fetch;
+ *   3. the file names inside the archive, read from the first article of its
+ *      first volume — one fetch. Needed when the poster obfuscated the names
+ *      before making the par2 set, so the par2 only lists the random names.
+ * An archive with encrypted headers hides its names behind a password that
+ * only the uploader's own indexer has, so nothing can name it: it is marked
+ * passworded, which hides it from browsing and the API while
+ * showpasswordedrelease=0 (the default).
+ * A release is marked proc_par2=1 whatever the outcome, so it is tried once.
+ */
+function cmd_fixnames(int $limit): void
+{
+    boot();
+    $others = App\Models\Category::OTHERS_GROUP;
+    $ids = Illuminate\Support\Facades\DB::table('releases')
+        ->where(['nzbstatus' => Blacklight\NZB::NZB_ADDED, 'isrenamed' => 0, 'predb_id' => 0, 'proc_par2' => 0])
+        ->whereIn('categories_id', $others)
+        ->orderByDesc('id')->limit($limit)->pluck('id');
+    if ($ids->isEmpty()) {
+        return;
+    }
+
+    $fixer = new Blacklight\NameFixer;
+    $pp = new Blacklight\processing\PostProcess;
+    $contents = new Blacklight\NZBContents;
+    $nntp = null;
+    $renamed = ['subject' => 0, 'par2' => 0, 'archive' => 0];
+    $fetches = 0;
+    $locked = 0;
+    $examples = [];
+    $row = fn ($id) => App\Models\Release::query()->where('id', $id)
+        ->select(['id', 'guid', 'groups_id', 'categories_id', 'name', 'searchname', 'fromname', 'postdate', 'id as releases_id'])->first();
+
+    foreach ($ids as $id) {
+        $r = $row($id);
+        $before = $r->searchname;
+        $how = null;
+
+        $file = subject_file_name((string) $r->name);
+        if ($file !== null) {
+            $fixer->reset();
+            $r->textstring = $file;
+            if ($fixer->checkName($r, true, 'Filenames, ', 1, false)) {
+                $how = 'subject';
+            }
+        }
+
+        $nzb = $how === null ? $contents->LoadNZB($r->guid) : false;
+        if ($nzb !== false && $nntp === null) {
+            $nntp = new Blacklight\NNTP;
+            if ($nntp->doConnect() !== true) {
+                out('fixnames: cannot connect to usenet — par2/archive steps skipped this pass');
+                $nntp = false;
+            }
+        }
+        $group = App\Models\UsenetGroup::getNameByID((int) $r->groups_id);
+
+        if ($nzb !== false && $nntp && ($mid = par2_message_id($nzb)) !== null) {
+            $fetches++;
+            if ($pp->parsePAR2($mid, (int) $id, (int) $r->groups_id, $nntp, 0)) {
+                $how = 'par2';
+            }
+        }
+
+        if ($how === null && $nzb !== false && $nntp && ($mid = first_rar_message_id($nzb)) !== null) {
+            $fetches++;
+            $data = $nntp->getMessages($group, $mid);
+            if (! $nntp->isError($data)) {
+                $archive = new dariusiii\rarinfo\ArchiveInfo;
+                $archive->setData($data, true);
+                if ($archive->isEncrypted) {
+                    App\Models\Release::query()->where('id', $id)->update(['passwordstatus' => Blacklight\Releases::PASSWD_RAR]);
+                    $locked++;
+                } else {
+                    foreach ($archive->getArchiveFileList() ?: [] as $inner) {
+                        if (empty($inner['name']) || ! empty($inner['is_dir'])) {
+                            continue;
+                        }
+                        $fixer->reset();
+                        $r->textstring = $inner['name'];
+                        if ($fixer->checkName($r, true, 'Filenames, ', 1, false)) {
+                            $how = 'archive';
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        App\Models\Release::query()->where('id', $id)->update(['proc_par2' => 1]);
+        if ($how !== null) {
+            $renamed[$how]++;
+            if (count($examples) < 5) {
+                $examples[] = '  '.$before.'  ->  '.App\Models\Release::query()->where('id', $id)->value('searchname');
+            }
+        }
+    }
+    if ($nntp) {
+        $nntp->doQuit();
+    }
+
+    out(sprintf('fixnames: %d checked, %d renamed (subject %d, par2 %d, archive %d), %d encrypted (hidden), %d article fetches',
+        count($ids), array_sum($renamed), $renamed['subject'], $renamed['par2'], $renamed['archive'], $locked, $fetches));
+    foreach ($examples as $e) {
+        out($e);
+    }
+}
+
 $cmd = $argv[1] ?? 'help';
 switch ($cmd) {
     case 'apply':
@@ -332,7 +539,13 @@ switch ($cmd) {
     case 'api-user':
         cmd_api_user(trim($argv[2] ?? '') ?: fail('usage: nntmux-setup api-user NAME'));
         break;
+    case 'prune':
+        cmd_prune();
+        break;
+    case 'fixnames':
+        cmd_fixnames(max(1, (int) ($argv[2] ?? 300)));
+        break;
     default:
-        out('usage: nntmux-setup status | groups [text] | api-user NAME | apply');
+        out('usage: nntmux-setup status | groups [text] | api-user NAME | apply | prune | fixnames [max]');
         exit($cmd === 'help' ? 0 : 1);
 }
