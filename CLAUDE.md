@@ -18,8 +18,14 @@ asset URLs. Do not re-add them here; edit them in that repo (vendored in
 
 `Apps/MetaMCP` is **not** part of that family — it is third-party
 `metatool-ai` software that merely shares the name prefix, and it stays here.
-`Apps/Suwayomi` and `Apps/SegmentPlayer` also stay: they are standalone apps
-that the MetaMesh stack happens to pair with.
+Suwayomi and SegmentPlayer, the standalone apps MetaMesh pairs with, now live in the
+official store (`Yundera/AppStore`).
+
+## Scope — apps already in the official store were removed
+
+On 2026-10-07 every app that also exists in the official `Yundera/AppStore` was
+removed from this fork. Edit those apps there, not here, and do not re-add them.
+This repo keeps only apps the official store does not have.
 
 ## Architecture & Structure
 
